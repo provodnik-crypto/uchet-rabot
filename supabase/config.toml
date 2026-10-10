@@ -1,0 +1,13 @@
+# Настройки для Supabase CLI (supabase link / db push / functions deploy).
+project_id = "uchet-rabot"
+
+[auth]
+# Самостоятельной регистрации нет: учётные записи создаёт руководитель.
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+
+[functions.admin-users]
+verify_jwt = true
