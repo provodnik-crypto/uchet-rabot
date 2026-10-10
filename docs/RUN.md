@@ -33,7 +33,7 @@
 
 ## Этап 1. Что проверить на телефоне
 Опубликовано: ветка обновлений `preview`, проект Expo `@provodnik-cryptos-team/repair-work`.
-Ссылка для Expo Go: `exp://u.expo.dev/9fed87c8-aaab-4af8-a7a8-8029e510d75e/group/7b29183a-033d-4c93-9082-a414a7b65284`
+Ссылка для Expo Go: `exp://u.expo.dev/9fed87c8-aaab-4af8-a7a8-8029e510d75e/group/7d251cab-ee84-4f54-8266-0f7e7c8654c8`
 (QR-код: `docs/expo-go-qr.png`). Логин руководителя — `60133303`.
 
 1. Откройте ссылку на обновление, которую пришлёт Claude, или отсканируйте
@@ -56,4 +56,11 @@
 ```bash
 cd app && npm install && npx tsc --noEmit   # проверка типов приложения
 bash supabase/tests/run.sh                  # тесты базы и правил доступа (нужен PostgreSQL 16)
+```
+
+### Публикация обновления (для Claude)
+`eas update --environment` не читает `app/.env`, поэтому переменные передаются из оболочки:
+```bash
+cd app && set -a && . ./.env && set +a && \
+  npx eas-cli@latest update --branch preview --environment preview --message "..." --platform all --non-interactive
 ```
