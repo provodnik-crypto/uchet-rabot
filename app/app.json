@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Учёт работ",
-    "slug": "uchet-rabot",
+    "slug": "repair-work",
     "scheme": "uchetrabot",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -26,6 +26,20 @@
       "favicon": "./assets/favicon.png",
       "output": "single"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router"
+    ],
+    "owner": "provodnik-cryptos-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9fed87c8-aaab-4af8-a7a8-8029e510d75e"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9fed87c8-aaab-4af8-a7a8-8029e510d75e"
+      }
+    }
   }
 }
