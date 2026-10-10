@@ -32,6 +32,10 @@
 создаст первого руководителя и опубликует приложение через EAS Update.
 
 ## Этап 1. Что проверить на телефоне
+**Android — установочный файл (APK):** https://expo.dev/artifacts/eas/zNj4OFdINGYAfr3gfTnaMpY_j8Nc5Yd90eIbYHTTWMc.apk (QR-код: `docs/apk-qr.png`).
+В Expo Go обновление на телефоне заказчика не загрузилось («Failed to download remote update»),
+поэтому проверяем через APK. Новые версии приходят в APK сами через EAS Update (ветка `preview`).
+
 Опубликовано: ветка обновлений `preview`, проект Expo `@provodnik-cryptos-team/repair-work`.
 Ссылка для Expo Go: `exp://u.expo.dev/9fed87c8-aaab-4af8-a7a8-8029e510d75e/group/7d251cab-ee84-4f54-8266-0f7e7c8654c8`
 (QR-код: `docs/expo-go-qr.png`). Логин руководителя — `60133303`.
