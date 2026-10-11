@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AccountForm } from '../../../components/AccountForm';
 import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
@@ -13,7 +13,8 @@ import { adminUsers, getEmployee, initialError, nameError, roleLabel, updateEmpl
 import { humanError } from '../../../lib/errors';
 import { loginError, normalizeLogin } from '../../../lib/login';
 import { passwordError } from '../../../lib/password';
-import { useEmployeeIcons } from '../../../lib/employeeIcons';
+import { refreshEmployeeIcons, useEmployeeIcons } from '../../../lib/employeeIcons';
+import { TOOL_ICONS } from '../../../lib/toolIcons';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
@@ -96,6 +97,26 @@ export default function EmployeeScreen() {
                 run('name', () => updateEmployee(emp.id, { first_name: name.trim(), last_initial: initial.trim() || null }), 'Имя сохранено');
               }}
             />
+            <Text style={styles.h}>Значок</Text>
+            <View style={styles.icons}>
+              {TOOL_ICONS.map((t) => (
+                <Pressable
+                  key={t.id}
+                  accessibilityLabel={t.name}
+                  disabled={busy !== null}
+                  onPress={() =>
+                    t.id !== emp.icon &&
+                    run('icon', async () => {
+                      await updateEmployee(emp.id, { icon: t.id });
+                      await refreshEmployeeIcons();
+                    }, `Значок: ${t.name.toLowerCase()}`)
+                  }
+                  style={[styles.iconCell, t.id === emp.icon && styles.iconSelected]}
+                >
+                  <Avatar name={t.name} icon={t.id} size={44} />
+                </Pressable>
+              ))}
+            </View>
           </>
         )}
       </Card>
@@ -168,4 +189,7 @@ const styles = StyleSheet.create({
   meta: { color: colors.muted, fontSize: font.small },
   h: { fontSize: font.body, fontWeight: '700' },
   msg: { fontSize: font.body },
+  icons: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  iconCell: { padding: 3, borderRadius: 30, borderWidth: 3, borderColor: 'transparent' },
+  iconSelected: { borderColor: colors.black },
 });
