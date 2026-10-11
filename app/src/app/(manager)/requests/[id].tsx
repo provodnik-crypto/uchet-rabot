@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
+import { DateField, todayText } from '../../../components/DateField';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
 import { formatDate, parseDate } from '../../../lib/dates';
@@ -17,7 +18,7 @@ export default function RequestScreen() {
   const { data } = useLocalSearchParams<{ id: string; data: string }>();
   const r = JSON.parse(data) as RequestRow;
   const [requester, setRequester] = useState(r.requester ?? '');
-  const [registered, setRegistered] = useState(r.registered_at ? formatDate(r.registered_at) : '');
+  const [registered, setRegistered] = useState(r.registered_at ? formatDate(r.registered_at) : todayText());
   const [subject, setSubject] = useState(r.subject ?? '');
   const [state, setState] = useState(r.state ?? '');
   const [note, setNote] = useState(r.note ?? '');
@@ -51,7 +52,12 @@ export default function RequestScreen() {
       <Text style={styles.meta}>Работ по заявке: {r.entries}</Text>
       <Card style={styles.card}>
         <Field label="Заявитель (конечный потребитель)" value={requester} onChangeText={setRequester} />
-        <Field label="Дата регистрации" value={registered} onChangeText={setRegistered} placeholder="ДД.ММ.ГГГГ" keyboardType="numbers-and-punctuation" />
+        <DateField
+          label="Дата регистрации"
+          value={registered}
+          onChange={setRegistered}
+          hint={r.registered_at ? undefined : 'Подставлена сегодняшняя дата. Если заявка зарегистрирована раньше — исправьте.'}
+        />
         <Field label="Тема" value={subject} onChangeText={setSubject} multiline />
         <Text style={styles.label}>Состояние</Text>
         <View style={styles.chips}>

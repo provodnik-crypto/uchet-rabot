@@ -5,7 +5,7 @@ import { periodLabel, presetPeriod, type Period, type PeriodPreset } from '../li
 import { colors, font } from '../theme';
 import { BigButton } from './BigButton';
 import { Chip } from './Chip';
-import { Field } from './Field';
+import { DateField } from './DateField';
 
 type Props = { preset: PeriodPreset; period: Period; onChange: (preset: PeriodPreset, period: Period) => void };
 
@@ -34,10 +34,10 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
         <View style={styles.custom}>
           <View style={styles.row}>
             <View style={styles.flex}>
-              <Field label="С" value={from} onChangeText={setFrom} placeholder="ДД.ММ.ГГГГ" keyboardType="numbers-and-punctuation" />
+              <DateField label="С" value={from} onChange={setFrom} quick={false} hint="" />
             </View>
             <View style={styles.flex}>
-              <Field label="По" value={to} onChangeText={setTo} placeholder="ДД.ММ.ГГГГ" keyboardType="numbers-and-punctuation" />
+              <DateField label="По" value={to} onChange={setTo} quick={false} hint="" />
             </View>
           </View>
           {error ? <Text style={styles.err}>{error}</Text> : null}

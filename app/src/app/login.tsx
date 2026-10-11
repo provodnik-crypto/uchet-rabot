@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
 import { Card } from '../components/Card';
 import { Field } from '../components/Field';
@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const { signIn, signOut, accessError } = useAuth();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const passwordRef = useRef<TextInput>(null);
@@ -65,12 +66,24 @@ export default function LoginScreen() {
             label="Пароль"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="password"
             textContentType="password"
             returnKeyType="go"
             onSubmitEditing={submit}
           />
+          <Pressable
+            onPress={() => setShowPassword((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: showPassword }}
+            style={styles.show}
+            hitSlop={8}
+          >
+            <View style={[styles.box, showPassword && styles.boxOn]}>{showPassword ? <Text style={styles.tick}>✓</Text> : null}</View>
+            <Text style={styles.showText}>Показать пароль</Text>
+          </Pressable>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <BigButton title="Войти" onPress={submit} loading={busy} />
           <Text style={styles.note}>Нет логина? Его выдаёт руководитель.</Text>
@@ -86,6 +99,11 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 34, fontWeight: '800' },
   title: { fontSize: font.header, fontWeight: '800' },
   form: { gap: 16 },
+  show: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, marginTop: -4 },
+  box: { width: 28, height: 28, borderRadius: 8, borderWidth: 2, borderColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  boxOn: { backgroundColor: colors.brand, borderColor: colors.brand },
+  tick: { fontSize: 18, fontWeight: '800' },
+  showText: { fontSize: font.body },
   error: { color: colors.danger, fontSize: font.body },
   note: { color: colors.muted, fontSize: font.small, textAlign: 'center' },
   warn: { gap: 16 },

@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
+import { DateField, todayText } from '../../../components/DateField';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
@@ -24,8 +25,7 @@ export default function PriceItemScreen() {
 
   const [shortName, setShortName] = useState('');
   const [price, setPriceText] = useState('');
-  const [fromToday, setFromToday] = useState(true);
-  const [fromDate, setFromDate] = useState('');
+  const [fromDate, setFromDate] = useState(todayText());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
@@ -60,10 +60,10 @@ export default function PriceItemScreen() {
 
   function savePrice() {
     const kop = parseRubToKop(price);
-    const date = fromToday ? null : parseDate(fromDate);
+    const date = parseDate(fromDate);
     const errs = {
       price: kop && kop > 0 ? null : 'Введите цену в рублях, например 850 или 28,57',
-      date: fromToday || date ? null : 'Дата в виде ДД.ММ.ГГГГ',
+      date: date ? null : 'Дата в виде ДД.ММ.ГГГГ',
     };
     setFieldErrors(errs);
     if (errs.price || errs.date) return;
@@ -73,7 +73,7 @@ export default function PriceItemScreen() {
         await setPrice(item.id, kop!, date);
         setPriceText('');
       },
-      `Цена ${formatKop(kop)} действует ${date ? `с ${formatDate(date)}` : 'с сегодняшнего дня'}. Уже внесённые работы не меняются.`,
+      `Цена ${formatKop(kop)} действует с ${formatDate(date!)}. Уже внесённые работы не меняются.`,
     );
   }
 
@@ -123,13 +123,13 @@ export default function PriceItemScreen() {
           placeholder="например 850"
           error={fieldErrors.price}
         />
-        <View style={styles.chips}>
-          <Chip label="С сегодняшнего дня" selected={fromToday} onPress={() => setFromToday(true)} />
-          <Chip label="С даты" selected={!fromToday} onPress={() => setFromToday(false)} />
-        </View>
-        {!fromToday ? (
-          <Field label="Действует с" value={fromDate} onChangeText={setFromDate} placeholder="ДД.ММ.ГГГГ" keyboardType="numbers-and-punctuation" error={fieldErrors.date} />
-        ) : null}
+        <DateField
+          label="Действует с"
+          value={fromDate}
+          onChange={setFromDate}
+          error={fieldErrors.date}
+          hint="По умолчанию сегодня. Можно указать прошедшую или будущую дату."
+        />
         <BigButton title="Сохранить цену" loading={busy === 'price'} onPress={savePrice} />
       </Card>
 
