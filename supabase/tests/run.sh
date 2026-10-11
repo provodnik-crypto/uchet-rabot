@@ -21,4 +21,11 @@ for t in "$here"/[0-9]*.sql; do
   echo "== $(basename "$t")"
   cat "$here/helpers.sql" "$t" | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
 done
+# Перенос истории 2026 — после остальных тестов, чтобы не менять их данные.
+python3 "$root/scripts/history_2026_import.py" 2>/dev/null | "${psql_cmd[@]}"
+python3 "$root/scripts/history_2026_import.py" 2>/dev/null | "${psql_cmd[@]}"  # повторный запуск не дублирует
+for t in "$here"/history/*.sql; do
+  echo "== history/$(basename "$t")"
+  cat "$here/helpers.sql" "$t" | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
+done
 echo "Все тесты пройдены"
