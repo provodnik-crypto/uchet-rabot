@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Проверка генератора Excel-отчёта: node --experimental-strip-types build_sample.ts && python3 check.py",
+  "dependencies": { "fflate": "0.8.2" }
+}
