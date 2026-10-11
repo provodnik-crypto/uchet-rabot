@@ -14,7 +14,7 @@ import { listDepartments, type Department } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { adminDeleteEntry, adminUpdateEntry, listPerformers, type AdminEntry } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
-import { usePhotoUrls } from '../../../lib/photos';
+import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, parseQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
@@ -22,7 +22,7 @@ import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 export default function AdminEntryScreen() {
   const { data } = useLocalSearchParams<{ id: string; data: string }>();
   const e = JSON.parse(data) as AdminEntry;
-  const photos = usePhotoUrls();
+  const icons = useEmployeeIcons();
   const [people, setPeople] = useState<{ id: number; display_name: string; is_active: boolean }[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [qty, setQty] = useState(formatQuantity(e.quantity));
@@ -103,7 +103,7 @@ export default function AdminEntryScreen() {
                 key={p.id}
                 label={p.display_name}
                 selected={performers.includes(p.id)}
-                left={<Avatar name={p.display_name} photo={photos[p.id]} size={36} />}
+                left={<Avatar name={p.display_name} icon={icons[p.id]} size={36} />}
                 onPress={() => setPerformers((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
               />
             ))}

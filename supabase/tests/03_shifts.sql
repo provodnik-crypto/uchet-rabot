@@ -2,7 +2,7 @@
 create or replace function pg_temp.item(p_name text) returns bigint language sql as $$
   select id from public.price_items where full_name = p_name $$;
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
-  select id from public.employees where nickname = p_name or display_name = p_name $$;
+  select id from public.employees where first_name = p_name or display_name = p_name $$;
 create or replace function pg_temp.dep() returns smallint language sql as $$
   select id from public.departments where is_default $$;
 
@@ -16,10 +16,10 @@ select pg_temp.assert(
       -- 588 ₽ × 3 шт = 1764 ₽, на троих
       jsonb_build_object('request_number', 'rfs260423_2283', 'department_id', pg_temp.dep(),
         'price_item_id', pg_temp.item('Благоустройство: Малые архитектурные формы: Установка скамеек'),
-        'quantity', 3, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'), pg_temp.emp('Миша'), pg_temp.emp('Женя'))),
+        'quantity', 3, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил'), pg_temp.emp('Евгений'))),
       jsonb_build_object('request_number', null, 'department_id', pg_temp.dep(),
         'custom_name', 'Сборка мебели для подиума', 'unit_id', (select id from public.units where code = 'шт'),
-        'quantity', 2, 'note', 'срочно', 'performer_ids', jsonb_build_array(pg_temp.emp('Коля')))
+        'quantity', 2, 'note', 'срочно', 'performer_ids', jsonb_build_array(pg_temp.emp('Николай')))
     )
   )) ->> 'pending')::int = 1,
   'смена отправлена, одна работа на оценке');
@@ -42,7 +42,7 @@ select public.submit_shift(jsonb_build_object(
   'client_uuid', '11111111-1111-1111-1111-111111111111', 'work_date', public.app_today(),
   'entries', jsonb_build_array(jsonb_build_object('department_id', pg_temp.dep(),
     'price_item_id', pg_temp.item('Благоустройство: Малые архитектурные формы: Установка скамеек'),
-    'quantity', 3, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'), pg_temp.emp('Миша'), pg_temp.emp('Женя'))))));
+    'quantity', 3, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил'), pg_temp.emp('Евгений'))))));
 select pg_temp.assert((select count(*) from public.shifts) = 1, 'повторная отправка не создаёт вторую смену');
 select pg_temp.assert((select count(*) from public.my_entries()) = 1, 'правка заменяет работы смены');
 select pg_temp.assert((select bool_and(can_edit) from public.my_entries()), 'смену можно править в день отправки');
@@ -52,7 +52,7 @@ do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
     'entries', jsonb_build_array(jsonb_build_object('department_id', pg_temp.dep(),
       'price_item_id', pg_temp.item('Благоустройство: Малые архитектурные формы: Установка скамеек'),
-      'quantity', 1.5, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'quantity', 1.5, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
   raise exception 'ПРОВАЛ: дробные штуки';
 exception when raise_exception then
   if sqlerrm like 'ПРОВАЛ%' then raise; end if;
@@ -61,7 +61,7 @@ end $$;
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today() - 2,
     'entries', jsonb_build_array(jsonb_build_object('department_id', pg_temp.dep(), 'custom_name', 'Распил МДФ',
-      'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
   raise exception 'ПРОВАЛ: позавчерашняя смена';
 exception when raise_exception then
   if sqlerrm like 'ПРОВАЛ%' then raise; end if;
@@ -70,7 +70,7 @@ end $$;
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
     'entries', jsonb_build_array(jsonb_build_object('request_number', 'RFS123', 'department_id', pg_temp.dep(),
-      'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
   raise exception 'ПРОВАЛ: кривой номер заявки';
 exception when raise_exception then
   if sqlerrm like 'ПРОВАЛ%' then raise; end if;
@@ -80,7 +80,7 @@ do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
     'entries', jsonb_build_array(jsonb_build_object('department_id', pg_temp.dep(),
       'price_item_id', (select id from public.price_items where is_material limit 1),
-      'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
   raise exception 'ПРОВАЛ: внесён материал';
 exception when raise_exception then
   if sqlerrm like 'ПРОВАЛ%' then raise; end if;
@@ -95,7 +95,7 @@ select pg_temp.assert(
   (select count(*) from public.suggest_custom_names('светильник') where kind = 'price') > 0,
   'подсказки вне прайса показывают похожие позиции прайса');
 
--- Миша видит работу, где он исполнитель; работы Коли без него — нет
+-- Михаил видит работу, где он исполнитель; работы Николая без него — нет
 reset role;
 select pg_temp.login_as('misha');
 select pg_temp.assert((select count(*) from public.my_entries()) = 1, 'напарник видит работу, где он исполнитель');
@@ -104,7 +104,7 @@ select pg_temp.assert(not (select bool_or(can_edit) from public.my_entries()), '
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', '11111111-1111-1111-1111-111111111111', 'work_date', public.app_today(),
     'entries', jsonb_build_array(jsonb_build_object('department_id', pg_temp.dep(), 'custom_name', 'Взлом',
-      'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Миша'))))));
+      'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Михаил'))))));
   raise exception 'ПРОВАЛ: чужая смена перезаписана';
 exception when insufficient_privilege then raise notice 'ok: чужую смену перезаписать нельзя';
 end $$;
@@ -129,7 +129,7 @@ select pg_temp.login_as('kolya');
 select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
   'entries', jsonb_build_array(jsonb_build_object('department_id', pg_temp.dep(),
     'price_item_id', pg_temp.item('Благоустройство: Малые архитектурные формы: Установка скамеек'),
-    'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Миша'), pg_temp.emp('Коля'), pg_temp.emp('Женя'))))));
+    'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Михаил'), pg_temp.emp('Николай'), pg_temp.emp('Евгений'))))));
 reset role;
 select pg_temp.login_as('boss');
 select pg_temp.assert(

@@ -7,6 +7,8 @@ export function humanError(e: unknown): string {
   if (/user already registered|already been registered|duplicate key.*login/i.test(msg)) return 'Такой логин уже занят';
   if (/departments_name_uq/i.test(msg)) return 'Такой отдел уже существует';
   if (/employees_display_name_active_uq/i.test(msg)) return 'Сотрудник с таким именем уже есть';
+  if (/employees_first_name_check/i.test(msg)) return 'В поле «Имя» — только имя, без фамилии';
+  if (/employees_last_initial_check/i.test(msg)) return 'Фамилия: только первая буква';
   if (/duplicate key/i.test(msg)) return 'Такая запись уже существует';
   if (/password should be at least/i.test(msg)) return 'Пароль слишком короткий: нужно не меньше 6 символов';
   // Остальные сообщения сервера бывают на английском — не показываем их как есть.

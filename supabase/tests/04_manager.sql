@@ -1,6 +1,6 @@
 -- Руководитель: оценка работ вне прайса, отклонение и исправление, журнал, сводки, заявки.
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
-  select id from public.employees where nickname = p_name or display_name = p_name $$;
+  select id from public.employees where first_name = p_name or display_name = p_name $$;
 create or replace function pg_temp.dep() returns smallint language sql as $$
   select id from public.departments where is_default $$;
 create or replace function pg_temp.custom(p_name text, p_qty numeric, p_unit text, variadic p_perf text[]) returns jsonb language sql as $$
@@ -12,10 +12,10 @@ begin;
 select pg_temp.login_as('kolya');
 select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
   'entries', jsonb_build_array(
-    pg_temp.custom('Распил МДФ', 3, 'шт', 'Коля', 'Миша'),
-    pg_temp.custom('Сборка мебели для подиума', 1, 'шт', 'Коля'),
-    pg_temp.custom('Монтаж плаката', 2, 'шт', 'Коля'),
-    pg_temp.custom('Что-то непонятное', 1, 'шт', 'Коля'))));
+    pg_temp.custom('Распил МДФ', 3, 'шт', 'Николай', 'Михаил'),
+    pg_temp.custom('Сборка мебели для подиума', 1, 'шт', 'Николай'),
+    pg_temp.custom('Монтаж плаката', 2, 'шт', 'Николай'),
+    pg_temp.custom('Что-то непонятное', 1, 'шт', 'Николай'))));
 do $$ begin
   perform * from public.pending_queue();
   raise exception 'ПРОВАЛ: мастер открыл очередь';
@@ -73,7 +73,7 @@ select pg_temp.assert((select count(*) from public.pending_queue()) = 1, 'в о�
 reset role;
 select pg_temp.login_as('misha');
 select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
-  'entries', jsonb_build_array(pg_temp.custom('распил  мдф', 2, 'шт', 'Миша'))));
+  'entries', jsonb_build_array(pg_temp.custom('распил  мдф', 2, 'шт', 'Михаил'))));
 reset role;
 select pg_temp.login_as('boss');
 select pg_temp.assert(
@@ -119,7 +119,7 @@ select pg_temp.assert(
 select pg_temp.assert(
   (select max(total_rows) from public.admin_entries(public.app_today(), public.app_today())) = 5, 'журнал: все работы за день');
 select pg_temp.assert(
-  (select max(total_rows) from public.admin_entries(public.app_today(), public.app_today(), pg_temp.emp('Миша'))) = 2,
+  (select max(total_rows) from public.admin_entries(public.app_today(), public.app_today(), pg_temp.emp('Михаил'))) = 2,
   'журнал: фильтр по сотруднику');
 select pg_temp.assert(
   (select max(total_rows) from public.admin_entries(public.app_today(), public.app_today(), null, null, null, 'pending')) = 3,
@@ -128,7 +128,7 @@ select pg_temp.assert(
 -- правка руководителем: объём и исполнители, цена за единицу та же
 select public.admin_update_entry(
   (select e.id from public.work_entries e where e.custom_name = 'Распил МДФ'), 4, pg_temp.dep(), null,
-  array[pg_temp.emp('Миша'), pg_temp.emp('Женя'), pg_temp.emp('Коля')]);
+  array[pg_temp.emp('Михаил'), pg_temp.emp('Евгений'), pg_temp.emp('Николай')]);
 select pg_temp.assert(
   (select m.total_kop from public.entry_money m join public.work_entries e on e.id = m.entry_id where e.custom_name = 'Распил МДФ') = 133332,
   'правка объёма пересчитала сумму по прежней цене');
@@ -140,6 +140,6 @@ select pg_temp.assert(not exists (select 1 from public.work_entries where custom
 
 -- заявки
 insert into public.requests (number, subject) values ('INC251125_3012', 'Замена светильников');
-update public.requests set requester = 'Иванов', state = 'В работе' where number = 'INC251125_3012';
-select pg_temp.assert((select requester from public.list_requests('иванов')) = 'Иванов', 'руководитель ведёт заявки и ищет по ним');
+update public.requests set subject = 'Замена смесителя' where number = 'INC251125_3012';
+select pg_temp.assert((select subject from public.list_requests('смесител')) = 'Замена смесителя', 'руководитель ведёт заявки и ищет по ним');
 rollback;

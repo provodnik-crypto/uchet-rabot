@@ -9,11 +9,11 @@ import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
-import { adminUsers, getEmployee, renameEmployee, roleLabel } from '../../../lib/employees';
+import { adminUsers, getEmployee, initialError, nameError, roleLabel, updateEmployee } from '../../../lib/employees';
 import { humanError } from '../../../lib/errors';
 import { loginError, normalizeLogin } from '../../../lib/login';
 import { passwordError } from '../../../lib/password';
-import { usePhotoUrls } from '../../../lib/photos';
+import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
@@ -21,10 +21,11 @@ export default function EmployeeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const employeeId = Number(id);
   const { me } = useAuth();
-  const photos = usePhotoUrls();
+  const icons = useEmployeeIcons();
   const { data: emp, error, loading, reload } = useFocusQuery(() => getEmployee(employeeId));
 
   const [name, setName] = useState('');
+  const [initial, setInitial] = useState('');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
@@ -32,7 +33,10 @@ export default function EmployeeScreen() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    if (emp) setName(emp.display_name);
+    if (emp) {
+      setName(emp.first_name);
+      setInitial(emp.last_initial ?? '');
+    }
   }, [emp]);
 
   async function run(key: string, fn: () => Promise<unknown>, okText: string) {
@@ -65,18 +69,35 @@ export default function EmployeeScreen() {
     <Screen>
       <Stack.Screen options={{ title: emp.display_name }} />
       <Card style={styles.card}>
-        <Avatar name={emp.display_name} photo={photos[emp.id]} size={96} />
+        <Avatar name={emp.display_name} icon={icons[emp.id]} size={96} />
         <Text style={styles.meta}>
           {roleLabel[emp.role]} · {emp.is_active ? 'активен' : 'отключён'}
         </Text>
-        <Field label="Имя" value={name} onChangeText={setName} />
-        <BigButton
-          title="Сохранить имя"
-          variant="secondary"
-          disabled={!name.trim() || name.trim() === emp.display_name}
-          loading={busy === 'name'}
-          onPress={() => run('name', () => renameEmployee(emp.id, name), 'Имя сохранено')}
-        />
+        {emp.role === 'service' ? null : (
+          <>
+            <Field label="Имя" value={name} onChangeText={setName} error={fieldErrors.name} />
+            <Field
+              label="Первая буква фамилии"
+              value={initial}
+              onChangeText={(t) => setInitial(t.toUpperCase())}
+              maxLength={1}
+              autoCapitalize="characters"
+              error={fieldErrors.initial}
+            />
+            <BigButton
+              title="Сохранить имя"
+              variant="secondary"
+              disabled={!name.trim() || (name.trim() === emp.first_name && initial.trim() === (emp.last_initial ?? ''))}
+              loading={busy === 'name'}
+              onPress={() => {
+                const e = { name: nameError(name), initial: initialError(initial) };
+                setFieldErrors(e);
+                if (e.name || e.initial) return;
+                run('name', () => updateEmployee(emp.id, { first_name: name.trim(), last_initial: initial.trim() || null }), 'Имя сохранено');
+              }}
+            />
+          </>
+        )}
       </Card>
 
       {canLogin && !emp.has_account ? (

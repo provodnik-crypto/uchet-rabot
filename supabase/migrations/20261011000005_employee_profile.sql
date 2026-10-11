@@ -1,4 +1,4 @@
--- Фамилии и фото сотрудников.
+-- Полные имена и фото сотрудников (фото и короткие имена убраны в 20261011000009_anonymize.sql).
 -- nickname — короткое имя, как его писали в старом файле («Коля»): по нему импорт истории узнаёт мастера.
 alter table public.employees
   add column nickname text check (nickname is null or length(trim(nickname)) between 1 and 30),

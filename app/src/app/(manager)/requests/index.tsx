@@ -35,8 +35,8 @@ export default function RequestsScreen() {
 
   return (
     <Screen>
-      <Field label="Поиск" value={q} onChangeText={setQ} placeholder="номер, заявитель или тема" autoCorrect={false} />
-      <Text style={styles.meta}>Заявки появляются сами, когда мастер вводит номер. Здесь можно дописать заявителя, тему и состояние.</Text>
+      <Field label="Поиск" value={q} onChangeText={setQ} placeholder="номер или тема" autoCorrect={false} />
+      <Text style={styles.meta}>Заявки появляются сами, когда мастер вводит номер. Здесь можно дописать тему. Имена и телефоны людей в тему не пишите.</Text>
       {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
       {rows && !rows.length ? <Text style={styles.meta}>Заявок не найдено</Text> : null}
       {rows?.map((r) => (
@@ -44,7 +44,7 @@ export default function RequestsScreen() {
           <Text style={styles.number}>{r.number}</Text>
           {r.subject ? <Text style={styles.subject}>{r.subject}</Text> : null}
           <Text style={styles.meta}>
-            {[r.requester, r.state, `работ: ${r.entries}`, r.last_work_date ? `последняя ${formatDate(r.last_work_date)}` : null]
+            {[`работ: ${r.entries}`, r.last_work_date ? `последняя ${formatDate(r.last_work_date)}` : null]
               .filter(Boolean)
               .join(' · ')}
           </Text>

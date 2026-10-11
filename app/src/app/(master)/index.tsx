@@ -10,7 +10,7 @@ import { useAuth } from '../../lib/auth';
 import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
 import { useDraft } from '../../lib/draft';
-import { usePhotoUrls } from '../../lib/photos';
+import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
 import { myEntries, myMonthSummary } from '../../lib/shift';
@@ -22,7 +22,7 @@ import { colors, font } from '../../theme';
 export default function MasterHome() {
   const { me, signOut } = useAuth();
   const { ready, draft, clear } = useDraft();
-  const photos = usePhotoUrls();
+  const icons = useEmployeeIcons();
   const { data: entries } = useFocusQuery(() => myEntries(14));
   const { data: month } = useFocusQuery(myMonthSummary);
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
@@ -31,7 +31,7 @@ export default function MasterHome() {
   return (
     <Screen>
       <View style={styles.helloRow}>
-        {me ? <Avatar name={me.displayName} photo={photos[me.id]} size={64} /> : null}
+        {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={64} /> : null}
         <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>
       </View>
 

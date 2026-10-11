@@ -69,12 +69,15 @@ async function create(body: Record<string, unknown>) {
     if (emp.user_id) throw new HttpError(409, 'У сотрудника уже есть учётная запись');
     employeeId = emp.id;
   } else {
-    const name = String(body.display_name ?? '').trim();
+    // Только имя и первая буква фамилии: полные ФИО не храним. Имя для отчётов («Иван П.») собирает база.
+    const firstName = String(body.first_name ?? '').trim();
+    const initial = String(body.last_initial ?? '').trim().toUpperCase() || null;
     const role = body.role === 'manager' ? 'manager' : 'master';
-    if (!name) throw new HttpError(400, 'Введите имя');
-    const { data, error } = await admin.from('employees').insert({ display_name: name, role }).select('id').single();
+    if (!firstName) throw new HttpError(400, 'Введите имя');
+    if (/\s/.test(firstName)) throw new HttpError(400, 'В поле «Имя» — только имя, без фамилии');
+    if (initial && !/^[А-ЯЁA-Z]$/.test(initial)) throw new HttpError(400, 'Фамилия: только первая буква');
+    const { data, error } = await admin.from('employees').insert({ first_name: firstName, last_initial: initial, role }).select('id').single();
     if (error) {
-      if (error.code === '23505') throw new HttpError(409, 'Сотрудник с таким именем уже есть');
       throw error;
     }
     employeeId = data.id;

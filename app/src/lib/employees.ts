@@ -5,6 +5,9 @@ export type EmployeeRole = 'master' | 'manager' | 'service';
 export type Employee = {
   id: number;
   display_name: string;
+  first_name: string;
+  last_initial: string | null;
+  icon: number | null;
   role: EmployeeRole;
   login: string | null;
   has_account: boolean;
@@ -20,7 +23,7 @@ export const roleLabel: Record<EmployeeRole, string> = {
 export async function listEmployees(): Promise<Employee[]> {
   const { data, error } = await supabase
     .from('employees')
-    .select('id, display_name, role, login, has_account, is_active')
+    .select('id, display_name, first_name, last_initial, icon, role, login, has_account, is_active')
     .order('is_active', { ascending: false })
     .order('role')
     .order('display_name');
@@ -31,21 +34,27 @@ export async function listEmployees(): Promise<Employee[]> {
 export async function getEmployee(id: number): Promise<Employee> {
   const { data, error } = await supabase
     .from('employees')
-    .select('id, display_name, role, login, has_account, is_active')
+    .select('id, display_name, first_name, last_initial, icon, role, login, has_account, is_active')
     .eq('id', id)
     .single();
   if (error) throw error;
   return data as Employee;
 }
 
-export async function renameEmployee(id: number, displayName: string) {
-  const { error } = await supabase.from('employees').update({ display_name: displayName.trim() }).eq('id', id);
+/** Только имя и первая буква фамилии: полные ФИО не храним (серверы за рубежом). */
+export const nameError = (firstName: string) =>
+  !firstName.trim() ? 'Введите имя' : /\s/.test(firstName.trim()) ? 'Только имя, без фамилии' : null;
+export const initialError = (initial: string) =>
+  !initial.trim() || /^[А-ЯЁA-Z]$/i.test(initial.trim()) ? null : 'Одна буква';
+
+export async function updateEmployee(id: number, patch: { first_name?: string; last_initial?: string | null; icon?: number }) {
+  const { error } = await supabase.from('employees').update(patch).eq('id', id);
   if (error) throw error;
 }
 
 /** Операции с учётными записями идут через серверную функцию: им нужен сервисный ключ. */
 type AdminAction =
-  | { action: 'create'; employee_id?: number; display_name?: string; role?: 'master' | 'manager'; login: string; password: string }
+  | { action: 'create'; employee_id?: number; first_name?: string; last_initial?: string | null; role?: 'master' | 'manager'; login: string; password: string }
   | { action: 'set_password'; employee_id: number; password: string }
   | { action: 'set_active'; employee_id: number; active: boolean };
 

@@ -21,7 +21,7 @@ import {
   type PeriodPreset,
 } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
-import { usePhotoUrls } from '../../../lib/photos';
+import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
 
@@ -43,7 +43,7 @@ export default function EntriesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const reqId = useRef(0);
-  const photos = usePhotoUrls();
+  const icons = useEmployeeIcons();
 
   useEffect(() => {
     listPerformers().then(setPeople).catch(() => {});
@@ -114,7 +114,7 @@ export default function EntriesScreen() {
                   label={p.display_name}
                   selected={filters.employeeId === p.id}
                   onPress={() => set({ employeeId: p.id })}
-                  left={<Avatar name={p.display_name} photo={photos[p.id]} size={36} />}
+                  left={<Avatar name={p.display_name} icon={icons[p.id]} size={36} />}
                 />
               ))}
             </View>

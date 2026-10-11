@@ -7,14 +7,14 @@ import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
 import { monthName, presetPeriod, reportByEmployee, reportByMonth, reportTotals, type PeriodPreset } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
-import { usePhotoUrls } from '../../lib/photos';
+import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font } from '../../theme';
 
 export default function SummaryScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [period, setPeriod] = useState(presetPeriod('month'));
-  const photos = usePhotoUrls();
+  const icons = useEmployeeIcons();
   const { data, error, loading, reload } = useFocusQuery(async () => {
     const [totals, employees, months] = await Promise.all([reportTotals(period), reportByEmployee(period), reportByMonth(period)]);
     return { totals, employees, months };
@@ -51,7 +51,7 @@ export default function SummaryScreen() {
           {data.employees.map((e) => (
             <Card key={e.employee_id} style={styles.card}>
               <View style={styles.row}>
-                <Avatar name={e.display_name} photo={photos[e.employee_id]} size={44} />
+                <Avatar name={e.display_name} icon={icons[e.employee_id]} size={44} />
                 <View style={styles.flex}>
                   <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                     {e.display_name}

@@ -6,13 +6,13 @@ import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { Avatar } from '../../../components/Avatar';
 import { listEmployees, roleLabel } from '../../../lib/employees';
-import { usePhotoUrls } from '../../../lib/photos';
+import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
 export default function EmployeesScreen() {
   const { data, error, loading, reload } = useFocusQuery(listEmployees);
-  const photos = usePhotoUrls();
+  const icons = useEmployeeIcons();
   return (
     <Screen>
       <BigButton title="+ Добавить сотрудника" onPress={() => router.push('/employees/new')} />
@@ -20,7 +20,7 @@ export default function EmployeesScreen() {
       {data?.map((e) => (
         <Card key={e.id} onPress={() => router.push({ pathname: '/employees/[id]', params: { id: String(e.id) } })}>
           <View style={styles.person}>
-            <Avatar name={e.display_name} photo={photos[e.id]} size={52} />
+            <Avatar name={e.display_name} icon={icons[e.id]} size={52} />
             <View style={styles.flex}>
               <Text style={[styles.name, !e.is_active && styles.off]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                 {e.display_name}

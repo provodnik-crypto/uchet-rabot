@@ -142,18 +142,14 @@ export async function listPerformers(): Promise<{ id: number; display_name: stri
 export type RequestRow = {
   id: number;
   number: string;
-  requester: string | null;
-  registered_at: string | null;
   subject: string | null;
-  state: string | null;
-  note: string | null;
   entries: number;
   last_work_date: string | null;
 };
 
 export const listRequests = (q: string) => rpc<RequestRow[]>('list_requests', { q, p_limit: 200 });
 
-export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'requester' | 'registered_at' | 'subject' | 'state' | 'note'>>) {
+export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'subject'>>) {
   const { error } = await supabase.from('requests').update(patch).eq('id', id);
   if (error) throw error;
 }

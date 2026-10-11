@@ -1,6 +1,6 @@
 -- Рейтинг команды: мастер видит итоги свои и коллег, но не цены и не суммы отдельных работ.
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
-  select id from public.employees where nickname = p_name or display_name = p_name $$;
+  select id from public.employees where first_name = p_name or display_name = p_name $$;
 
 begin;
 select pg_temp.login_as('kolya');
@@ -8,12 +8,12 @@ select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 
   'entries', jsonb_build_array(
     jsonb_build_object('request_number', 'RFS261011_0001', 'department_id', (select id from public.departments where is_default),
       'price_item_id', (select id from public.price_items where full_name = 'Благоустройство: Малые архитектурные формы: Установка скамеек'),
-      'quantity', 2, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'), pg_temp.emp('Миша'))),
+      'quantity', 2, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил'))),
     jsonb_build_object('request_number', 'RFS261011_0002', 'department_id', (select id from public.departments where is_default),
       'price_item_id', (select id from public.price_items where full_name = 'Благоустройство: Малые архитектурные формы: Установка скамеек'),
-      'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))),
+      'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))),
     jsonb_build_object('department_id', (select id from public.departments where is_default),
-      'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
 select pg_temp.assert((select total_kop from public.my_month_summary()) = 58800 + 58800, 'моя сумма за месяц: доля 588 + 588 ₽');
 select pg_temp.assert((select requests from public.my_month_summary()) = 2, 'выполнено заявок: 2');
 select pg_temp.assert((select pending from public.my_month_summary()) = 1, 'на оценке: 1, в сумму не входит');

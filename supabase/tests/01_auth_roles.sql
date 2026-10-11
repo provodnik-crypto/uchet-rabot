@@ -3,7 +3,7 @@ select pg_temp.login_as('kolya');
 select pg_temp.assert((select role from public.whoami()) = 'master', 'мастер видит свою роль');
 select pg_temp.assert(not public.is_manager(), 'мастер не руководитель');
 select pg_temp.assert((select count(*) from public.employees) = 6, 'мастер видит список сотрудников для выбора напарников');
-update public.employees set display_name = 'Взлом' where login = 'misha';
+update public.employees set first_name = 'Взлом' where login = 'misha';
 select pg_temp.assert((select display_name from public.employees where login = 'misha') = 'Михаил М.', 'мастер не может переименовать сотрудника');
 rollback;
 
@@ -19,8 +19,8 @@ rollback;
 begin;
 select pg_temp.login_as('boss');
 select pg_temp.assert((select role from public.whoami()) = 'manager', 'руководитель видит свою роль');
-update public.employees set display_name = 'Михаил' where login = 'misha';
-select pg_temp.assert((select display_name from public.employees where login = 'misha') = 'Михаил', 'руководитель переименовывает');
+update public.employees set first_name = 'Миша', last_initial = null where login = 'misha';
+select pg_temp.assert((select display_name from public.employees where login = 'misha') = 'Миша', 'руководитель переименовывает');
 do $$ begin
   update public.employees set is_active = false where login = 'misha';
   raise exception 'ПРОВАЛ: блокировка в обход функции admin-users';

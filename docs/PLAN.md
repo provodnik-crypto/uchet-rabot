@@ -76,13 +76,13 @@ Python-сервис (FastAPI + XlsxWriter + openpyxl)
 ### Справочники
 | Таблица | Поля | Кто видит |
 |---|---|---|
-| `employees` | id, display_name («Коля»), role (`master`/`manager`/`service`), user_id → auth.users, login, is_active, in_output_chart | все (без лишнего) |
+| `employees` | id, first_name, last_initial (одна буква), display_name («Иван П.», собирает база), icon (значок 1–12, вместо фото), role (`master`/`manager`/`service`), user_id → auth.users, login, is_active, in_output_chart | все (без лишнего) |
 | `units` | id, code (`шт`,`м²`,`м`,`м³`,`т`,`кг`,`км`,`ч`,`чел.-ч`), integer_only, sort | все |
 | `departments` | id, name (уникально без учёта регистра), is_default, sort, is_active | все |
 | `price_items` | id, source_id (id из CSV), full_name, short_name, category, subcategory, unit_id, is_material, is_active, origin (`csv`/`manual`), source_block, source_row, поиск (pg_trgm) | мастер: только `is_active and not is_material` |
 | `price_lists` | id, title («Прайс 2026»), valid_from, file_name, uploaded_by, applied_at, stats (jsonb: изменено/добавлено/выключено) | руководитель |
 | `price_item_prices` | price_item_id, price_list_id, price_kop, valid_from | **только руководитель** |
-| `requests` | id, number (`^(RFS\|INC)\d{6}_\d{4}$`, уникально), requester, registered_at, subject, state, note, created_by | все: номер; детали — руководитель |
+| `requests` | id, number (`^(RFS\|INC)\d{6}_\d{4}$`, уникально), subject, created_by (только номер и тема — данных людей не храним) | все: номер; детали — руководитель |
 
 ### Журнал
 | Таблица | Поля | Кто видит |
@@ -149,7 +149,7 @@ Python-сервис (FastAPI + XlsxWriter + openpyxl)
 5. **По месяцам** — суммы по месяцам + простая диаграмма.
 6. **Выгрузка в Excel** — период → файл → меню «Поделиться».
 7. **Справочники**: Сотрудники (создать учётку, сбросить пароль, выключить),
-   Отделы, Заявки (дозаполнить заявителя, тему, состояние), Прайс (поиск,
+   Отделы, Заявки (дозаполнить тему), Прайс (поиск,
    правка цены и единицы, включить/выключить), Загрузка прайса (файл →
    дата начала действия → предпросмотр → «Применить»), Версии прайса.
 
@@ -192,7 +192,7 @@ uchet-rabot/
 │  ├─ app/imports/price.py, history.py
 │  ├─ tests/
 │  └─ requirements.txt
-├─ data/                        # price_2026_max.csv, исходный .xlsm
+├─ data/                        # price_2026_max.csv
 └─ docs/PLAN.md, docs/RUN.md    # план и инструкции «как запустить»
 ```
 

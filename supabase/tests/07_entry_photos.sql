@@ -1,6 +1,6 @@
 -- Фото к работам: прикрепление, лимит, чужие файлы, видимость, корзина при удалении и замене.
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
-  select id from public.employees where nickname = p_name or display_name = p_name $$;
+  select id from public.employees where first_name = p_name or display_name = p_name $$;
 -- путь фото в папке пользователя: <uid>/<uuid>.jpg
 create or replace function pg_temp.ph(p_uid text, n int) returns jsonb language sql as $$
   select jsonb_build_object('path', p_uid || '/' || lpad(n::text, 8, '0') || '-0000-4000-8000-000000000000.jpg',
@@ -12,10 +12,10 @@ select pg_temp.login_as('kolya');
 select public.submit_shift(jsonb_build_object('client_uuid', '22222222-2222-2222-2222-222222222222', 'work_date', public.app_today(),
   'entries', jsonb_build_array(
     jsonb_build_object('department_id', 1, 'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1,
-      'performer_ids', jsonb_build_array(pg_temp.emp('Коля'), pg_temp.emp('Миша')),
+      'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000001', 1), pg_temp.ph('00000000-0000-0000-0000-000000000001', 2))),
     jsonb_build_object('department_id', 1, 'custom_name', 'Сборка стеллажа', 'unit_id', 1, 'quantity', 1,
-      'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
 select pg_temp.assert((select count(*) from public.entry_photos) = 2, 'к работе прикреплены 2 фото');
 select pg_temp.assert(
   (select count(*) from public.entry_photos_for(array(select id from public.work_entries))) = 2, 'автор видит свои фото');
@@ -24,10 +24,10 @@ select pg_temp.assert(
 select public.submit_shift(jsonb_build_object('client_uuid', '22222222-2222-2222-2222-222222222222', 'work_date', public.app_today(),
   'entries', jsonb_build_array(
     jsonb_build_object('department_id', 1, 'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1,
-      'performer_ids', jsonb_build_array(pg_temp.emp('Коля'), pg_temp.emp('Миша')),
+      'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000001', 1), pg_temp.ph('00000000-0000-0000-0000-000000000001', 2))),
     jsonb_build_object('department_id', 1, 'custom_name', 'Сборка стеллажа', 'unit_id', 1, 'quantity', 1,
-      'performer_ids', jsonb_build_array(pg_temp.emp('Коля'))))));
+      'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
 select pg_temp.assert((select count(*) from public.entry_photos) = 2, 'после повторной отправки фото те же');
 reset role;
 select pg_temp.assert(not exists (select 1 from public.photo_cleanup_batch()), 'повторная отправка не отправила фото в корзину');
@@ -37,7 +37,7 @@ select pg_temp.login_as('kolya');
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
     'entries', jsonb_build_array(jsonb_build_object('department_id', 1, 'custom_name', 'Чужое фото', 'unit_id', 1, 'quantity', 1,
-      'performer_ids', jsonb_build_array(pg_temp.emp('Коля')),
+      'performer_ids', jsonb_build_array(pg_temp.emp('Николай')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000002', 9))))));
   raise exception 'ПРОВАЛ: прикреплено фото из чужой папки';
 exception when insufficient_privilege then raise notice 'ok: фото из чужой папки прикрепить нельзя';
@@ -45,7 +45,7 @@ end $$;
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
     'entries', jsonb_build_array(jsonb_build_object('department_id', 1, 'custom_name', 'Четыре фото', 'unit_id', 1, 'quantity', 1,
-      'performer_ids', jsonb_build_array(pg_temp.emp('Коля')),
+      'performer_ids', jsonb_build_array(pg_temp.emp('Николай')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000001', 11), pg_temp.ph('00000000-0000-0000-0000-000000000001', 12),
                                   pg_temp.ph('00000000-0000-0000-0000-000000000001', 13), pg_temp.ph('00000000-0000-0000-0000-000000000001', 14))))));
   raise exception 'ПРОВАЛ: 4 фото';
@@ -67,7 +67,7 @@ select pg_temp.assert(
   'напарник-исполнитель видит фото');
 reset role;
 insert into auth.users (id, email) values ('00000000-0000-0000-0000-000000000003', 'zhenya@uchet.local') on conflict do nothing;
-update public.employees set user_id = '00000000-0000-0000-0000-000000000003', login = 'zhenya' where nickname = 'Женя';
+update public.employees set user_id = '00000000-0000-0000-0000-000000000003', login = 'zhenya' where first_name = 'Евгений';
 select pg_temp.login_as('zhenya');
 select pg_temp.assert(
   (select count(*) from public.entry_photos_for(array(select e.id from public.work_entries e))) = 0
