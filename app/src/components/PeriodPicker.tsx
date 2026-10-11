@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDate, parseDate } from '../lib/dates';
 import { periodLabel, presetPeriod, type Period, type PeriodPreset } from '../lib/manager';
-import { colors, font } from '../theme';
+import { colors, font, radius, touch } from '../theme';
 import { BigButton } from './BigButton';
-import { Chip } from './Chip';
 import { DateField } from './DateField';
+
+const PRESETS: PeriodPreset[] = ['month', 'prev', 'year', 'custom'];
+/** Короткие подписи, чтобы весь выбор помещался в одну строку. */
+const short: Record<PeriodPreset, string> = { month: 'Этот месяц', prev: 'Прошлый', year: 'Год', custom: 'Свой' };
 
 type Props = { preset: PeriodPreset; period: Period; onChange: (preset: PeriodPreset, period: Period) => void };
 
@@ -17,17 +20,23 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.chips}>
-        {(Object.keys(periodLabel) as PeriodPreset[]).map((p) => (
-          <Chip
+      <View style={styles.segments} accessibilityRole="tablist">
+        {PRESETS.map((p) => (
+          <Pressable
             key={p}
-            label={periodLabel[p]}
-            selected={preset === p}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: preset === p }}
+            accessibilityLabel={periodLabel[p]}
             onPress={() => {
               if (p === 'custom') onChange('custom', period);
               else onChange(p, presetPeriod(p));
             }}
-          />
+            style={[styles.segment, preset === p && styles.segmentOn]}
+          >
+            <Text style={[styles.segmentText, preset === p && styles.segmentTextOn]} numberOfLines={1}>
+              {short[p]}
+            </Text>
+          </Pressable>
         ))}
       </View>
       {preset === 'custom' ? (
@@ -64,11 +73,15 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 10 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  custom: { gap: 10 },
-  row: { flexDirection: 'row', gap: 10 },
+  wrap: { gap: 8 },
+  segments: { flexDirection: 'row', gap: 2, padding: 3, backgroundColor: colors.card, borderRadius: radius.control },
+  segment: { flex: 1, height: touch.small + 4, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  segmentOn: { backgroundColor: colors.brand },
+  segmentText: { fontSize: font.small },
+  segmentTextOn: { fontWeight: '700' },
+  custom: { gap: 8 },
+  row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
-  range: { fontSize: font.small, color: colors.muted },
+  range: { fontSize: font.small - 1, color: colors.secondary, paddingHorizontal: 2 },
   err: { color: colors.danger, fontSize: font.small },
 });

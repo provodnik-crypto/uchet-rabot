@@ -23,5 +23,5 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  content: { padding: 16, gap: 16, paddingBottom: 40 },
+  content: { padding: 16, gap: 12, paddingBottom: 32 },
 });

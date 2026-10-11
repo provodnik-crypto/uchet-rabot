@@ -31,7 +31,7 @@ export default function MasterHome() {
   return (
     <Screen>
       <View style={styles.helloRow}>
-        {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={64} /> : null}
+        {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={44} /> : null}
         <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>
       </View>
 
@@ -84,10 +84,10 @@ const styles = StyleSheet.create({
   hello: { fontSize: font.header, fontWeight: '800', flex: 1 },
   month: { gap: 4, backgroundColor: colors.black },
   monthLabel: { fontSize: font.small, color: '#BBBBBB' },
-  monthSum: { fontSize: 34, fontWeight: '800', color: colors.brand },
+  monthSum: { fontSize: 30, fontWeight: '800', color: colors.brand },
   monthMeta: { fontSize: font.small, color: '#DDDDDD' },
   monthLink: { fontSize: font.small, color: colors.brand, fontWeight: '700', marginTop: 4 },
-  alert: { borderWidth: 2, borderColor: colors.danger, gap: 4 },
+  alert: { borderWidth: 1.5, borderColor: colors.danger, gap: 4 },
   alertTitle: { fontSize: font.body, fontWeight: '800', color: colors.danger },
   alertText: { fontSize: font.small, color: colors.muted },
   draftNote: { textAlign: 'center', color: colors.muted, fontSize: font.small, marginTop: -8 },

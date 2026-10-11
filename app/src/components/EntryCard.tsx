@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   qty: { fontSize: font.title, fontWeight: '800', marginTop: 4 },
   meta: { fontSize: font.small, color: colors.muted },
   comment: { fontSize: font.small, color: colors.danger, fontWeight: '600' },
-  status: { fontSize: font.small, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.chip, overflow: 'hidden' },
+  status: { fontSize: font.small, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.chip, overflow: 'hidden' },
   ok: { backgroundColor: '#E3F1E4', color: colors.success },
   wait: { backgroundColor: '#FFF3C4', color: '#7A5B00' },
   bad: { backgroundColor: '#FBE3E3', color: colors.danger },

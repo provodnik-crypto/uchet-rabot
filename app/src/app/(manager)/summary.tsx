@@ -93,7 +93,7 @@ export default function SummaryScreen() {
 const styles = StyleSheet.create({
   total: { gap: 4, backgroundColor: colors.black },
   totalLabel: { fontSize: font.small, color: '#BBBBBB' },
-  totalSum: { fontSize: 34, fontWeight: '800', color: colors.brand },
+  totalSum: { fontSize: 30, fontWeight: '800', color: colors.brand },
   totalMeta: { fontSize: font.small, color: '#BBBBBB' },
   warn: { fontSize: font.small, color: '#FFFFFF', fontWeight: '700' },
   section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },

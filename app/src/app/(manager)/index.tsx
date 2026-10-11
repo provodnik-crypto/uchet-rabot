@@ -1,52 +1,124 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
-import { BigButton } from '../../components/BigButton';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../components/Card';
+import { Icon, type IconName } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
-import { Tile } from '../../components/Tile';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { managerDashboard, monthName } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
 import { storeToday } from '../../lib/today';
 import { useFocusQuery } from '../../lib/useQuery';
-import { colors, font } from '../../theme';
+import { colors, font, radius, touch } from '../../theme';
+
+type Href = Parameters<typeof router.push>[0];
 
 export default function ManagerHome() {
   const { me, signOut } = useAuth();
   const { data } = useFocusQuery(managerDashboard);
   return (
     <Screen>
-      <Text style={styles.hello}>{me?.displayName}</Text>
+      <View style={styles.top}>
+        <View style={styles.flex}>
+          <Text style={styles.hello}>{me?.displayName}</Text>
+          <Text style={styles.sub}>Руководитель</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Выйти" onPress={signOut} style={styles.round}>
+          <Icon name="logout" size={20} />
+        </Pressable>
+      </View>
+
       <Card style={styles.month}>
         <Text style={styles.monthLabel}>Выполнено за {monthName(storeToday())}</Text>
         <Text style={styles.monthSum}>{data ? formatKop(data.month_total_kop) : '…'}</Text>
-        {data ? <Text style={styles.monthMeta}>работ с ценой: {data.month_entries}</Text> : null}
-        {data?.pending_count ? <Text style={styles.warn}>Без цены (на оценке): {data.pending_count} — в сумму не входят</Text> : null}
+        {data ? <Text style={styles.monthLabel}>работ с ценой: {data.month_entries}</Text> : null}
+        {data?.pending_count ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push('/pending')} style={styles.warn}>
+            <Text style={styles.warnText}>
+              <Text style={styles.warnStrong}>{data.pending_count} на оценке</Text> — в сумму не входят
+            </Text>
+            <Icon name="chevronRight" size={16} color="#FFFFFF" strokeWidth={2.4} />
+          </Pressable>
+        ) : null}
       </Card>
-      <Tile title="На оценке" subtitle="Работы вне прайса без цены" badge={data?.pending_count} onPress={() => router.push('/pending')} />
-      <Tile title="Работы" subtitle="Журнал с фильтрами, правка записей" onPress={() => router.push('/entries')} />
-      <Tile title="Сводка" subtitle="Выработка по сотрудникам и месяцам" onPress={() => router.push('/summary')} />
-      <Tile title="Выгрузить в Excel" subtitle="Отчёт с диаграммами за период" onPress={() => router.push('/export')} />
+
+      <Text style={styles.section}>Действия</Text>
+      <View style={styles.grid}>
+        <ActionTile title="На оценке" subtitle="без цены" icon="clock" badge={data?.pending_count} href="/pending" />
+        <ActionTile title="Работы" subtitle="журнал и правка" icon="list" href="/entries" />
+        <ActionTile title="Сводка" subtitle="по сотрудникам" icon="chart" href="/summary" />
+        <ActionTile title="В Excel" subtitle="отчёт за период" icon="download" href="/export" />
+      </View>
+
       <Text style={styles.section}>Справочники</Text>
-      <Tile title="Заявки" subtitle="Заявитель, тема, состояние" onPress={() => router.push('/requests')} />
-      <Tile title="Сотрудники" subtitle="Учётные записи и пароли" onPress={() => router.push('/employees')} />
-      <Tile title="Прайс" subtitle="Поиск, цены, включение позиций" onPress={() => router.push('/price')} />
-      <Tile title="Отделы" subtitle="Список для выбора мастером" onPress={() => router.push('/departments')} />
-      <BigButton title="Выйти" variant="secondary" onPress={signOut} />
+      <Card style={styles.list}>
+        <ListRow title="Заявки" subtitle="заявитель, тема, состояние" icon="doc" href="/requests" />
+        <ListRow title="Сотрудники" subtitle="учётные записи и пароли" icon="users" href="/employees" />
+        <ListRow title="Прайс" subtitle="поиск, цены, включение позиций" icon="tag" href="/price" />
+        <ListRow title="Отделы" subtitle="список для выбора мастером" icon="grid" href="/departments" last />
+      </Card>
+
       <Text style={styles.role}>Вы вошли как руководитель · {me?.login}</Text>
       <Text style={styles.role}>{appVersionLabel()}</Text>
     </Screen>
   );
 }
 
+/** Плитка действия: название сверху, жёлтый уголок со значком снизу справа. */
+function ActionTile({ title, subtitle, icon, badge, href }: { title: string; subtitle: string; icon: IconName; badge?: number | null; href: Href }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={badge ? `${title}: ${badge}` : title} onPress={() => router.push(href)} style={({ pressed }) => [styles.tile, pressed && { opacity: 0.7 }]}>
+      <Text style={styles.tileTitle}>{title}</Text>
+      <Text style={styles.sub}>{subtitle}</Text>
+      {badge ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      ) : null}
+      <View style={styles.corner} />
+      <View style={styles.cornerIcon}>
+        <Icon name={icon} size={24} fill="#FFFFFF" strokeWidth={1.8} />
+      </View>
+    </Pressable>
+  );
+}
+
+function ListRow({ title, subtitle, icon, href, last }: { title: string; subtitle: string; icon: IconName; href: Href; last?: boolean }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={() => router.push(href)} style={({ pressed }) => [styles.row, !last && styles.rowLine, pressed && { backgroundColor: colors.bg }]}>
+      <Icon name={icon} size={22} strokeWidth={1.8} />
+      <View style={styles.flex}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.sub}>{subtitle}</Text>
+      </View>
+      <Icon name="chevronRight" size={16} color={colors.muted} strokeWidth={2.4} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  hello: { fontSize: font.header, fontWeight: '800' },
-  month: { gap: 4, backgroundColor: colors.black },
-  monthLabel: { fontSize: font.small, color: '#BBBBBB' },
-  monthSum: { fontSize: 34, fontWeight: '800', color: colors.brand },
-  monthMeta: { fontSize: font.small, color: '#BBBBBB' },
-  warn: { fontSize: font.small, color: '#FFFFFF', fontWeight: '700', marginTop: 4 },
-  section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },
-  role: { textAlign: 'center', color: colors.muted, fontSize: font.small },
+  flex: { flex: 1 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hello: { fontSize: font.title, fontWeight: '700' },
+  sub: { fontSize: font.small - 1, color: colors.secondary },
+  round: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
+  month: { gap: 4, backgroundColor: colors.black, paddingHorizontal: 16, paddingVertical: 14 },
+  monthLabel: { fontSize: font.small, color: '#C8C8C8' },
+  monthSum: { fontSize: 30, fontWeight: '800', color: colors.brand },
+  warn: { marginTop: 6, minHeight: 40, borderRadius: 8, backgroundColor: '#1F1F1F', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  warnText: { flex: 1, fontSize: font.small, color: '#FFFFFF' },
+  warnStrong: { fontWeight: '700', color: colors.brand },
+  section: { fontSize: font.body + 2, fontWeight: '700', marginTop: 4, marginBottom: -4 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tile: { width: '48.5%', flexGrow: 1, height: 92, padding: 12, borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden', gap: 2 },
+  tileTitle: { fontSize: font.body, fontWeight: '700' },
+  badge: { position: 'absolute', top: 10, right: 10, minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: font.small - 1, fontWeight: '700' },
+  corner: { position: 'absolute', right: -12, bottom: 0, width: 80, height: 30, backgroundColor: colors.brand, transform: [{ skewX: '-25deg' }] },
+  cornerIcon: { position: 'absolute', right: 12, bottom: 8 },
+  list: { padding: 0, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: touch.big, paddingHorizontal: 12, paddingVertical: 6 },
+  rowLine: { borderBottomWidth: 1, borderBottomColor: colors.bg },
+  rowTitle: { fontSize: font.body, fontWeight: '600' },
+  role: { textAlign: 'center', color: colors.secondary, fontSize: font.small - 1 },
 });
