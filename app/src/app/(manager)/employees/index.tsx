@@ -4,23 +4,29 @@ import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
+import { Avatar } from '../../../components/Avatar';
 import { listEmployees, roleLabel } from '../../../lib/employees';
+import { usePhotoUrls } from '../../../lib/photos';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
 export default function EmployeesScreen() {
   const { data, error, loading, reload } = useFocusQuery(listEmployees);
+  const photos = usePhotoUrls();
   return (
     <Screen>
       <BigButton title="+ Добавить сотрудника" onPress={() => router.push('/employees/new')} />
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data?.map((e) => (
         <Card key={e.id} onPress={() => router.push({ pathname: '/employees/[id]', params: { id: String(e.id) } })}>
-          <View style={styles.row}>
-            <Text style={[styles.name, !e.is_active && styles.off]}>{e.display_name}</Text>
-            <Text style={styles.role}>{roleLabel[e.role]}</Text>
-          </View>
-          <Text style={styles.sub}>
+          <View style={styles.person}>
+            <Avatar name={e.display_name} uri={photos[e.id]} size={52} />
+            <View style={styles.flex}>
+              <View style={styles.row}>
+                <Text style={[styles.name, !e.is_active && styles.off]}>{e.display_name}</Text>
+                <Text style={styles.role}>{roleLabel[e.role]}</Text>
+              </View>
+              <Text style={styles.sub}>
             {!e.is_active
               ? 'Отключён'
               : e.role === 'service'
@@ -28,7 +34,9 @@ export default function EmployeesScreen() {
                 : e.has_account
                   ? `Логин: ${e.login}`
                   : 'Нет учётной записи'}
-          </Text>
+              </Text>
+            </View>
+          </View>
         </Card>
       ))}
     </Screen>
@@ -36,7 +44,9 @@ export default function EmployeesScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  person: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  flex: { flex: 1 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   name: { fontSize: font.body, fontWeight: '700' },
   off: { color: colors.muted, textDecorationLine: 'line-through' },
   role: { fontSize: font.small, color: colors.muted },

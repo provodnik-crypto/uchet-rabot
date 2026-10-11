@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../components/Avatar';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
@@ -8,6 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
 import { useDraft } from '../../lib/draft';
+import { usePhotoUrls } from '../../lib/photos';
 import { myEntries } from '../../lib/shift';
 import { goToShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
@@ -16,13 +18,17 @@ import { colors, font } from '../../theme';
 export default function MasterHome() {
   const { me, signOut } = useAuth();
   const { ready, draft, clear } = useDraft();
+  const photos = usePhotoUrls();
   const { data: entries } = useFocusQuery(() => myEntries(14));
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
   const hasDraft = !!draft && draft.entries.length > 0;
 
   return (
     <Screen>
-      <Text style={styles.hello}>Здравствуйте, {me?.displayName}!</Text>
+      <View style={styles.helloRow}>
+        {me ? <Avatar name={me.displayName} uri={photos[me.id]} size={64} /> : null}
+        <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>
+      </View>
 
       {rejected ? (
         <Card onPress={() => router.push('/history')} style={styles.alert}>
@@ -57,7 +63,8 @@ export default function MasterHome() {
 }
 
 const styles = StyleSheet.create({
-  hello: { fontSize: font.header, fontWeight: '800' },
+  helloRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  hello: { fontSize: font.header, fontWeight: '800', flex: 1 },
   alert: { borderWidth: 2, borderColor: colors.danger, gap: 4 },
   alertTitle: { fontSize: font.body, fontWeight: '800', color: colors.danger },
   alertText: { fontSize: font.small, color: colors.muted },

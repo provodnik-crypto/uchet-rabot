@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../../components/Avatar';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
@@ -20,6 +21,7 @@ import {
   type PeriodPreset,
 } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
+import { usePhotoUrls } from '../../../lib/photos';
 import { formatQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
 
@@ -41,6 +43,7 @@ export default function EntriesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const reqId = useRef(0);
+  const photos = usePhotoUrls();
 
   useEffect(() => {
     listPerformers().then(setPeople).catch(() => {});
@@ -106,7 +109,13 @@ export default function EntriesScreen() {
             <View style={styles.chips}>
               <Chip label="Все" selected={filters.employeeId == null} onPress={() => set({ employeeId: null })} />
               {people.map((p) => (
-                <Chip key={p.id} label={p.display_name} selected={filters.employeeId === p.id} onPress={() => set({ employeeId: p.id })} />
+                <Chip
+                  key={p.id}
+                  label={p.display_name}
+                  selected={filters.employeeId === p.id}
+                  onPress={() => set({ employeeId: p.id })}
+                  left={<Avatar name={p.display_name} uri={photos[p.id]} size={36} />}
+                />
               ))}
             </View>
             <Text style={styles.label}>Отдел</Text>

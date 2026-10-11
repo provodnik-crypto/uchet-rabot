@@ -4,7 +4,7 @@ select pg_temp.assert((select role from public.whoami()) = 'master', 'масте
 select pg_temp.assert(not public.is_manager(), 'мастер не руководитель');
 select pg_temp.assert((select count(*) from public.employees) = 6, 'мастер видит список сотрудников для выбора напарников');
 update public.employees set display_name = 'Взлом' where login = 'misha';
-select pg_temp.assert((select display_name from public.employees where login = 'misha') = 'Миша', 'мастер не может переименовать сотрудника');
+select pg_temp.assert((select display_name from public.employees where login = 'misha') = 'Михаил М.', 'мастер не может переименовать сотрудника');
 rollback;
 
 begin;

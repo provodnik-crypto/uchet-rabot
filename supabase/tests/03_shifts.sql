@@ -2,7 +2,7 @@
 create or replace function pg_temp.item(p_name text) returns bigint language sql as $$
   select id from public.price_items where full_name = p_name $$;
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
-  select id from public.employees where display_name = p_name $$;
+  select id from public.employees where nickname = p_name or display_name = p_name $$;
 create or replace function pg_temp.dep() returns smallint language sql as $$
   select id from public.departments where is_default $$;
 
@@ -35,7 +35,7 @@ select pg_temp.assert(exists (select 1 from public.requests where number = 'RFS2
 select pg_temp.assert((select number from public.my_recent_requests()) = 'RFS260423_2283', 'недавние заявки мастера');
 select pg_temp.assert((select count(*) from public.my_price_items('frequent')) = 1, 'часто используемые работы');
 select pg_temp.assert(
-  (select performer_names from public.my_entries() where entry_position = 1) = 'Коля, Миша, Женя', 'исполнители по порядку');
+  (select performer_names from public.my_entries() where entry_position = 1) = 'Николай Х., Михаил М., Евгений Г.', 'исполнители по порядку');
 
 -- повторная отправка того же черновика (обрыв связи) не создаёт дубль
 select public.submit_shift(jsonb_build_object(

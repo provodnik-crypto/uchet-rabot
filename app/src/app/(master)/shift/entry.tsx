@@ -1,6 +1,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -10,6 +11,7 @@ import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
 import { useDraft, type DraftEntry } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
+import { usePhotoUrls } from '../../../lib/photos';
 import { listUnits, type Unit } from '../../../lib/price';
 import {
   listActiveDepartments,
@@ -41,6 +43,7 @@ export default function EntryScreen() {
   const params = useLocalSearchParams<Params>();
   const { me } = useAuth();
   const { draft, upsertEntry } = useDraft();
+  const photos = usePhotoUrls();
   const editing = params.key ? draft?.entries.find((e) => e.key === params.key) : undefined;
   const last = draft?.entries[draft.entries.length - 1];
 
@@ -268,6 +271,7 @@ export default function EntryScreen() {
               label={m.id === me?.id ? `${m.display_name} (я)` : m.display_name}
               selected={performerIds.includes(m.id)}
               onPress={() => togglePerformer(m.id)}
+              left={<Avatar name={m.display_name} uri={photos[m.id]} size={36} />}
             />
           ))}
         </View>

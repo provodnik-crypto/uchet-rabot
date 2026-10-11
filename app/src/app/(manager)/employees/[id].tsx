@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { AccountForm } from '../../../components/AccountForm';
+import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -12,6 +13,7 @@ import { adminUsers, getEmployee, renameEmployee, roleLabel } from '../../../lib
 import { humanError } from '../../../lib/errors';
 import { loginError, normalizeLogin } from '../../../lib/login';
 import { passwordError } from '../../../lib/password';
+import { usePhotoUrls } from '../../../lib/photos';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
@@ -19,6 +21,7 @@ export default function EmployeeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const employeeId = Number(id);
   const { me } = useAuth();
+  const photos = usePhotoUrls();
   const { data: emp, error, loading, reload } = useFocusQuery(() => getEmployee(employeeId));
 
   const [name, setName] = useState('');
@@ -62,6 +65,7 @@ export default function EmployeeScreen() {
     <Screen>
       <Stack.Screen options={{ title: emp.display_name }} />
       <Card style={styles.card}>
+        <Avatar name={emp.display_name} uri={photos[emp.id]} size={96} />
         <Text style={styles.meta}>
           {roleLabel[emp.role]} · {emp.is_active ? 'активен' : 'отключён'}
         </Text>

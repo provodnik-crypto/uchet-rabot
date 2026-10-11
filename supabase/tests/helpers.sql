@@ -23,5 +23,5 @@ on conflict do nothing;
 insert into public.employees (display_name, role, user_id, login)
   select 'Начальник', 'manager', '00000000-0000-0000-0000-00000000000b', 'boss'
   where not exists (select 1 from public.employees where login = 'boss');
-update public.employees set user_id = '00000000-0000-0000-0000-000000000001', login = 'kolya' where display_name = 'Коля';
-update public.employees set user_id = '00000000-0000-0000-0000-000000000002', login = 'misha' where display_name = 'Миша';
+update public.employees set user_id = '00000000-0000-0000-0000-000000000001', login = 'kolya' where nickname = 'Коля';
+update public.employees set user_id = '00000000-0000-0000-0000-000000000002', login = 'misha' where nickname = 'Миша';

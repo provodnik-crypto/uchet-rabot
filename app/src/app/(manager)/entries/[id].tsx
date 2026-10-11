@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -12,12 +13,14 @@ import { listDepartments, type Department } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { adminDeleteEntry, adminUpdateEntry, listPerformers, type AdminEntry } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
+import { usePhotoUrls } from '../../../lib/photos';
 import { formatQuantity, parseQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
 
 export default function AdminEntryScreen() {
   const { data } = useLocalSearchParams<{ id: string; data: string }>();
   const e = JSON.parse(data) as AdminEntry;
+  const photos = usePhotoUrls();
   const [people, setPeople] = useState<{ id: number; display_name: string; is_active: boolean }[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [qty, setQty] = useState(formatQuantity(e.quantity));
@@ -93,6 +96,7 @@ export default function AdminEntryScreen() {
                 key={p.id}
                 label={p.display_name}
                 selected={performers.includes(p.id)}
+                left={<Avatar name={p.display_name} uri={photos[p.id]} size={36} />}
                 onPress={() => setPerformers((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
               />
             ))}

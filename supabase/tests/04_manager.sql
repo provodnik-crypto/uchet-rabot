@@ -1,6 +1,6 @@
 -- Руководитель: оценка работ вне прайса, отклонение и исправление, журнал, сводки, заявки.
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
-  select id from public.employees where display_name = p_name $$;
+  select id from public.employees where nickname = p_name or display_name = p_name $$;
 create or replace function pg_temp.dep() returns smallint language sql as $$
   select id from public.departments where is_default $$;
 create or replace function pg_temp.custom(p_name text, p_qty numeric, p_unit text, variadic p_perf text[]) returns jsonb language sql as $$
@@ -109,10 +109,10 @@ select pg_temp.assert(
   (select sum(total_kop) from public.report_by_employee(public.app_today(), public.app_today())) = 99999 + 58800,
   'сумма долей сотрудников равна общему итогу');
 select pg_temp.assert(
-  (select total_kop from public.report_by_employee(public.app_today(), public.app_today()) where display_name = 'Коля') = 50000 + 58800,
+  (select total_kop from public.report_by_employee(public.app_today(), public.app_today()) where display_name = 'Николай Х.') = 50000 + 58800,
   'выработка Коли: его доля + целая работа');
 select pg_temp.assert(
-  (select shifts from public.report_by_employee(public.app_today(), public.app_today()) where display_name = 'Коля') = 1, 'число смен');
+  (select shifts from public.report_by_employee(public.app_today(), public.app_today()) where display_name = 'Николай Х.') = 1, 'число смен');
 select pg_temp.assert(
   (select total_kop from public.report_by_month(date_trunc('month', public.app_today())::date, public.app_today())) = 99999 + 58800,
   'сумма по месяцу');

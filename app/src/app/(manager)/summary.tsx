@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { PeriodPicker } from '../../components/PeriodPicker';
 import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
 import { monthName, presetPeriod, reportByEmployee, reportByMonth, reportTotals, type PeriodPreset } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
+import { usePhotoUrls } from '../../lib/photos';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font } from '../../theme';
 
 export default function SummaryScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [period, setPeriod] = useState(presetPeriod('month'));
+  const photos = usePhotoUrls();
   const { data, error, loading, reload } = useFocusQuery(async () => {
     const [totals, employees, months] = await Promise.all([reportTotals(period), reportByEmployee(period), reportByMonth(period)]);
     return { totals, employees, months };
@@ -48,7 +51,8 @@ export default function SummaryScreen() {
           {data.employees.map((e) => (
             <Card key={e.employee_id} style={styles.card}>
               <View style={styles.row}>
-                <Text style={styles.name}>{e.display_name}</Text>
+                <Avatar name={e.display_name} uri={photos[e.employee_id]} size={44} />
+                <Text style={[styles.name, styles.flex]}>{e.display_name}</Text>
                 <Text style={styles.sum}>{formatKop(e.total_kop)}</Text>
               </View>
               <View style={styles.barBg}>
@@ -90,6 +94,7 @@ const styles = StyleSheet.create({
   card: { gap: 6 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   name: { fontSize: font.body, fontWeight: '700' },
+  flex: { flex: 1 },
   sum: { fontSize: font.body, fontWeight: '800' },
   meta: { fontSize: font.small, color: colors.muted },
   barBg: { height: 10, backgroundColor: colors.bg, borderRadius: 5, overflow: 'hidden' },
