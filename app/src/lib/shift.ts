@@ -147,3 +147,7 @@ export function parseQuantity(raw: string, integerOnly: boolean): { value: numbe
 export function formatQuantity(q: number | string): string {
   return String(Number(q)).replace('.', ',');
 }
+
+/** Исправить отклонённую работу и отправить снова на оценку. */
+export const resubmitEntry = (entryId: number, customName: string, unitId: number, quantity: number, note: string) =>
+  rpc<void>('resubmit_entry', { p_entry: entryId, p_custom_name: customName, p_unit_id: unitId, p_quantity: quantity, p_note: note });

@@ -15,6 +15,7 @@ export default function MasterLayout() {
         <Stack.Screen name="shift/review" options={{ title: 'Проверка' }} />
         <Stack.Screen name="shift/done" options={{ title: 'Готово', headerBackVisible: false, gestureEnabled: false }} />
         <Stack.Screen name="history" options={{ title: 'Моя история' }} />
+        <Stack.Screen name="fix" options={{ title: 'Исправить работу' }} />
       </Stack>
     </DraftProvider>
   );

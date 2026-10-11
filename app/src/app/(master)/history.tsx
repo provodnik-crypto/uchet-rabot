@@ -1,3 +1,5 @@
+import { router } from 'expo-router';
+import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../components/BigButton';
 import { EntryCard } from '../../components/EntryCard';
@@ -38,19 +40,23 @@ export default function HistoryScreen() {
         <View key={s.id} style={styles.shift}>
           <Text style={styles.date}>{formatDate(s.rows[0].work_date)}</Text>
           {s.rows.map((r) => (
-            <EntryCard
-              key={r.entry_id}
-              name={r.name}
-              category={`${r.request_number ? `Заявка ${r.request_number}` : 'Без заявки'}${r.is_custom ? ' · вне прайса' : ''}`}
-              isCustom={false}
-              quantity={formatQuantity(r.quantity)}
-              unitCode={r.unit_code}
-              department={r.department_name}
-              performers={r.performer_names}
-              note={r.note}
-              status={{ label: statusLabel[r.status], tone: tone[r.status] }}
-              comment={r.status === 'rejected' ? r.reject_comment : null}
-            />
+            <Fragment key={r.entry_id}>
+              <EntryCard
+                name={r.name}
+                category={`${r.request_number ? `Заявка ${r.request_number}` : 'Без заявки'}${r.is_custom ? ' · вне прайса' : ''}`}
+                isCustom={false}
+                quantity={formatQuantity(r.quantity)}
+                unitCode={r.unit_code}
+                department={r.department_name}
+                performers={r.performer_names}
+                note={r.note}
+                status={{ label: statusLabel[r.status], tone: tone[r.status] }}
+                comment={r.status === 'rejected' ? r.reject_comment : null}
+              />
+              {r.status === 'rejected' && r.client_uuid ? (
+                <BigButton title="Исправить и отправить снова" onPress={() => router.push({ pathname: '/fix', params: { id: String(r.entry_id) } })} />
+              ) : null}
+            </Fragment>
           ))}
           {s.rows[0].can_edit ? <BigButton title="Изменить смену" variant="secondary" onPress={() => edit(s.rows)} /> : null}
         </View>
