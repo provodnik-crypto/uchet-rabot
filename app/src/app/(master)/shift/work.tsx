@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
-import { Chip } from '../../../components/Chip';
-import { Field } from '../../../components/Field';
+import { Icon } from '../../../components/Icon';
 import { Screen } from '../../../components/Screen';
+import { SearchBox } from '../../../components/SearchBox';
+import { Segmented } from '../../../components/Segmented';
 import { StateView } from '../../../components/StateView';
 import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
@@ -107,22 +108,17 @@ export default function WorkPickerScreen() {
             <Text style={styles.request}>
               Заявка: {draft?.currentRequest ?? 'без заявки'}
             </Text>
-            <Field label="Поиск работы" value={q} onChangeText={setQ} placeholder="Например, розетка" autoCorrect={false} />
+            <SearchBox label="Поиск работы" value={q} onChangeText={setQ} placeholder="Поиск работы, например розетка" autoCorrect={false} />
             {!searching ? (
-              <View style={styles.tabs}>
-                {(Object.keys(tabLabel) as Tab[]).map((t) => (
-                  <Chip
-                    key={t}
-                    label={tabLabel[t]}
-                    selected={tab === t}
-                    onPress={() => {
-                      setTab(t);
-                      setCategory(null);
-                      setSubcategory(undefined);
-                    }}
-                  />
-                ))}
-              </View>
+              <Segmented
+                options={(Object.keys(tabLabel) as Tab[]).map((t) => ({ value: t, label: tabLabel[t] }))}
+                value={tab}
+                onChange={(t) => {
+                  setTab(t);
+                  setCategory(null);
+                  setSubcategory(undefined);
+                }}
+              />
             ) : null}
             {!searching && tab === 'categories' && category ? (
               <Pressable onPress={back} style={styles.crumb}>
@@ -153,6 +149,7 @@ export default function WorkPickerScreen() {
             >
               <Text style={styles.groupName}>{r.label}</Text>
               <Text style={styles.count}>{r.count}</Text>
+              <Icon name="chevronRight" size={16} color={colors.muted} strokeWidth={2.4} />
             </Card>
           )
         }
@@ -167,18 +164,17 @@ export default function WorkPickerScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 10, paddingBottom: 24 },
-  header: { gap: 12, marginBottom: 4 },
-  request: { fontSize: font.small, color: colors.muted, fontWeight: '700' },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  crumb: { minHeight: 44, justifyContent: 'center' },
+  content: { padding: 16, paddingTop: 12, gap: 6, paddingBottom: 16 },
+  header: { gap: 8, marginBottom: 2 },
+  request: { fontSize: font.small, color: colors.secondary, fontWeight: '600' },
+  crumb: { minHeight: 40, justifyContent: 'center' },
   crumbText: { fontSize: font.body, fontWeight: '700' },
-  item: { gap: 4, minHeight: touch.min, justifyContent: 'center' },
-  name: { fontSize: font.body, fontWeight: '700' },
-  cat: { fontSize: font.small, color: colors.muted },
-  group: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: touch.min, gap: 8 },
+  item: { gap: 2, minHeight: touch.min, justifyContent: 'center', paddingVertical: 10 },
+  name: { fontSize: font.body, fontWeight: '600' },
+  cat: { fontSize: font.small, color: colors.secondary },
+  group: { flexDirection: 'row', alignItems: 'center', minHeight: touch.min, gap: 8, paddingVertical: 10 },
   groupName: { fontSize: font.body, fontWeight: '600', flex: 1 },
-  count: { fontSize: font.small, color: colors.muted, backgroundColor: colors.bg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.chip, overflow: 'hidden' },
-  empty: { color: colors.muted, fontSize: font.body, textAlign: 'center', marginTop: 24 },
-  bottom: { padding: 16, paddingTop: 8, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border },
+  count: { fontSize: font.small - 1, color: colors.secondary, backgroundColor: colors.bg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.chip, overflow: 'hidden' },
+  empty: { color: colors.secondary, fontSize: font.body, textAlign: 'center', marginTop: 24 },
+  bottom: { padding: 12, paddingHorizontal: 16, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border },
 });

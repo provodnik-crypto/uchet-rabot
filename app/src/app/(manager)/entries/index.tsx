@@ -1,15 +1,15 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../components/Avatar';
 import { Card } from '../../../components/Card';
 import { FilterSelect } from '../../../components/FilterSelect';
-import { Icon } from '../../../components/Icon';
+import { SearchBox } from '../../../components/SearchBox';
 import { PeriodPicker } from '../../../components/PeriodPicker';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
-import { listDepartments, type Department } from '../../../lib/departments';
+import { isWholeStore, listDepartments, type Department } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import {
   adminEntries,
@@ -23,7 +23,7 @@ import {
 import { formatKop } from '../../../lib/money';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, statusLabel } from '../../../lib/shift';
-import { colors, font, radius } from '../../../theme';
+import { colors, font } from '../../../theme';
 
 const STATUSES: EntryStatus[] = ['priced', 'pending', 'rejected'];
 const pill = StyleSheet.create({ priced: { backgroundColor: '#E0EDE9' }, pending: { backgroundColor: '#FFF3C4' }, rejected: { backgroundColor: '#F7DCD5' } });
@@ -116,11 +116,12 @@ export default function EntriesScreen() {
                 options={people.map((p) => ({ value: p.id, label: p.display_name, left: <Avatar name={p.display_name} icon={icons[p.id]} size={32} /> }))}
               />
               <FilterSelect
-                label="Отдел"
-                allLabel="Все отделы"
+                label="Магазин"
+                title="Отдел"
+                allLabel="Магазин — все отделы"
                 value={filters.departmentId}
                 onChange={(v) => set({ departmentId: v })}
-                options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                options={departments.filter((d) => !isWholeStore(d)).map((d) => ({ value: d.id, label: d.name }))}
               />
               <FilterSelect
                 label="Статус"
@@ -130,23 +131,13 @@ export default function EntriesScreen() {
                 options={STATUSES.map((s) => ({ value: s, label: statusLabel[s] }))}
               />
             </ScrollView>
-            <View style={styles.search}>
-              <Icon name="search" size={18} color={colors.secondary} />
-              <TextInput
-                value={filters.request}
-                onChangeText={(t) => set({ request: t })}
-                placeholder="Номер заявки, например 2283"
-                placeholderTextColor={colors.muted}
-                autoCapitalize="characters"
-                accessibilityLabel="Номер заявки"
-                style={styles.searchInput}
-              />
-              {filters.request ? (
-                <Pressable accessibilityRole="button" accessibilityLabel="Очистить" onPress={() => set({ request: '' })} hitSlop={10}>
-                  <Icon name="close" size={16} color={colors.secondary} />
-                </Pressable>
-              ) : null}
-            </View>
+            <SearchBox
+              label="Номер заявки"
+              value={filters.request}
+              onChangeText={(t) => set({ request: t })}
+              placeholder="Номер заявки, например 2283"
+              autoCapitalize="characters"
+            />
             {total != null ? <Text style={styles.count}>Найдено работ: {total}</Text> : null}
             {error ? <StateView loading={false} error={error} onRetry={() => load(0)} /> : null}
           </View>
@@ -192,8 +183,6 @@ const styles = StyleSheet.create({
   header: { gap: 8, marginBottom: 2 },
   filtersBox: { marginHorizontal: -16 },
   filters: { gap: 6, paddingHorizontal: 16, paddingVertical: 2 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 12, backgroundColor: colors.card, borderRadius: radius.control },
-  searchInput: { flex: 1, fontSize: font.small + 1, color: colors.text, paddingVertical: 0 },
   count: { color: colors.secondary, fontSize: font.small - 1, paddingHorizontal: 2 },
   card: { gap: 5, paddingVertical: 10 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },

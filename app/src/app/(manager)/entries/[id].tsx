@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { PhotoStrip } from '../../../components/PhotoStrip';
+import { SelectField } from '../../../components/SelectField';
 import { Screen } from '../../../components/Screen';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
@@ -88,12 +89,12 @@ export default function AdminEntryScreen() {
       <Card style={styles.card}>
         <Field label={`Объём, ${e.unit_code}`} value={qty} onChangeText={setQty} keyboardType={e.integer_only ? 'number-pad' : 'decimal-pad'} error={qty ? parsed.error : null} />
         {newTotal && newTotal !== e.total_kop ? <Text style={styles.total}>Новая сумма: {formatKop(newTotal)}</Text> : null}
-        <Text style={styles.label}>Отдел</Text>
-        <View style={styles.chips}>
-          {departments.map((d) => (
-            <Chip key={d.id} label={d.name} selected={d.id === departmentId} onPress={() => setDepartmentId(d.id)} />
-          ))}
-        </View>
+        <SelectField
+          label="Отдел"
+          value={departmentId}
+          onChange={setDepartmentId}
+          options={departments.filter((d) => d.is_active || d.id === departmentId).map((d) => ({ value: d.id, label: d.name }))}
+        />
         <Text style={styles.label}>Исполнители (сумма делится поровну)</Text>
         <View style={styles.chips}>
           {people
@@ -103,7 +104,7 @@ export default function AdminEntryScreen() {
                 key={p.id}
                 label={p.display_name}
                 selected={performers.includes(p.id)}
-                left={<Avatar name={p.display_name} icon={icons[p.id]} size={36} />}
+                left={<Avatar name={p.display_name} icon={icons[p.id]} size={28} />}
                 onPress={() => setPerformers((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
               />
             ))}

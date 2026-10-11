@@ -11,10 +11,10 @@ begin;
 select pg_temp.login_as('kolya');
 select public.submit_shift(jsonb_build_object('client_uuid', '22222222-2222-2222-2222-222222222222', 'work_date', public.app_today(),
   'entries', jsonb_build_array(
-    jsonb_build_object('department_id', 1, 'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1,
+    jsonb_build_object('department_id', (select id from public.departments where is_default), 'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1,
       'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000001', 1), pg_temp.ph('00000000-0000-0000-0000-000000000001', 2))),
-    jsonb_build_object('department_id', 1, 'custom_name', 'Сборка стеллажа', 'unit_id', 1, 'quantity', 1,
+    jsonb_build_object('department_id', (select id from public.departments where is_default), 'custom_name', 'Сборка стеллажа', 'unit_id', 1, 'quantity', 1,
       'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
 select pg_temp.assert((select count(*) from public.entry_photos) = 2, 'к работе прикреплены 2 фото');
 select pg_temp.assert(
@@ -23,10 +23,10 @@ select pg_temp.assert(
 -- повторная отправка той же смены (обрыв связи) — фото на месте, в корзину не попали
 select public.submit_shift(jsonb_build_object('client_uuid', '22222222-2222-2222-2222-222222222222', 'work_date', public.app_today(),
   'entries', jsonb_build_array(
-    jsonb_build_object('department_id', 1, 'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1,
+    jsonb_build_object('department_id', (select id from public.departments where is_default), 'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1,
       'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000001', 1), pg_temp.ph('00000000-0000-0000-0000-000000000001', 2))),
-    jsonb_build_object('department_id', 1, 'custom_name', 'Сборка стеллажа', 'unit_id', 1, 'quantity', 1,
+    jsonb_build_object('department_id', (select id from public.departments where is_default), 'custom_name', 'Сборка стеллажа', 'unit_id', 1, 'quantity', 1,
       'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
 select pg_temp.assert((select count(*) from public.entry_photos) = 2, 'после повторной отправки фото те же');
 reset role;
@@ -36,7 +36,7 @@ select pg_temp.assert(not exists (select 1 from public.photo_cleanup_batch()), '
 select pg_temp.login_as('kolya');
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
-    'entries', jsonb_build_array(jsonb_build_object('department_id', 1, 'custom_name', 'Чужое фото', 'unit_id', 1, 'quantity', 1,
+    'entries', jsonb_build_array(jsonb_build_object('department_id', (select id from public.departments where is_default), 'custom_name', 'Чужое фото', 'unit_id', 1, 'quantity', 1,
       'performer_ids', jsonb_build_array(pg_temp.emp('Николай')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000002', 9))))));
   raise exception 'ПРОВАЛ: прикреплено фото из чужой папки';
@@ -44,7 +44,7 @@ exception when insufficient_privilege then raise notice 'ok: фото из чу�
 end $$;
 do $$ begin
   perform public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
-    'entries', jsonb_build_array(jsonb_build_object('department_id', 1, 'custom_name', 'Четыре фото', 'unit_id', 1, 'quantity', 1,
+    'entries', jsonb_build_array(jsonb_build_object('department_id', (select id from public.departments where is_default), 'custom_name', 'Четыре фото', 'unit_id', 1, 'quantity', 1,
       'performer_ids', jsonb_build_array(pg_temp.emp('Николай')),
       'photos', jsonb_build_array(pg_temp.ph('00000000-0000-0000-0000-000000000001', 11), pg_temp.ph('00000000-0000-0000-0000-000000000001', 12),
                                   pg_temp.ph('00000000-0000-0000-0000-000000000001', 13), pg_temp.ph('00000000-0000-0000-0000-000000000001', 14))))));

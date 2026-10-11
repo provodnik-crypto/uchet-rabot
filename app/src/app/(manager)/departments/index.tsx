@@ -6,7 +6,7 @@ import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
-import { addDepartment, listDepartments } from '../../../lib/departments';
+import { addDepartment, isWholeStore, listDepartments } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
@@ -44,7 +44,11 @@ export default function DepartmentsScreen() {
             <Text style={[styles.name, !d.is_active && styles.off]}>{d.name}</Text>
             {d.is_default ? <Text style={styles.badge}>по умолчанию</Text> : null}
           </View>
-          {!d.is_active ? <Text style={styles.sub}>Выключен: мастера его не видят</Text> : null}
+          {isWholeStore(d) ? (
+            <Text style={styles.sub}>Весь магазин: для просмотра всех работ, мастер его не выбирает</Text>
+          ) : !d.is_active ? (
+            <Text style={styles.sub}>Выключен: мастера его не видят</Text>
+          ) : null}
         </Card>
       ))}
     </Screen>

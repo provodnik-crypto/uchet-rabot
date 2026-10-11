@@ -50,6 +50,7 @@ export default function ShiftListScreen() {
           <BigButton
             title={g.request ? `+ Работа по ${g.request}` : '+ Работа без заявки'}
             variant="secondary"
+            size="small"
             onPress={() => {
               setRequest(g.request);
               router.push('/shift/work');
@@ -57,7 +58,7 @@ export default function ShiftListScreen() {
           />
         </View>
       ))}
-      <BigButton title="+ Другая заявка" variant="secondary" onPress={() => router.push('/shift/request')} />
+      <BigButton title="+ Другая заявка" variant="secondary" size="small" onPress={() => router.push('/shift/request')} />
       <BigButton title="Проверить и отправить" size="big" disabled={!draft.entries.length} onPress={() => router.push('/shift/review')} />
     </Screen>
   );
@@ -65,7 +66,7 @@ export default function ShiftListScreen() {
 
 const styles = StyleSheet.create({
   date: { fontSize: font.body, fontWeight: '700' },
-  group: { gap: 10 },
-  request: { fontSize: font.small, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },
+  group: { gap: 6 },
+  request: { fontSize: font.small, fontWeight: '700', color: colors.secondary, marginTop: 6 },
   empty: { color: colors.muted, fontSize: font.body },
 });

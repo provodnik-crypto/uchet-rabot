@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { formatDate, parseDate } from '../lib/dates';
 import { periodLabel, presetPeriod, type Period, type PeriodPreset } from '../lib/manager';
-import { colors, font, radius, touch } from '../theme';
+import { colors, font } from '../theme';
 import { BigButton } from './BigButton';
 import { DateField } from './DateField';
+import { Segmented } from './Segmented';
 
 const PRESETS: PeriodPreset[] = ['month', 'prev', 'year', 'custom'];
 /** Короткие подписи, чтобы весь выбор помещался в одну строку. */
@@ -20,25 +21,14 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.segments} accessibilityRole="tablist">
-        {PRESETS.map((p) => (
-          <Pressable
-            key={p}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: preset === p }}
-            accessibilityLabel={periodLabel[p]}
-            onPress={() => {
-              if (p === 'custom') onChange('custom', period);
-              else onChange(p, presetPeriod(p));
-            }}
-            style={[styles.segment, preset === p && styles.segmentOn]}
-          >
-            <Text style={[styles.segmentText, preset === p && styles.segmentTextOn]} numberOfLines={1}>
-              {short[p]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <Segmented
+        options={PRESETS.map((p) => ({ value: p, label: short[p], a11y: periodLabel[p] }))}
+        value={preset}
+        onChange={(p) => {
+          if (p === 'custom') onChange('custom', period);
+          else onChange(p, presetPeriod(p));
+        }}
+      />
       {preset === 'custom' ? (
         <View style={styles.custom}>
           <View style={styles.row}>
@@ -74,11 +64,6 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
-  segments: { flexDirection: 'row', gap: 2, padding: 3, backgroundColor: colors.card, borderRadius: radius.control },
-  segment: { flex: 1, height: touch.small + 4, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
-  segmentOn: { backgroundColor: colors.brand },
-  segmentText: { fontSize: font.small },
-  segmentTextOn: { fontWeight: '700' },
   custom: { gap: 8 },
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
