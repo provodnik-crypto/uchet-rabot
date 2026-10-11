@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BigButton } from '../components/BigButton';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { isConfigured } from '../lib/supabase';
 import { colors, font } from '../theme';
@@ -12,6 +13,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <StatusBar style="dark" />
+        <UpdateBanner />
         <RootStack />
       </AuthProvider>
     </SafeAreaProvider>

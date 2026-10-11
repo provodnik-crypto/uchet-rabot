@@ -5,6 +5,7 @@ import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
 import { Tile } from '../../components/Tile';
+import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
@@ -73,6 +74,7 @@ export default function MasterHome() {
       <Tile title="Моя история" subtitle="Внесённые работы и их статусы" onPress={() => router.push('/history')} />
       <BigButton title="Выйти" variant="secondary" onPress={signOut} />
       <Text style={styles.role}>Вы вошли как мастер · {me?.login}</Text>
+      <Text style={styles.role}>{appVersionLabel()}</Text>
     </Screen>
   );
 }

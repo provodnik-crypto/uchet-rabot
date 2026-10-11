@@ -4,6 +4,7 @@ import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Screen } from '../../components/Screen';
 import { Tile } from '../../components/Tile';
+import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { managerDashboard, monthName } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
@@ -34,6 +35,7 @@ export default function ManagerHome() {
       <Tile title="Отделы" subtitle="Список для выбора мастером" onPress={() => router.push('/departments')} />
       <BigButton title="Выйти" variant="secondary" onPress={signOut} />
       <Text style={styles.role}>Вы вошли как руководитель · {me?.login}</Text>
+      <Text style={styles.role}>{appVersionLabel()}</Text>
     </Screen>
   );
 }
