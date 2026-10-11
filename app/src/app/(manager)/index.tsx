@@ -17,7 +17,9 @@ export default function ManagerHome() {
       <Tile title="Выгрузить в Excel" soon />
       <Text style={styles.section}>Справочники</Text>
       <Tile title="Сотрудники" subtitle="Учётные записи и пароли" onPress={() => router.push('/employees')} />
-      <Tile title="Отделы, заявки, прайс" soon />
+      <Tile title="Прайс" subtitle="Поиск, цены, включение позиций" onPress={() => router.push('/price')} />
+      <Tile title="Отделы" subtitle="Список для выбора мастером" onPress={() => router.push('/departments')} />
+      <Tile title="Заявки" soon />
       <BigButton title="Выйти" variant="secondary" onPress={signOut} />
       <Text style={styles.role}>Вы вошли как руководитель · {me?.login}</Text>
     </Screen>

@@ -15,6 +15,8 @@ psql_cmd=(psql -h "$work" -p 54329 -U postgres -d postgres -v ON_ERROR_STOP=1 -q
 
 "${psql_cmd[@]}" -f "$here/supabase_stub.sql"
 for f in "$root"/migrations/*.sql; do "${psql_cmd[@]}" -f "$f"; done
+# Прайс 2026 загружается тем же скриптом, что и в настоящую базу.
+python3 "$root/scripts/price_2026_seed.py" 2>/dev/null | "${psql_cmd[@]}"
 for t in "$here"/[0-9]*.sql; do
   echo "== $(basename "$t")"
   cat "$here/helpers.sql" "$t" | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
