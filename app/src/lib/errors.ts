@@ -5,6 +5,11 @@ export function humanError(e: unknown): string {
   if (/network request failed|failed to fetch|fetch failed|load failed|timeout/i.test(msg))
     return 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';
   if (/user already registered|already been registered|duplicate key.*login/i.test(msg)) return 'Такой логин уже занят';
+  if (/departments_name_uq/i.test(msg)) return 'Такой отдел уже существует';
+  if (/employees_display_name_active_uq/i.test(msg)) return 'Сотрудник с таким именем уже есть';
+  if (/duplicate key/i.test(msg)) return 'Такая запись уже существует';
   if (/password should be at least/i.test(msg)) return 'Пароль слишком короткий: нужно не меньше 6 символов';
+  // Остальные сообщения сервера бывают на английском — не показываем их как есть.
+  if (/^[\x00-\x7F]*$/.test(msg)) return 'Не удалось выполнить действие. Попробуйте ещё раз.';
   return msg || 'Неизвестная ошибка';
 }
