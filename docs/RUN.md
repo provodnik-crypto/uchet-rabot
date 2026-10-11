@@ -32,7 +32,7 @@
 создаст первого руководителя и опубликует приложение через EAS Update.
 
 ## Этап 1. Что проверить на телефоне
-**Android — установочный файл (APK):** https://expo.dev/artifacts/eas/nucxJl4P0tjfjT93Lx2VAdyaOs_TU_AmP46PX9bXK0Q.apk (QR-код: `docs/apk-qr.png`).
+**Android — установочный файл (APK):** https://expo.dev/artifacts/eas/p350l267n5MyOWIOX6ap4cSJ3--6T7kXVodgQalobrU.apk (QR-код: `docs/apk-qr.png`).
 В Expo Go обновление на телефоне заказчика не загрузилось («Failed to download remote update»),
 поэтому проверяем через APK. Новые версии приходят в APK сами через EAS Update (ветка `preview`).
 
