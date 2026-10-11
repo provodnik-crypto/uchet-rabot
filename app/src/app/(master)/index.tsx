@@ -31,7 +31,7 @@ export default function MasterHome() {
   return (
     <Screen>
       <View style={styles.helloRow}>
-        {me ? <Avatar name={me.displayName} uri={photos[me.id]} size={64} /> : null}
+        {me ? <Avatar name={me.displayName} photo={photos[me.id]} size={64} /> : null}
         <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>
       </View>
 

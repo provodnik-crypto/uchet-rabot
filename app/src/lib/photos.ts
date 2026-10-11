@@ -1,44 +1,19 @@
-import { useEffect, useState } from 'react';
-import { supabase } from './supabase';
+import type { ImageSourcePropType } from 'react-native';
 
 /**
- * Фото сотрудников — маленькие картинки прямо в записи сотрудника (data:image/jpeg;base64).
- * Приходят вместе с данными, без отдельной загрузки из хранилища. Кешируем на 10 минут.
+ * Фото сотрудников встроены в приложение и не скачиваются с сервера.
+ * Раньше они приходили одним ответом ~23 КБ; на части российских сетей такие ответы
+ * от серверов за Cloudflare «замирают» и тормозят остальные запросы (рейтинг, суммы).
+ * Новое фото: положить файл в assets/employees/<id сотрудника>.jpg и добавить строку ниже.
  */
-const LIFETIME_MS = 10 * 60 * 1000;
-let cache: { at: number; urls: Record<number, string> } | null = null;
-let pending: Promise<Record<number, string>> | null = null;
+const PHOTOS: Record<number, ImageSourcePropType> = {
+  1: require('../../assets/employees/1.jpg'),
+  2: require('../../assets/employees/2.jpg'),
+  3: require('../../assets/employees/3.jpg'),
+  4: require('../../assets/employees/4.jpg'),
+};
 
-async function loadPhotos(): Promise<Record<number, string>> {
-  const { data, error } = await supabase.from('employees').select('id, photo_thumb').not('photo_thumb', 'is', null);
-  if (error) throw error;
-  return Object.fromEntries((data ?? []).map((e) => [e.id, e.photo_thumb as string]));
-}
-
-export function getPhotoUrls(): Promise<Record<number, string>> {
-  if (cache && Date.now() - cache.at < LIFETIME_MS) return Promise.resolve(cache.urls);
-  pending ??= loadPhotos()
-    .then((urls) => {
-      cache = { at: Date.now(), urls };
-      return urls;
-    })
-    .finally(() => {
-      pending = null;
-    });
-  return pending;
-}
-
-/** id сотрудника → картинка. Пока грузится — пустой объект (видны инициалы). */
-export function usePhotoUrls(): Record<number, string> {
-  const [urls, setUrls] = useState<Record<number, string>>(cache?.urls ?? {});
-  useEffect(() => {
-    let alive = true;
-    getPhotoUrls()
-      .then((u) => alive && setUrls(u))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
-  return urls;
+/** id сотрудника → фото. Без фото — инициалы. */
+export function usePhotoUrls(): Record<number, ImageSourcePropType> {
+  return PHOTOS;
 }

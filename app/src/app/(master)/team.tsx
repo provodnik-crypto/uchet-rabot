@@ -49,7 +49,7 @@ export default function TeamScreen() {
               <Card key={r.employee_id} style={[styles.card, mine && styles.mine]}>
                 <View style={styles.row}>
                   <Text style={styles.place}>{r.total_kop > 0 ? (MEDALS[i] ?? `${i + 1}`) : '–'}</Text>
-                  <Avatar name={r.display_name} uri={photos[r.employee_id]} size={44} />
+                  <Avatar name={r.display_name} photo={photos[r.employee_id]} size={44} />
                   <View style={styles.flex}>
                     <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                       {r.display_name}
@@ -82,7 +82,7 @@ export default function TeamScreen() {
                     <Text style={styles.month}>{monthName(m)}</Text>
                     {rows.map((x) => (
                       <View key={x.employee_id} style={styles.monthRow}>
-                        <Avatar name={x.display_name} uri={photos[x.employee_id]} size={28} />
+                        <Avatar name={x.display_name} photo={photos[x.employee_id]} size={28} />
                         <View style={styles.flex}>
                           <View style={styles.row}>
                             <Text style={[styles.small, styles.flex, x.employee_id === me?.id && styles.bold]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>

@@ -96,7 +96,7 @@ export default function AdminEntryScreen() {
                 key={p.id}
                 label={p.display_name}
                 selected={performers.includes(p.id)}
-                left={<Avatar name={p.display_name} uri={photos[p.id]} size={36} />}
+                left={<Avatar name={p.display_name} photo={photos[p.id]} size={36} />}
                 onPress={() => setPerformers((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
               />
             ))}

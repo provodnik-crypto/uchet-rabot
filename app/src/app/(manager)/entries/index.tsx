@@ -114,7 +114,7 @@ export default function EntriesScreen() {
                   label={p.display_name}
                   selected={filters.employeeId === p.id}
                   onPress={() => set({ employeeId: p.id })}
-                  left={<Avatar name={p.display_name} uri={photos[p.id]} size={36} />}
+                  left={<Avatar name={p.display_name} photo={photos[p.id]} size={36} />}
                 />
               ))}
             </View>

@@ -51,7 +51,7 @@ export default function SummaryScreen() {
           {data.employees.map((e) => (
             <Card key={e.employee_id} style={styles.card}>
               <View style={styles.row}>
-                <Avatar name={e.display_name} uri={photos[e.employee_id]} size={44} />
+                <Avatar name={e.display_name} photo={photos[e.employee_id]} size={44} />
                 <View style={styles.flex}>
                   <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                     {e.display_name}

@@ -65,7 +65,7 @@ export default function EmployeeScreen() {
     <Screen>
       <Stack.Screen options={{ title: emp.display_name }} />
       <Card style={styles.card}>
-        <Avatar name={emp.display_name} uri={photos[emp.id]} size={96} />
+        <Avatar name={emp.display_name} photo={photos[emp.id]} size={96} />
         <Text style={styles.meta}>
           {roleLabel[emp.role]} · {emp.is_active ? 'активен' : 'отключён'}
         </Text>

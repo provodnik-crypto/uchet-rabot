@@ -20,7 +20,7 @@ export default function EmployeesScreen() {
       {data?.map((e) => (
         <Card key={e.id} onPress={() => router.push({ pathname: '/employees/[id]', params: { id: String(e.id) } })}>
           <View style={styles.person}>
-            <Avatar name={e.display_name} uri={photos[e.id]} size={52} />
+            <Avatar name={e.display_name} photo={photos[e.id]} size={52} />
             <View style={styles.flex}>
               <Text style={[styles.name, !e.is_active && styles.off]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                 {e.display_name}

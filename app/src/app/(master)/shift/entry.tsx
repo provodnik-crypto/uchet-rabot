@@ -271,7 +271,7 @@ export default function EntryScreen() {
               label={m.id === me?.id ? `${m.display_name} (я)` : m.display_name}
               selected={performerIds.includes(m.id)}
               onPress={() => togglePerformer(m.id)}
-              left={<Avatar name={m.display_name} uri={photos[m.id]} size={36} />}
+              left={<Avatar name={m.display_name} photo={photos[m.id]} size={36} />}
             />
           ))}
         </View>
