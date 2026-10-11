@@ -22,10 +22,10 @@ export default function EmployeesScreen() {
           <View style={styles.person}>
             <Avatar name={e.display_name} uri={photos[e.id]} size={52} />
             <View style={styles.flex}>
-              <View style={styles.row}>
-                <Text style={[styles.name, !e.is_active && styles.off]}>{e.display_name}</Text>
-                <Text style={styles.role}>{roleLabel[e.role]}</Text>
-              </View>
+              <Text style={[styles.name, !e.is_active && styles.off]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {e.display_name}
+              </Text>
+              <Text style={styles.role}>{roleLabel[e.role]}</Text>
               <Text style={styles.sub}>
             {!e.is_active
               ? 'Отключён'
@@ -46,7 +46,6 @@ export default function EmployeesScreen() {
 const styles = StyleSheet.create({
   person: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flex: { flex: 1 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   name: { fontSize: font.body, fontWeight: '700' },
   off: { color: colors.muted, textDecorationLine: 'line-through' },
   role: { fontSize: font.small, color: colors.muted },

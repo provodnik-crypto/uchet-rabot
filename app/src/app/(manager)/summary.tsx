@@ -52,8 +52,14 @@ export default function SummaryScreen() {
             <Card key={e.employee_id} style={styles.card}>
               <View style={styles.row}>
                 <Avatar name={e.display_name} uri={photos[e.employee_id]} size={44} />
-                <Text style={[styles.name, styles.flex]}>{e.display_name}</Text>
-                <Text style={styles.sum}>{formatKop(e.total_kop)}</Text>
+                <View style={styles.flex}>
+                  <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                    {e.display_name}
+                  </Text>
+                  <Text style={styles.empSum} numberOfLines={1}>
+                    {formatKop(e.total_kop)}
+                  </Text>
+                </View>
               </View>
               <View style={styles.barBg}>
                 <View style={[styles.bar, { width: `${(e.total_kop / maxEmp) * 100}%` }, !e.in_output_chart && styles.barGrey]} />
@@ -96,6 +102,7 @@ const styles = StyleSheet.create({
   name: { fontSize: font.body, fontWeight: '700' },
   flex: { flex: 1 },
   sum: { fontSize: font.body, fontWeight: '800' },
+  empSum: { fontSize: font.title, fontWeight: '800', marginTop: 2 },
   meta: { fontSize: font.small, color: colors.muted },
   barBg: { height: 10, backgroundColor: colors.bg, borderRadius: 5, overflow: 'hidden' },
   bar: { height: 10, backgroundColor: colors.brand, borderRadius: 5 },

@@ -50,11 +50,15 @@ export default function TeamScreen() {
                 <View style={styles.row}>
                   <Text style={styles.place}>{r.total_kop > 0 ? (MEDALS[i] ?? `${i + 1}`) : '–'}</Text>
                   <Avatar name={r.display_name} uri={photos[r.employee_id]} size={44} />
-                  <Text style={[styles.name, styles.flex]}>
-                    {r.display_name}
-                    {mine ? ' (я)' : ''}
-                  </Text>
-                  <Text style={styles.sum}>{formatKop(r.total_kop)}</Text>
+                  <View style={styles.flex}>
+                    <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                      {r.display_name}
+                      {mine ? ' (я)' : ''}
+                    </Text>
+                    <Text style={styles.sum} numberOfLines={1}>
+                      {formatKop(r.total_kop)}
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.barBg}>
                   <View style={[styles.bar, { width: `${(r.total_kop / max) * 100}%` }]} />
@@ -81,8 +85,12 @@ export default function TeamScreen() {
                         <Avatar name={x.display_name} uri={photos[x.employee_id]} size={28} />
                         <View style={styles.flex}>
                           <View style={styles.row}>
-                            <Text style={[styles.small, x.employee_id === me?.id && styles.bold]}>{x.display_name}</Text>
-                            <Text style={[styles.small, styles.bold]}>{formatKop(x.total_kop)}</Text>
+                            <Text style={[styles.small, styles.flex, x.employee_id === me?.id && styles.bold]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                              {x.display_name}
+                            </Text>
+                            <Text style={[styles.small, styles.bold]} numberOfLines={1}>
+                              {formatKop(x.total_kop)}
+                            </Text>
                           </View>
                           <View style={styles.barBgThin}>
                             <View style={[styles.bar, { width: `${(x.total_kop / top) * 100}%` }]} />
@@ -106,10 +114,10 @@ const styles = StyleSheet.create({
   card: { gap: 8 },
   mine: { borderWidth: 2, borderColor: colors.brand },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  place: { fontSize: font.title, width: 30, textAlign: 'center', fontWeight: '800' },
+  place: { fontSize: font.title, width: 28, textAlign: 'center', fontWeight: '800' },
   flex: { flex: 1 },
   name: { fontSize: font.body, fontWeight: '700' },
-  sum: { fontSize: font.body, fontWeight: '800' },
+  sum: { fontSize: font.title, fontWeight: '800', marginTop: 2 },
   meta: { fontSize: font.small, color: colors.muted },
   barBg: { height: 10, backgroundColor: colors.bg, borderRadius: 5, overflow: 'hidden' },
   barBgThin: { height: 6, backgroundColor: colors.bg, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
