@@ -151,3 +151,12 @@ export function formatQuantity(q: number | string): string {
 /** Исправить отклонённую работу и отправить снова на оценку. */
 export const resubmitEntry = (entryId: number, customName: string, unitId: number, quantity: number, note: string) =>
   rpc<void>('resubmit_entry', { p_entry: entryId, p_custom_name: customName, p_unit_id: unitId, p_quantity: quantity, p_note: note });
+
+// ---------- Итоги для мастера (без цен отдельных работ) ----------
+export type MyMonthSummary = { total_kop: number; requests: number; entries: number; pending: number };
+export type TeamRow = { employee_id: number; display_name: string; total_kop: number; entries: number; requests: number };
+export type TeamMonthRow = { month: string; employee_id: number; display_name: string; total_kop: number };
+
+export const myMonthSummary = async () => (await rpc<MyMonthSummary[]>('my_month_summary'))[0];
+export const teamRating = (from: string, to: string) => rpc<TeamRow[]>('team_rating', { p_from: from, p_to: to });
+export const teamByMonth = (from: string, to: string) => rpc<TeamMonthRow[]>('team_by_month', { p_from: from, p_to: to });
