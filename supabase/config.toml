@@ -14,3 +14,7 @@ verify_jwt = true
 
 [functions.excel-report]
 verify_jwt = true
+
+[functions.photo-cleanup]
+# вызывает расписание pg_cron со своим паролем (CRON_SECRET), а не пользователь
+verify_jwt = false

@@ -40,6 +40,7 @@ export default function ShiftListScreen() {
               department={e.departmentName}
               performers={e.performerNames.join(', ')}
               note={e.note}
+              photos={e.photos?.length}
               onPress={() => router.push({ pathname: '/shift/entry', params: { key: e.key } })}
               onRemove={async () => {
                 if (await confirm('Удалить работу?', e.name, 'Удалить')) removeEntry(e.key);

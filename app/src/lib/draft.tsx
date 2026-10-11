@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from './auth';
 import type { MyEntry } from './shift';
+import { remoteToDraft, type DraftPhoto, type RemotePhoto } from './workPhotos';
 import { uuid } from './today';
 
 /** Работа в черновике смены. Хранится на телефоне до успешной отправки. */
@@ -21,6 +22,8 @@ export type DraftEntry = {
   note: string;
   performerIds: number[];
   performerNames: string[];
+  /** Фото работы (до 3). Загружаются при отправке смены. */
+  photos?: DraftPhoto[];
 };
 
 export type Draft = {
@@ -37,7 +40,7 @@ type DraftState = {
   ready: boolean;
   draft: Draft | null;
   start: (workDate: string) => void;
-  startEdit: (entries: MyEntry[]) => void;
+  startEdit: (entries: MyEntry[], photos?: Record<number, RemotePhoto[]>) => void;
   setRequest: (request: string | null) => void;
   setWorkDate: (workDate: string) => void;
   upsertEntry: (entry: DraftEntry) => void;
@@ -87,7 +90,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setDraft({ clientUuid: uuid(), workDate, editing: false, entries: [] });
   }, []);
 
-  const startEdit = useCallback((rows: MyEntry[]) => {
+  const startEdit = useCallback((rows: MyEntry[], photos: Record<number, RemotePhoto[]> = {}) => {
     const first = rows[0];
     if (!first?.client_uuid) return;
     setDraft({
@@ -113,6 +116,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
           note: r.note ?? '',
           performerIds: r.performer_ids,
           performerNames: r.performer_names.split(', '),
+          photos: remoteToDraft(photos[r.entry_id]),
         })),
     });
   }, []);

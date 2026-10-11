@@ -10,12 +10,14 @@ import { groupByRequest, useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import { parseQuantity, submitShift, type SubmitEntry } from '../../../lib/shift';
 import { storeToday, storeYesterday } from '../../../lib/today';
+import { toPayload, uploadPhotos, type DraftPhoto } from '../../../lib/workPhotos';
 import { colors, font } from '../../../theme';
 
 export default function ReviewScreen() {
-  const { draft, setWorkDate, clear } = useDraft();
+  const { draft, setWorkDate, clear, upsertEntry } = useDraft();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
 
   if (!draft) {
     return (
@@ -34,7 +36,25 @@ export default function ReviewScreen() {
     setSending(true);
     setError(null);
     try {
-      // Порядок работ — как на экране: по заявкам.
+      // 1. Фото: загружаем недостающие; путь каждого загруженного сразу сохраняем в черновик,
+      //    поэтому при обрыве связи «Повторить» догрузит только оставшиеся.
+      const uploaded = new Map<string, DraftPhoto>();
+      const all = draft.entries.flatMap((e) => (e.photos ?? []).map((p) => ({ entry: e, photo: p })));
+      if (all.some(({ photo }) => !photo.path)) {
+        await uploadPhotos(
+          all.map((x) => x.photo),
+          (p) => {
+            uploaded.set(p.key, p);
+            const owner = all.find((x) => x.photo.key === p.key)!.entry;
+            upsertEntry({ ...owner, photos: (owner.photos ?? []).map((x) => uploaded.get(x.key) ?? x) });
+          },
+          (done, total) => setProgress(`Загружаем фото: ${done} из ${total}`),
+        );
+      }
+      setProgress('Отправляем смену…');
+      const withPhotos = (e: (typeof draft.entries)[number]) => (e.photos ?? []).map((p) => uploaded.get(p.key) ?? p);
+
+      // 2. Смена. Порядок работ — как на экране: по заявкам.
       const entries: SubmitEntry[] = groups.flatMap((g) =>
         g.entries.map((e) => ({
           request_number: e.requestNumber,
@@ -43,6 +63,7 @@ export default function ReviewScreen() {
           quantity: parseQuantity(e.quantity, e.integerOnly).value ?? Number(e.quantity.replace(',', '.')),
           note: e.note || null,
           performer_ids: e.performerIds,
+          photos: toPayload(withPhotos(e)),
         })),
       );
       const res = await submitShift({ client_uuid: draft.clientUuid, work_date: draft.workDate, entries });
@@ -54,6 +75,7 @@ export default function ReviewScreen() {
       setError(humanError(e));
     } finally {
       setSending(false);
+      setProgress(null);
     }
   }
 
@@ -82,6 +104,7 @@ export default function ReviewScreen() {
               <Text style={styles.meta}>
                 {e.departmentName} · {e.performerNames.join(', ')}
                 {e.note ? ` · ${e.note}` : ''}
+                {e.photos?.length ? ` · 📷 ${e.photos.length}` : ''}
               </Text>
             </View>
           ))}
@@ -92,6 +115,7 @@ export default function ReviewScreen() {
         Работ: {draft.entries.length}
         {pending ? ` · вне прайса (на оценку руководителю): ${pending}` : ''}
       </Text>
+      {progress ? <Text style={styles.progress}>{progress}</Text> : null}
       {error ? <Text style={styles.error}>Не отправлено: {error}</Text> : null}
       <BigButton title={error ? 'Повторить' : 'Отправить'} size="big" loading={sending} onPress={send} />
       <BigButton title="Вернуться к списку" variant="secondary" disabled={sending} onPress={() => router.back()} />
@@ -111,4 +135,5 @@ const styles = StyleSheet.create({
   meta: { fontSize: font.small, color: colors.muted },
   summary: { fontSize: font.body, fontWeight: '600', textAlign: 'center' },
   error: { color: colors.danger, fontSize: font.body },
+  progress: { fontSize: font.body, fontWeight: '700', textAlign: 'center' },
 });

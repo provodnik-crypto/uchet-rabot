@@ -6,6 +6,7 @@ import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
+import { PhotoStrip } from '../../../components/PhotoStrip';
 import { Screen } from '../../../components/Screen';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
@@ -16,6 +17,7 @@ import { formatKop } from '../../../lib/money';
 import { usePhotoUrls } from '../../../lib/photos';
 import { formatQuantity, parseQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
+import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 
 export default function AdminEntryScreen() {
   const { data } = useLocalSearchParams<{ id: string; data: string }>();
@@ -28,12 +30,16 @@ export default function AdminEntryScreen() {
   const [performers, setPerformers] = useState<number[]>(e.performer_ids ?? []);
   const [note, setNote] = useState(e.note ?? '');
   const [busy, setBusy] = useState<string | null>(null);
+  const [workPhotos, setWorkPhotos] = useState<RemotePhoto[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     listPerformers().then(setPeople).catch(() => {});
     listDepartments().then(setDepartments).catch(() => {});
-  }, []);
+    fetchEntryPhotos([e.entry_id])
+      .then((m) => setWorkPhotos(m[e.entry_id] ?? []))
+      .catch(() => {});
+  }, [e.entry_id]);
 
   const parsed = parseQuantity(qty, e.integer_only);
   const newTotal = parsed.value && e.unit_price_kop ? Math.max(1, Math.round(parsed.value * e.unit_price_kop)) : null;
@@ -77,6 +83,7 @@ export default function AdminEntryScreen() {
           Цена за {e.unit_code}: {formatKop(e.unit_price_kop)} (не меняется при правке) · сумма {formatKop(e.total_kop)}
         </Text>
         {e.reject_comment ? <Text style={styles.err}>Комментарий: {e.reject_comment}</Text> : null}
+        {workPhotos.length ? <PhotoStrip photos={workPhotos} /> : null}
       </Card>
       <Card style={styles.card}>
         <Field label={`Объём, ${e.unit_code}`} value={qty} onChangeText={setQty} keyboardType={e.integer_only ? 'number-pad' : 'decimal-pad'} error={qty ? parsed.error : null} />

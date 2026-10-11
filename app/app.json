@@ -28,7 +28,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Чтобы приложить фото выполненной работы из галереи.",
+          "cameraPermission": "Чтобы сфотографировать выполненную работу. Фото увидят только руководитель и исполнители.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "owner": "provodnik-cryptos-team",
     "updates": {

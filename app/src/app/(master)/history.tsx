@@ -3,6 +3,7 @@ import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../components/BigButton';
 import { EntryCard } from '../../components/EntryCard';
+import { PhotoBadge } from '../../components/PhotoStrip';
 import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
 import { confirm } from '../../lib/confirm';
@@ -11,16 +12,21 @@ import { useDraft } from '../../lib/draft';
 import { formatQuantity, myEntries, statusLabel, type MyEntry } from '../../lib/shift';
 import { goToShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
+import { fetchEntryPhotos, type RemotePhoto } from '../../lib/workPhotos';
 import { colors, font } from '../../theme';
 
 const tone = { priced: 'ok', pending: 'wait', rejected: 'bad' } as const;
 
 export default function HistoryScreen() {
-  const { data, error, loading, reload } = useFocusQuery(() => myEntries(60));
+  const { data, error, loading, reload } = useFocusQuery(async () => {
+    const rows = await myEntries(60);
+    const photos = await fetchEntryPhotos(rows.map((r) => r.entry_id)).catch((): Record<number, RemotePhoto[]> => ({}));
+    return { rows, photos };
+  });
   const { draft, startEdit } = useDraft();
 
   const shifts: { id: number; rows: MyEntry[] }[] = [];
-  for (const r of data ?? []) {
+  for (const r of data?.rows ?? []) {
     const s = shifts.find((x) => x.id === r.shift_id);
     if (s) s.rows.push(r);
     else shifts.push({ id: r.shift_id, rows: [r] });
@@ -28,14 +34,14 @@ export default function HistoryScreen() {
 
   async function edit(rows: MyEntry[]) {
     if (draft?.entries.length && !(await confirm('Заменить черновик?', 'Неотправленный черновик будет удалён.', 'Заменить'))) return;
-    startEdit(rows);
+    startEdit(rows, data?.photos);
     goToShiftList();
   }
 
   return (
     <Screen>
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
-      {data && !data.length ? <Text style={styles.empty}>За последние 60 дней работ нет.</Text> : null}
+      {data && !data.rows.length ? <Text style={styles.empty}>За последние 60 дней работ нет.</Text> : null}
       {shifts.map((s) => (
         <View key={s.id} style={styles.shift}>
           <Text style={styles.date}>{formatDate(s.rows[0].work_date)}</Text>
@@ -52,6 +58,7 @@ export default function HistoryScreen() {
                 note={r.note}
                 status={{ label: statusLabel[r.status], tone: tone[r.status] }}
                 comment={r.status === 'rejected' ? r.reject_comment : null}
+                extra={<PhotoBadge photos={data?.photos[r.entry_id]} />}
               />
               {r.status === 'rejected' && r.client_uuid ? (
                 <BigButton title="Исправить и отправить снова" onPress={() => router.push({ pathname: '/fix', params: { id: String(r.entry_id) } })} />

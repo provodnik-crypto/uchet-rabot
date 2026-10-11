@@ -5,25 +5,29 @@ import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Chip } from '../../components/Chip';
 import { Field } from '../../components/Field';
+import { PhotoPicker } from '../../components/PhotoPicker';
 import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
 import { humanError } from '../../lib/errors';
 import { listUnits, type Unit } from '../../lib/price';
 import { formatQuantity, myEntries, parseQuantity, resubmitEntry } from '../../lib/shift';
 import { useFocusQuery } from '../../lib/useQuery';
+import { fetchEntryPhotos, remoteToDraft, toPayload, uploadPhotos, type DraftPhoto, type RemotePhoto } from '../../lib/workPhotos';
 import { colors, font } from '../../theme';
 
 export default function FixEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const entryId = Number(id);
   const { data, error, loading, reload } = useFocusQuery(async () => {
-    const [rows, units] = await Promise.all([myEntries(60), listUnits()]);
-    return { entry: rows.find((r) => r.entry_id === entryId) ?? null, units };
+    const [rows, units, photos] = await Promise.all([myEntries(60), listUnits(), fetchEntryPhotos([entryId]).catch((): Record<number, RemotePhoto[]> => ({}))]);
+    return { entry: rows.find((r) => r.entry_id === entryId) ?? null, units, photos: remoteToDraft(photos[entryId]) };
   });
   const [name, setName] = useState('');
   const [unitId, setUnitId] = useState<number | null>(null);
   const [qty, setQty] = useState('');
   const [note, setNote] = useState('');
+  const [workPhotos, setWorkPhotos] = useState<DraftPhoto[]>([]);
+  const [progress, setProgress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -33,6 +37,7 @@ export default function FixEntryScreen() {
     setUnitId(data.entry.unit_id);
     setQty(formatQuantity(data.entry.quantity));
     setNote(data.entry.note ?? '');
+    setWorkPhotos(data.photos);
   }, [data]);
 
   if (!data) {
@@ -61,12 +66,21 @@ export default function FixEntryScreen() {
     setBusy(true);
     setMessage(null);
     try {
-      await resubmitEntry(entry!.entry_id, name.trim().replace(/\s+/g, ' '), unit.id, p.value!, note);
+      const ready = new Map<string, DraftPhoto>();
+      await uploadPhotos(
+        workPhotos,
+        (ph) => ready.set(ph.key, ph),
+        (done, total) => setProgress(total ? `Загружаем фото: ${done} из ${total}` : null),
+      );
+      const finalPhotos = workPhotos.map((ph) => ready.get(ph.key) ?? ph);
+      setWorkPhotos(finalPhotos);
+      await resubmitEntry(entry!.entry_id, name.trim().replace(/\s+/g, ' '), unit.id, p.value!, note, toPayload(finalPhotos));
       router.back();
     } catch (e) {
       setMessage(humanError(e));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -86,7 +100,10 @@ export default function FixEntryScreen() {
         </View>
         <Field label={unit ? `Объём, ${unit.code}` : 'Объём'} value={qty} onChangeText={setQty} keyboardType="decimal-pad" />
         <Field label="Примечание" value={note} onChangeText={setNote} multiline maxLength={500} />
+        <Text style={styles.label}>Фото работы</Text>
+        <PhotoPicker photos={workPhotos} onChange={setWorkPhotos} hint />
       </Card>
+      {progress ? <Text style={styles.label}>{progress}</Text> : null}
       {message ? <Text style={styles.err}>{message}</Text> : null}
       <BigButton title="Отправить снова" size="big" loading={busy} onPress={send} />
     </Screen>

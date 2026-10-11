@@ -5,6 +5,7 @@ import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
+import { PhotoStrip } from '../../../components/PhotoStrip';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
@@ -13,6 +14,7 @@ import { pendingQueue, pricePendingEntry, rejectEntry, replaceEntryWithItem } fr
 import { formatKop, parseRubToKop } from '../../../lib/money';
 import { formatQuantity, parseQuantity, searchWork, type WorkItem } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
+import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 import { colors, font } from '../../../theme';
 
 type Mode = 'price' | 'replace' | 'reject';
@@ -21,6 +23,7 @@ export default function PendingEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const entryId = Number(id);
   const { data, error, loading, reload } = useFocusQuery(async () => (await pendingQueue()).find((r) => r.entry_id === entryId) ?? null);
+  const { data: photos } = useFocusQuery(async () => (await fetchEntryPhotos([entryId]).catch((): Record<number, RemotePhoto[]> => ({})))[entryId] ?? []);
 
   const [mode, setMode] = useState<Mode>('price');
   const [price, setPrice] = useState('');
@@ -91,6 +94,7 @@ export default function PendingEntryScreen() {
           Исполнители: {data.performer_names} · внёс {data.author_name}
         </Text>
         {data.note ? <Text style={styles.meta}>Примечание: {data.note}</Text> : null}
+        {photos?.length ? <PhotoStrip photos={photos} /> : <Text style={styles.meta}>Фото не приложены</Text>}
       </Card>
 
       <View style={styles.chips}>

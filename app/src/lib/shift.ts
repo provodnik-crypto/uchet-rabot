@@ -67,6 +67,7 @@ export type SubmitEntry = {
   quantity: number;
   note: string | null;
   performer_ids: number[];
+  photos?: { path?: string; thumb_path?: string; width: number | null; height: number | null; size_bytes: number | null }[];
 };
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -149,8 +150,23 @@ export function formatQuantity(q: number | string): string {
 }
 
 /** Исправить отклонённую работу и отправить снова на оценку. */
-export const resubmitEntry = (entryId: number, customName: string, unitId: number, quantity: number, note: string) =>
-  rpc<void>('resubmit_entry', { p_entry: entryId, p_custom_name: customName, p_unit_id: unitId, p_quantity: quantity, p_note: note });
+export const resubmitEntry = (
+  entryId: number,
+  customName: string,
+  unitId: number,
+  quantity: number,
+  note: string,
+  photos: SubmitEntry['photos'],
+) =>
+  rpc<void>('resubmit_entry', {
+    p_entry: entryId,
+    p_custom_name: customName,
+    p_unit_id: unitId,
+    p_quantity: quantity,
+    p_note: note,
+    p_price_item_id: null,
+    p_photos: photos ?? [],
+  });
 
 // ---------- Итоги для мастера (без цен отдельных работ) ----------
 export type MyMonthSummary = { total_kop: number; requests: number; entries: number; pending: number };

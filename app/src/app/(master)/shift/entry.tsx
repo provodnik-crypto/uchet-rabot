@@ -6,6 +6,7 @@ import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
+import { PhotoPicker } from '../../../components/PhotoPicker';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
@@ -24,6 +25,7 @@ import {
 } from '../../../lib/shift';
 import { goToShiftList } from '../../../lib/shiftNav';
 import { uuid } from '../../../lib/today';
+import type { DraftPhoto } from '../../../lib/workPhotos';
 import { colors, font } from '../../../theme';
 
 type Params = {
@@ -82,6 +84,7 @@ export default function EntryScreen() {
   const [departmentId, setDepartmentId] = useState<number | null>(editing?.departmentId ?? last?.departmentId ?? null);
   const [performerIds, setPerformerIds] = useState<number[]>(editing?.performerIds ?? last?.performerIds ?? (me ? [me.id] : []));
   const [note, setNote] = useState(editing?.note ?? '');
+  const [workPhotos, setWorkPhotos] = useState<DraftPhoto[]>(editing?.photos ?? []);
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const isCustom = !priceChoice;
@@ -170,6 +173,7 @@ export default function EntryScreen() {
       note: note.trim(),
       performerIds,
       performerNames: names,
+      photos: workPhotos,
     };
     upsertEntry(entry);
     goToShiftList();
@@ -276,6 +280,11 @@ export default function EntryScreen() {
           ))}
         </View>
         {errors.performers ? <Text style={styles.err}>{errors.performers}</Text> : null}
+      </Card>
+
+      <Card style={styles.card}>
+        <Text style={styles.label}>Фото работы</Text>
+        <PhotoPicker photos={workPhotos} onChange={setWorkPhotos} hint={isCustom} />
       </Card>
 
       <Card style={styles.card}>

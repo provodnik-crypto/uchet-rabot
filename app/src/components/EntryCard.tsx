@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, font, radius } from '../theme';
 import { Card } from './Card';
@@ -15,10 +16,13 @@ type Props = {
   comment?: string | null;
   onPress?: () => void;
   onRemove?: () => void;
+  /** Число фото (для черновика) или свой элемент, например значок с просмотром. */
+  photos?: number;
+  extra?: ReactNode;
 };
 
 /** Карточка одной работы: без цен и сумм. */
-export function EntryCard({ name, category, isCustom, quantity, unitCode, department, performers, note, status, comment, onPress, onRemove }: Props) {
+export function EntryCard({ name, category, isCustom, quantity, unitCode, department, performers, note, status, comment, onPress, onRemove, photos, extra }: Props) {
   return (
     <Card onPress={onPress} style={styles.card}>
       <View style={styles.top}>
@@ -35,6 +39,8 @@ export function EntryCard({ name, category, isCustom, quantity, unitCode, depart
         {department} · {performers}
       </Text>
       {note ? <Text style={styles.meta}>Примечание: {note}</Text> : null}
+      {photos ? <Text style={styles.meta}>📷 Фото: {photos}</Text> : null}
+      {extra}
       {comment ? <Text style={styles.comment}>Руководитель: {comment}</Text> : null}
       {onRemove ? (
         <Pressable onPress={onRemove} hitSlop={8} style={styles.remove}>
