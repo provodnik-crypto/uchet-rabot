@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme';
 
-/** Круглое фото сотрудника; без фото — инициалы на жёлтом фоне. */
+/** Круглое фото сотрудника; без фото (или если картинка не открылась) — инициалы на жёлтом фоне. */
 export function Avatar({ name, uri, size = 40 }: { name: string; uri?: string | null; size?: number }) {
+  const [failed, setFailed] = useState(false);
   const box = { width: size, height: size, borderRadius: size / 2 };
-  if (uri) return <Image source={{ uri }} style={[styles.img, box]} accessibilityLabel={name} />;
+  if (uri && !failed) {
+    return <Image source={{ uri }} style={[styles.img, box]} accessibilityLabel={name} onError={() => setFailed(true)} />;
+  }
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
