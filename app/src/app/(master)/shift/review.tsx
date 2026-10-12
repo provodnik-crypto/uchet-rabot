@@ -12,6 +12,7 @@ import { formatMinutes, SHIFT_MINUTES, statusText } from '../../../lib/requestTi
 import { parseQuantity, submitShift, type SubmitEntry, type SubmitRequest } from '../../../lib/shift';
 import { storeToday, storeYesterday } from '../../../lib/today';
 import { toPayload, uploadPhotos, type DraftPhoto } from '../../../lib/workPhotos';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 export default function ReviewScreen() {
@@ -144,7 +145,9 @@ export default function ReviewScreen() {
       </Text>
       {progress ? <Text style={styles.progress}>{progress}</Text> : null}
       {error ? <Text style={styles.error}>Не отправлено: {error}</Text> : null}
-      <BigButton title={error ? 'Повторить' : 'Отправить'} size="big" loading={sending} onPress={send} />
+      <TourTarget id="review.send">
+        <BigButton title={error ? 'Повторить' : 'Отправить'} size="big" loading={sending} onPress={send} />
+      </TourTarget>
       <BigButton title="Вернуться к списку" variant="secondary" disabled={sending} onPress={() => router.back()} />
     </Screen>
   );

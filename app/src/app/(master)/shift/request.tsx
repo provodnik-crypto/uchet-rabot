@@ -10,6 +10,7 @@ import { Segmented } from '../../../components/Segmented';
 import { useDraft } from '../../../lib/draft';
 import { formatRequestDigits, myRecentRequests, requestError, requestNumber, type RequestPrefix } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 export default function RequestScreen() {
@@ -42,6 +43,7 @@ export default function RequestScreen() {
           value={prefix}
           onChange={setPrefix}
         />
+        <TourTarget id="request.digits">
         <Field
           label={`Цифры номера: ${prefix}${formatRequestDigits(digits) || '______ ____'}`}
           value={formatRequestDigits(digits)}
@@ -56,6 +58,8 @@ export default function RequestScreen() {
           hint="Наберите 10 цифр — подчёркивание поставится само"
           autoFocus={chips.length === 0}
         />
+        </TourTarget>
+        <TourTarget id="request.next">
         <BigButton
           title="Дальше"
           onPress={() => {
@@ -64,6 +68,7 @@ export default function RequestScreen() {
             if (!e) choose(requestNumber(prefix, digits));
           }}
         />
+        </TourTarget>
       </Card>
 
       {chips.length ? (

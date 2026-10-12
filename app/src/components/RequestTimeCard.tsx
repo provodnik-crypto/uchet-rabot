@@ -5,16 +5,30 @@ import { formatMinutes, formatPlan, QUICK_TIMES, statusText, TIME_STEP, type Req
 import type { RequestTime } from '../lib/shift';
 import { colors, font, radius, touch } from '../theme';
 import { Chip } from './Chip';
+import { TourTarget } from '../lib/tour';
+import type { ReactNode } from 'react';
+
+/** Метка для обучения только у первой заявки списка. */
+const Mark = ({ on, id, children }: { on?: boolean; id: string; children: ReactNode }) =>
+  on ? (
+    <TourTarget id={id} style={styles.part}>
+      {children}
+    </TourTarget>
+  ) : (
+    <>{children}</>
+  );
 
 type Props = {
   time: DraftRequest;
   /** План и время прошлых смен с сервера (может не прийти без связи). */
   info?: RequestTime;
+  /** Подсветка частей карточки в обучении. */
+  tour?: boolean;
   onChange: (patch: Partial<Pick<DraftRequest, 'minutes' | 'status'>>) => void;
 };
 
 /** Сколько времени ушло на заявку за смену и закончена ли она. Крупные кнопки — под палец. */
-export function RequestTimeCard({ time, info, onChange }: Props) {
+export function RequestTimeCard({ time, info, onChange, tour }: Props) {
   const minutes = time.minutes ?? 0;
   const before = info?.spent_minutes ?? time.carried?.spent ?? 0;
   const plan = info?.plan_minutes ?? time.carried?.plan ?? null;
@@ -25,9 +39,12 @@ export function RequestTimeCard({ time, info, onChange }: Props) {
   return (
     <View style={styles.box}>
       {time.carried ? (
-        <Text style={styles.carried}>
-          Перенесено с {formatDate(time.carried.since).slice(0, 5)} · уже потрачено {formatMinutes(time.carried.spent)} · работ: {time.carried.entries}
-        </Text>
+        <Mark on={tour} id="list.carried">
+          <Text style={styles.carried}>
+            Перенесено с {formatDate(time.carried.since).slice(0, 5)} · уже потрачено {formatMinutes(time.carried.spent)} · работ:{' '}
+            {time.carried.entries}
+          </Text>
+        </Mark>
       ) : null}
       {plan != null || before > 0 ? (
         <Text style={[styles.plan, over && styles.over]}>
@@ -36,30 +53,46 @@ export function RequestTimeCard({ time, info, onChange }: Props) {
         </Text>
       ) : null}
 
-      <Text style={styles.label}>Время за смену</Text>
-      <View style={styles.chips}>
-        {QUICK_TIMES.map((q) => (
-          <Chip key={q.label} label={q.label} selected={time.minutes === q.minutes} onPress={() => onChange({ minutes: q.minutes })} />
-        ))}
-      </View>
-      <View style={styles.stepper}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Меньше на 15 минут" onPress={() => step(-TIME_STEP)} style={styles.stepBtn}>
-          <Text style={styles.stepText}>−15</Text>
-        </Pressable>
-        <Text style={[styles.value, time.minutes == null && styles.empty]}>{time.minutes == null ? 'не указано' : formatMinutes(minutes)}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Больше на 15 минут" onPress={() => step(TIME_STEP)} style={styles.stepBtn}>
-          <Text style={styles.stepText}>+15</Text>
-        </Pressable>
-      </View>
+      <Mark on={tour} id="list.time">
+        <Text style={styles.label}>Время за смену</Text>
+        <View style={styles.chips}>
+          {QUICK_TIMES.map((q) => (
+            <Chip key={q.label} label={q.label} selected={time.minutes === q.minutes} onPress={() => onChange({ minutes: q.minutes })} />
+          ))}
+        </View>
+        <View style={styles.stepper}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Меньше на 15 минут"
+            onPress={() => step(-TIME_STEP)}
+            style={styles.stepBtn}
+          >
+            <Text style={styles.stepText}>−15</Text>
+          </Pressable>
+          <Text style={[styles.value, time.minutes == null && styles.empty]}>
+            {time.minutes == null ? 'не указано' : formatMinutes(minutes)}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Больше на 15 минут"
+            onPress={() => step(TIME_STEP)}
+            style={styles.stepBtn}
+          >
+            <Text style={styles.stepText}>+15</Text>
+          </Pressable>
+        </View>
+      </Mark>
 
       {time.number ? (
         <>
-          <Text style={styles.label}>Заявка</Text>
-          <View style={styles.chips}>
-            {(['done', 'unfinished'] as RequestStatus[]).map((st) => (
-              <Chip key={st} label={statusText[st]} selected={time.status === st} onPress={() => onChange({ status: st })} />
-            ))}
-          </View>
+          <Mark on={tour} id="list.status">
+            <Text style={styles.label}>Заявка</Text>
+            <View style={styles.chips}>
+              {(['done', 'unfinished'] as RequestStatus[]).map((st) => (
+                <Chip key={st} label={statusText[st]} selected={time.status === st} onPress={() => onChange({ status: st })} />
+              ))}
+            </View>
+          </Mark>
           {time.status === 'unfinished' ? <Text style={styles.hint}>Заявка останется у вас и появится вверху следующей смены.</Text> : null}
         </>
       ) : null}
@@ -68,8 +101,23 @@ export function RequestTimeCard({ time, info, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 8, backgroundColor: colors.card, borderRadius: radius.card, padding: 14 },
-  carried: { fontSize: font.small, fontWeight: '700', color: colors.black, backgroundColor: colors.brand, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
+  part: { gap: 8 },
+  box: {
+    gap: 8,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    padding: 14,
+  },
+  carried: {
+    fontSize: font.small,
+    fontWeight: '700',
+    color: colors.black,
+    backgroundColor: colors.brand,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
   plan: { fontSize: font.small, color: colors.muted },
   over: { color: colors.danger, fontWeight: '700' },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
@@ -85,7 +133,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepText: { fontSize: font.body, fontWeight: '800' },
-  value: { flex: 1, textAlign: 'center', fontSize: font.title, fontWeight: '800' },
+  value: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: font.title,
+    fontWeight: '800',
+  },
   empty: { color: colors.muted, fontSize: font.body, fontWeight: '600' },
   hint: { fontSize: font.small, color: colors.muted },
 });

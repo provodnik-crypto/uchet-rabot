@@ -11,6 +11,7 @@ import { StateView } from '../../../components/StateView';
 import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import { myWorkItems, searchWork, workCategories, type CategoryRow, type WorkItem } from '../../../lib/shift';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font, radius, touch } from '../../../theme';
 
 type Tab = 'frequent' | 'recent' | 'categories';
@@ -108,7 +109,9 @@ export default function WorkPickerScreen() {
             <Text style={styles.request}>
               Заявка: {draft?.currentRequest ?? 'без заявки'}
             </Text>
-            <SearchBox label="Поиск работы" value={q} onChangeText={setQ} placeholder="Поиск работы, например розетка" autoCorrect={false} />
+            <TourTarget id="work.search">
+              <SearchBox label="Поиск работы" value={q} onChangeText={setQ} placeholder="Поиск работы, например розетка" autoCorrect={false} />
+            </TourTarget>
             {!searching ? (
               <Segmented
                 options={(Object.keys(tabLabel) as Tab[]).map((t) => ({ value: t, label: tabLabel[t] }))}
@@ -157,7 +160,9 @@ export default function WorkPickerScreen() {
         ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: 16 }} /> : null}
       />
       <View style={styles.bottom}>
-        <BigButton title="Работы нет в прайсе" variant="secondary" onPress={notInPrice} />
+        <TourTarget id="work.custom">
+          <BigButton title="Работы нет в прайсе" variant="secondary" onPress={notInPrice} />
+        </TourTarget>
       </View>
     </Screen>
   );

@@ -18,6 +18,7 @@ export default function ManagerLayout() {
       <Stack.Screen name="entries/[id]" options={{ title: 'Правка работы' }} />
       <Stack.Screen name="summary" options={{ title: 'Сводка' }} />
       <Stack.Screen name="time" options={{ title: 'Время' }} />
+      <Stack.Screen name="help" options={{ title: 'Помощь' }} />
       <Stack.Screen name="export" options={{ title: 'Выгрузка в Excel' }} />
       <Stack.Screen name="requests/index" options={{ title: 'Заявки' }} />
       <Stack.Screen name="requests/[id]" options={{ title: 'Заявка' }} />

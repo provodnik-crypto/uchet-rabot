@@ -5,6 +5,7 @@ import { BigButton } from '../../../components/BigButton';
 import { Screen } from '../../../components/Screen';
 import { formatDate } from '../../../lib/dates';
 import { useDraft } from '../../../lib/draft';
+import { TourTarget } from '../../../lib/tour';
 import { myOpenRequests } from '../../../lib/shift';
 import { storeToday, storeYesterday } from '../../../lib/today';
 import { colors, font } from '../../../theme';
@@ -23,7 +24,9 @@ export default function ShiftDateScreen() {
   return (
     <Screen>
       <Text style={styles.q}>За какой день вносите работы?</Text>
-      <BigButton title={`Сегодня · ${formatDate(storeToday())}`} size="big" loading={busy === storeToday()} disabled={!!busy} onPress={() => pick(storeToday())} />
+      <TourTarget id="date.today">
+        <BigButton title={`Сегодня · ${formatDate(storeToday())}`} size="big" loading={busy === storeToday()} disabled={!!busy} onPress={() => pick(storeToday())} />
+      </TourTarget>
       <BigButton
         title={`Вчера · ${formatDate(storeYesterday())}`}
         variant="secondary"

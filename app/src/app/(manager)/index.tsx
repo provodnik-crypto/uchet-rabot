@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../components/Card';
 import { Icon, type IconName } from '../../components/Icon';
@@ -8,6 +9,7 @@ import { useAuth } from '../../lib/auth';
 import { managerDashboard, monthName } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
 import { storeToday } from '../../lib/today';
+import { TourTarget, useTour } from '../../lib/tour';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font, radius, touch } from '../../theme';
 
@@ -16,6 +18,12 @@ type Href = Parameters<typeof router.push>[0];
 export default function ManagerHome() {
   const { me, signOut } = useAuth();
   const { data } = useFocusQuery(managerDashboard);
+  const { autoStart } = useTour();
+  const focused = useIsFocused();
+  // первый вход на этом телефоне — обучение, после обновлений — «Что нового»
+  useEffect(() => {
+    if (focused && data) autoStart('manager', false);
+  }, [focused, data, autoStart]);
   return (
     <Screen>
       <View style={styles.top}>
@@ -28,6 +36,7 @@ export default function ManagerHome() {
         </Pressable>
       </View>
 
+      <TourTarget id="mhome.month">
       <Card style={styles.month}>
         <Text style={styles.monthLabel}>Выполнено за {monthName(storeToday())}</Text>
         <Text style={styles.monthSum}>{data ? formatKop(data.month_total_kop) : '…'}</Text>
@@ -41,24 +50,28 @@ export default function ManagerHome() {
           </Pressable>
         ) : null}
       </Card>
+      </TourTarget>
 
       <Text style={styles.section}>Действия</Text>
       <View style={styles.grid}>
-        <ActionTile title="На оценке" subtitle="без цены" icon="clock" badge={data?.pending_count} href="/pending" />
-        <ActionTile title="Работы" subtitle="журнал и правка" icon="list" href="/entries" />
-        <ActionTile title="Сводка" subtitle="по сотрудникам" icon="chart" href="/summary" />
-        <ActionTile title="В Excel" subtitle="отчёт за период" icon="download" href="/export" />
+        <ActionTile tourId="mhome.pending" title="На оценке" subtitle="без цены" icon="clock" badge={data?.pending_count} href="/pending" />
+        <ActionTile tourId="mhome.entries" title="Работы" subtitle="журнал и правка" icon="list" href="/entries" />
+        <ActionTile tourId="mhome.summary" title="Сводка" subtitle="по сотрудникам" icon="chart" href="/summary" />
+        <ActionTile tourId="mhome.export" title="В Excel" subtitle="отчёт за период" icon="download" href="/export" />
       </View>
       <Card style={styles.list}>
-        <ListRow title="Время" subtitle="по видам работ и мастерам, перенос, план" icon="clock" href="/time" last />
+        <ListRow tourId="mhome.time" title="Время" subtitle="по видам работ и мастерам, перенос, план" icon="clock" href="/time" last />
       </Card>
 
       <Text style={styles.section}>Справочники</Text>
       <Card style={styles.list}>
-        <ListRow title="Заявки" subtitle="тема, план и факт по времени" icon="doc" href="/requests" />
+        <ListRow tourId="mhome.requests" title="Заявки" subtitle="тема, план и факт по времени" icon="doc" href="/requests" />
         <ListRow title="Сотрудники" subtitle="учётные записи и пароли" icon="users" href="/employees" />
         <ListRow title="Прайс" subtitle="поиск, цены, включение позиций" icon="tag" href="/price" />
         <ListRow title="Отделы" subtitle="список для выбора мастером" icon="grid" href="/departments" last />
+      </Card>
+      <Card style={styles.list}>
+        <ListRow tourId="mhome.help" title="Помощь" subtitle="обучение по шагам и «Что нового»" icon="doc" href="/help" last />
       </Card>
 
       <Text style={styles.role}>Вы вошли как руководитель · {me?.login}</Text>
@@ -68,8 +81,9 @@ export default function ManagerHome() {
 }
 
 /** Плитка действия: название сверху, жёлтый уголок со значком снизу справа. */
-function ActionTile({ title, subtitle, icon, badge, href }: { title: string; subtitle: string; icon: IconName; badge?: number | null; href: Href }) {
+function ActionTile({ tourId, title, subtitle, icon, badge, href }: { tourId: string; title: string; subtitle: string; icon: IconName; badge?: number | null; href: Href }) {
   return (
+    <TourTarget id={tourId} style={styles.tileBox}>
     <Pressable accessibilityRole="button" accessibilityLabel={badge ? `${title}: ${badge}` : title} onPress={() => router.push(href)} style={({ pressed }) => [styles.tile, pressed && { opacity: 0.7 }]}>
       <Text style={styles.tileTitle}>{title}</Text>
       <Text style={styles.sub}>{subtitle}</Text>
@@ -83,11 +97,12 @@ function ActionTile({ title, subtitle, icon, badge, href }: { title: string; sub
         <Icon name={icon} size={24} fill="#FFFFFF" strokeWidth={1.8} />
       </View>
     </Pressable>
+    </TourTarget>
   );
 }
 
-function ListRow({ title, subtitle, icon, href, last }: { title: string; subtitle: string; icon: IconName; href: Href; last?: boolean }) {
-  return (
+function ListRow({ tourId, title, subtitle, icon, href, last }: { tourId?: string; title: string; subtitle: string; icon: IconName; href: Href; last?: boolean }) {
+  const row = (
     <Pressable accessibilityRole="button" onPress={() => router.push(href)} style={({ pressed }) => [styles.row, !last && styles.rowLine, pressed && { backgroundColor: colors.bg }]}>
       <Icon name={icon} size={22} strokeWidth={1.8} />
       <View style={styles.flex}>
@@ -97,6 +112,7 @@ function ListRow({ title, subtitle, icon, href, last }: { title: string; subtitl
       <Icon name="chevronRight" size={16} color={colors.muted} strokeWidth={2.4} />
     </Pressable>
   );
+  return tourId ? <TourTarget id={tourId}>{row}</TourTarget> : row;
 }
 
 const styles = StyleSheet.create({
@@ -113,7 +129,8 @@ const styles = StyleSheet.create({
   warnStrong: { fontWeight: '700', color: colors.brand },
   section: { fontSize: font.body + 2, fontWeight: '700', marginTop: 4, marginBottom: -4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tile: { width: '48.5%', flexGrow: 1, height: 92, padding: 12, borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden', gap: 2 },
+  tileBox: { width: '48.5%', flexGrow: 1 },
+  tile: { width: '100%', height: 92, padding: 12, borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden', gap: 2 },
   tileTitle: { fontSize: font.body, fontWeight: '700' },
   badge: { position: 'absolute', top: 10, right: 10, minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#FFFFFF', fontSize: font.small - 1, fontWeight: '700' },

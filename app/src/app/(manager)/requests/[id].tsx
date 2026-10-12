@@ -10,6 +10,7 @@ import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { setRequestState, updateRequest, type RequestRow } from '../../../lib/manager';
 import { formatMinutes, formatPlan, PLAN_TIMES } from '../../../lib/requestTime';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font, radius, touch } from '../../../theme';
 
 const PLAN_STEP = 30;
@@ -62,6 +63,7 @@ export default function RequestScreen() {
         {r.carries ? ` · переносов: ${r.carries}` : ''}
       </Text>
 
+      <TourTarget id="rdetail.plan">
       <Card style={[styles.card, over && styles.overCard]}>
         <Text style={styles.h}>Время</Text>
         <Text style={[styles.fact, over && styles.overText]}>
@@ -87,6 +89,7 @@ export default function RequestScreen() {
         </View>
         <Text style={styles.hint}>1 день = смена 8 ч.</Text>
       </Card>
+      </TourTarget>
 
       <Card style={styles.card}>
         <Field label="Тема" value={subject} onChangeText={setSubject} multiline hint="Что нужно сделать. Без имён, фамилий и телефонов." />
@@ -94,6 +97,7 @@ export default function RequestScreen() {
       {message ? <Text style={styles.err}>{message}</Text> : null}
       <BigButton title="Сохранить" loading={busy === 'save'} disabled={!!busy} onPress={save} />
 
+      <TourTarget id="rdetail.state">
       <Card style={styles.card}>
         <Text style={styles.h}>Состояние: {state === 'done' ? 'выполнена' : state === 'open' ? 'не закончена' : 'время не отмечали'}</Text>
         {state === 'done' ? (
@@ -107,6 +111,7 @@ export default function RequestScreen() {
             : 'Например, если мастер в отпуске. Заявка перестанет переноситься на следующие смены.'}
         </Text>
       </Card>
+      </TourTarget>
     </Screen>
   );
 }

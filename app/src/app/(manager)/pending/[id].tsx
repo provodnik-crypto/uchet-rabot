@@ -13,6 +13,7 @@ import { humanError } from '../../../lib/errors';
 import { pendingQueue, pricePendingEntry, rejectEntry, replaceEntryWithItem } from '../../../lib/manager';
 import { formatKop, parseRubToKop } from '../../../lib/money';
 import { formatQuantity, parseQuantity, searchWork, type WorkItem } from '../../../lib/shift';
+import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 import { colors, font } from '../../../theme';
@@ -97,11 +98,14 @@ export default function PendingEntryScreen() {
         {photos?.length ? <PhotoStrip photos={photos} /> : <Text style={styles.meta}>Фото не приложены</Text>}
       </Card>
 
+      <TourTarget id="pdetail.modes">
       <View style={styles.chips}>
         <Chip label="Назначить цену" selected={mode === 'price'} onPress={() => setMode('price')} />
         <Chip label="Заменить на прайс" selected={mode === 'replace'} onPress={() => setMode('replace')} />
         <Chip label="Отклонить" selected={mode === 'reject'} onPress={() => setMode('reject')} />
       </View>
+      </TourTarget>
+      <TourTarget id="pdetail.action">
 
       {mode === 'price' ? (
         <Card style={styles.card}>
@@ -178,6 +182,7 @@ export default function PendingEntryScreen() {
           <Text style={styles.meta}>Мастер увидит комментарий, сможет исправить работу и отправить её снова.</Text>
         </Card>
       ) : null}
+      </TourTarget>
 
       {message ? <Text style={styles.err}>{message}</Text> : null}
     </Screen>

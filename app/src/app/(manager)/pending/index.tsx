@@ -8,6 +8,7 @@ import { formatDate } from '../../../lib/dates';
 import { pendingQueue } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
 import { formatQuantity } from '../../../lib/shift';
+import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 import { colors, font } from '../../../theme';
@@ -24,7 +25,8 @@ export default function PendingScreen() {
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data && !data.length ? <Text style={styles.empty}>Все работы оценены.</Text> : null}
       {data?.length ? <Text style={styles.count}>Ждут оценки: {data.length}</Text> : null}
-      {data?.map((r) => (
+      {data?.map((r, i) => (
+        <TourTarget key={r.entry_id} id={i === 0 ? 'pending.first' : `pending.${r.entry_id}`}>
         <Card key={r.entry_id} style={styles.card} onPress={() => router.push({ pathname: '/pending/[id]', params: { id: String(r.entry_id) } })}>
           <View style={styles.top}>
             <View style={styles.flex}>
@@ -45,6 +47,7 @@ export default function PendingScreen() {
             </Text>
           ) : null}
         </Card>
+        </TourTarget>
       ))}
     </Screen>
   );

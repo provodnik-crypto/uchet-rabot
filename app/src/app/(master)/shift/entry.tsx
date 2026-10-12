@@ -27,6 +27,7 @@ import {
 import { goToShiftList } from '../../../lib/shiftNav';
 import { uuid } from '../../../lib/today';
 import type { DraftPhoto } from '../../../lib/workPhotos';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 type Params = {
@@ -187,6 +188,7 @@ export default function EntryScreen() {
 
       {isCustom ? (
         <Card style={styles.card}>
+          <TourTarget id="entry.customName">
           <Field
             label="Название работы"
             value={customName}
@@ -196,6 +198,7 @@ export default function EntryScreen() {
             autoFocus={!editing}
             multiline
           />
+          </TourTarget>
           {suggesting ? <ActivityIndicator color={colors.black} /> : null}
           {suggestions.length ? (
             <View style={styles.sug}>
@@ -228,12 +231,14 @@ export default function EntryScreen() {
               ))}
             </View>
           ) : null}
-          <Text style={styles.label}>Единица измерения</Text>
-          <View style={styles.chips}>
-            {units.map((u) => (
-              <Chip key={u.id} label={u.code} selected={u.id === unitId} onPress={() => setUnitId(u.id)} />
-            ))}
-          </View>
+          <TourTarget id="entry.unit" style={styles.card}>
+            <Text style={styles.label}>Единица измерения</Text>
+            <View style={styles.chips}>
+              {units.map((u) => (
+                <Chip key={u.id} label={u.code} selected={u.id === unitId} onPress={() => setUnitId(u.id)} />
+              ))}
+            </View>
+          </TourTarget>
           {errors.unit ? <Text style={styles.err}>{errors.unit}</Text> : null}
           <Text style={styles.meta}>Цену назначит руководитель. До этого работа будет со статусом «На оценке».</Text>
         </Card>
@@ -244,6 +249,7 @@ export default function EntryScreen() {
         </Card>
       )}
 
+      <TourTarget id="entry.qty">
       <Card style={styles.card}>
         <Field
           label={unitCode ? `Объём, ${unitCode}` : 'Объём'}
@@ -257,8 +263,10 @@ export default function EntryScreen() {
           hint={unitCode ? undefined : 'Сначала выберите единицу'}
         />
       </Card>
+      </TourTarget>
 
       <Card style={styles.card}>
+        <TourTarget id="entry.dept">
         <SelectField
           label="Отдел"
           value={departmentId}
@@ -266,6 +274,8 @@ export default function EntryScreen() {
           options={refs.departments.map((d) => ({ value: d.id, label: d.name }))}
           error={errors.department}
         />
+        </TourTarget>
+        <TourTarget id="entry.perf" style={styles.card}>
         <Text style={styles.label}>Исполнители (сумма делится поровну)</Text>
         <View style={styles.chips}>
           {masters.map((m) => (
@@ -278,19 +288,24 @@ export default function EntryScreen() {
             />
           ))}
         </View>
+        </TourTarget>
         {errors.performers ? <Text style={styles.err}>{errors.performers}</Text> : null}
       </Card>
 
+      <TourTarget id="entry.photo">
       <Card style={styles.card}>
         <Text style={styles.label}>Фото работы</Text>
         <PhotoPicker photos={workPhotos} onChange={setWorkPhotos} hint={isCustom} />
       </Card>
+      </TourTarget>
 
       <Card style={styles.card}>
         <Field label="Примечание (необязательно)" value={note} onChangeText={setNote} multiline maxLength={500} />
       </Card>
 
-      <BigButton title={editing ? 'Сохранить' : 'Добавить в смену'} size="big" onPress={save} />
+      <TourTarget id="entry.add">
+        <BigButton title={editing ? 'Сохранить' : 'Добавить в смену'} size="big" onPress={save} />
+      </TourTarget>
     </Screen>
   );
 }

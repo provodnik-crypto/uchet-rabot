@@ -47,3 +47,5 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
 * Время по заявкам: таблица `shift_requests` (минуты и статус за смену), `requests.plan_minutes/state`;
   длина смены — `public.shift_minutes()` = 480 и `SHIFT_MINUTES` в `app/src/lib/requestTime.ts`.
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
+* Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).
+  После каждого обновления добавить запись в начало `WHATS_NEW` (тексты пишет Claude, заказчик проверяет).

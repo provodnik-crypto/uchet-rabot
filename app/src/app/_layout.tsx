@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BigButton } from '../components/BigButton';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { TourProvider } from '../lib/tour';
 import { isConfigured } from '../lib/supabase';
 import { colors, font } from '../theme';
 
@@ -13,8 +14,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <StatusBar style="dark" />
-        <UpdateBanner />
-        <RootStack />
+        <TourProvider>
+          <UpdateBanner />
+          <RootStack />
+        </TourProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

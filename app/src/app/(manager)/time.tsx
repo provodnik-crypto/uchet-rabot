@@ -10,6 +10,7 @@ import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { presetPeriod, timeStats, type PeriodPreset } from '../../lib/manager';
 import { formatMinutes, formatPlan, hours, ratioText } from '../../lib/requestTime';
 import { useFocusQuery } from '../../lib/useQuery';
+import { TourTarget } from '../../lib/tour';
 import { colors, font } from '../../theme';
 
 export default function TimeScreen() {
@@ -42,6 +43,7 @@ export default function TimeScreen() {
       {!data || loading ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data && !loading ? (
         <>
+          <TourTarget id="time.total">
           <Card style={styles.total}>
             <Text style={styles.totalLabel}>Отмечено времени</Text>
             <Text style={styles.totalSum}>{hours(data.minutes)} ч</Text>
@@ -53,8 +55,11 @@ export default function TimeScreen() {
             </Text>
             <Text style={[styles.totalMeta, data.over_plan.length > 0 && styles.warn]}>Дольше плана: {data.over_plan.length}</Text>
           </Card>
+          </TourTarget>
 
-          <Text style={styles.section}>По видам работ</Text>
+          <TourTarget id="time.kinds">
+            <Text style={styles.section}>По видам работ</Text>
+          </TourTarget>
           {data.kinds.length === 0 ? <Text style={styles.meta}>За период нет выполненных заявок с отмеченным временем.</Text> : null}
           {data.kinds.map((k) => (
             <Card key={k.kind} style={styles.card}>
@@ -72,7 +77,9 @@ export default function TimeScreen() {
             заявки в среднее не входят.
           </Text>
 
-          <Text style={styles.section}>Мастера</Text>
+          <TourTarget id="time.masters">
+            <Text style={styles.section}>Мастера</Text>
+          </TourTarget>
           {data.masters.length === 0 ? <Text style={styles.meta}>Нет данных за период.</Text> : null}
           {data.masters.map((m) => {
             const r = ratioText(m.ratio);

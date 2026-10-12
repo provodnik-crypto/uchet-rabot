@@ -9,6 +9,7 @@ import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { listRequests, type RequestRow } from '../../../lib/manager';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 export default function RequestsScreen() {
@@ -40,7 +41,8 @@ export default function RequestsScreen() {
       <Text style={styles.meta}>Заявки появляются сами, когда мастер вводит номер. Здесь можно дописать тему и плановое время. Красная рамка — потрачено больше плана. Имена и телефоны людей в тему не пишите.</Text>
       {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
       {rows && !rows.length ? <Text style={styles.meta}>Заявок не найдено</Text> : null}
-      {rows?.map((r) => (
+      {rows?.map((r, i) => (
+        <TourTarget key={r.id} id={i === 0 ? 'requests.first' : `requests.${r.id}`}>
         <Card
           key={r.id}
           style={[styles.card, overPlan(r) && styles.over]}
@@ -63,6 +65,7 @@ export default function RequestsScreen() {
             {[`работ: ${r.entries}`, r.last_work_date ? `последняя ${formatDate(r.last_work_date)}` : null].filter(Boolean).join(' · ')}
           </Text>
         </Card>
+        </TourTarget>
       ))}
     </Screen>
   );
