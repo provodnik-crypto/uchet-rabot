@@ -145,11 +145,17 @@ export type RequestRow = {
   subject: string | null;
   entries: number;
   last_work_date: string | null;
+  plan_minutes: number | null;
+  spent_minutes: number | null;
+  /** null — время по заявке ещё не отмечали; open — не закончена; done — выполнена */
+  state: 'open' | 'done' | null;
+  carries: number;
+  since: string | null;
 };
 
 export const listRequests = (q: string) => rpc<RequestRow[]>('list_requests', { q, p_limit: 200 });
 
-export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'subject'>>) {
+export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'subject' | 'plan_minutes'>>) {
   const { error } = await supabase.from('requests').update(patch).eq('id', id);
   if (error) throw error;
 }
@@ -159,3 +165,17 @@ export async function addRequest(number: string) {
   if (error) throw error;
   return data.id as number;
 }
+
+export const setRequestState = (requestId: number, done: boolean) => rpc<void>('set_request_state', { p_request: requestId, p_done: done });
+
+// ---------- Время ----------
+export type TimeStats = {
+  kinds: { kind: string; jobs: number; avg_minutes: number; median_minutes: number }[];
+  masters: { employee_id: number; display_name: string; requests: number; jobs: number; minutes: number; expected_minutes: number; ratio: number | null }[];
+  over_plan: { number: string; plan_minutes: number; spent_minutes: number; state: 'open' | 'done' | null; since: string; last_date: string }[];
+  requests: number;
+  carried: number;
+  done: number;
+  minutes: number;
+};
+export const timeStats = (p: Period) => rpc<TimeStats>('time_stats', { p_from: p.from, p_to: p.to });

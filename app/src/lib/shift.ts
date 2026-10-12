@@ -84,7 +84,20 @@ export const myRecentRequests = async () => (await rpc<{ number: string }[]>('my
 export const suggestCustomNames = (q: string) => rpc<Suggestion[]>('suggest_custom_names', { q });
 export const myEntries = (days = 60) => rpc<MyEntry[]>('my_entries', { p_days: days });
 
-export function submitShift(payload: { client_uuid: string; work_date: string; entries: SubmitEntry[] }) {
+/** Время и статус по заявке за смену; request_number null — работы без заявки. */
+export type SubmitRequest = { request_number: string | null; minutes: number; status?: 'done' | 'unfinished' };
+
+/** Незаконченная заявка, которая переходит к мастеру в следующую смену. */
+export type OpenRequest = { number: string; since: string; last_date: string; spent_minutes: number; entries: number; plan_minutes: number | null };
+export type RequestTime = { number: string; plan_minutes: number | null; spent_minutes: number; since: string | null; state: 'open' | 'done' | null };
+
+export const myOpenRequests = () => rpc<OpenRequest[]>('my_open_requests');
+export const requestsTime = (numbers: string[], exclude: string | null) =>
+  numbers.length ? rpc<RequestTime[]>('requests_time', { p_numbers: numbers, p_exclude: exclude }) : Promise.resolve([] as RequestTime[]);
+export const myShiftRequests = (clientUuid: string) =>
+  rpc<{ request_number: string | null; minutes: number; status: 'done' | 'unfinished' | null }[]>('my_shift_requests', { p_client_uuid: clientUuid });
+
+export function submitShift(payload: { client_uuid: string; work_date: string; entries: SubmitEntry[]; requests: SubmitRequest[] }) {
   return rpc<{ shift_id: number; entries: number; pending: number }>('submit_shift', { payload });
 }
 

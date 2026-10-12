@@ -19,7 +19,9 @@ export default function RequestScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Номера, уже добавленные в эту смену, — первыми.
-  const inShift = Array.from(new Set((draft?.entries ?? []).map((e) => e.requestNumber).filter((n): n is string => !!n)));
+  const inShift = Array.from(
+    new Set([...(draft?.requests ?? []).map((r) => r.number), ...(draft?.entries ?? []).map((e) => e.requestNumber)].filter((n): n is string => !!n)),
+  );
   const chips = Array.from(new Set([...inShift, ...(recent ?? [])])).slice(0, 8);
 
   const choose = (number: string | null) => {

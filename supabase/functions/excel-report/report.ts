@@ -23,7 +23,87 @@ export type ReportData = {
     note: string | null;
   }[];
   works: { category: string; name: string; unit_code: string; quantity: number; entries: number; total_kop: number }[];
+  /** Статистика времени (функция базы time_stats). */
+  time?: TimeData;
 };
+
+export type TimeData = {
+  kinds: { kind: string; jobs: number; avg_minutes: number; median_minutes: number }[];
+  masters: { employee_id: number; display_name: string; requests: number; jobs: number; minutes: number; expected_minutes: number; ratio: number | null }[];
+  over_plan: { number: string; plan_minutes: number; spent_minutes: number; state: 'open' | 'done' | null; since: string; last_date: string }[];
+  requests: number;
+  carried: number;
+  done: number;
+  minutes: number;
+};
+
+/** Минуты → часы с одним знаком. */
+const hrs = (m: number) => Math.round(Number(m) / 6) / 10;
+
+function ratioLabel(ratio: number | null): string {
+  if (ratio == null) return '';
+  const diff = Math.round((1 - Number(ratio)) * 100);
+  if (Math.abs(diff) < 5) return 'как в среднем';
+  return diff > 0 ? `на ${diff}% быстрее среднего` : `на ${-diff}% дольше среднего`;
+}
+
+function timeSheet(t: TimeData, period: string): Sheet {
+  const share = t.requests ? Math.round((t.carried / t.requests) * 100) : 0;
+  const rows: Cell[][] = [
+    [{ v: 'Время по заявкам', s: 'title' }],
+    [muted(period)],
+    [muted(`Отмечено: ${hrs(t.minutes)} ч · заявок в работе: ${t.requests} · выполнено: ${t.done} · не закончены за один день (перенос): ${t.carried} (${share}%) · дольше плана: ${t.over_plan.length}`)],
+    [h('Вид работ'), h('Заявок'), h('Среднее, ч'), h('Медиана, ч')],
+  ];
+  const kindHeader = 3;
+  for (const k of t.kinds) rows.push([k.kind, Number(k.jobs), qty(hrs(k.avg_minutes)), qty(hrs(k.median_minutes))]);
+  if (!t.kinds.length) rows.push([muted('За период нет выполненных заявок с отмеченным временем')]);
+  rows.push([muted('Время заявки делится между её работами по стоимости; работы без заявки за смену — одна заявка; незаконченные заявки в среднее не входят.')]);
+
+  rows.push([]);
+  rows.push([h('Мастер'), h('Выполнено заявок'), h('Время, ч'), h('Среднее по тем же видам, ч'), h('Сравнение')]);
+  for (const m of t.masters) {
+    rows.push([m.display_name, Number(m.requests), qty(hrs(m.minutes)), qty(hrs(m.expected_minutes)), ratioLabel(m.ratio)]);
+  }
+  rows.push([muted('Совместная работа засчитывается каждому исполнителю целиком (время бригады).')]);
+
+  rows.push([]);
+  rows.push([h('Дольше плана'), h('План, ч'), h('Факт, ч'), h('Состояние'), h('С'), h('По')]);
+  for (const o of t.over_plan) {
+    rows.push([
+      o.number,
+      qty(hrs(o.plan_minutes)),
+      qty(hrs(o.spent_minutes)),
+      o.state === 'done' ? 'выполнена' : 'не закончена',
+      { v: excelDate(o.since), s: 'date' },
+      { v: excelDate(o.last_date), s: 'date' },
+    ]);
+  }
+  if (!t.over_plan.length) rows.push([muted('Нет заявок, где факт больше плана')]);
+
+  const n = t.kinds.length;
+  return {
+    name: 'Время',
+    rows,
+    widths: [40, 18, 14, 26, 26, 12],
+    charts: n
+      ? [
+          {
+            title: 'Время по видам работ, ч',
+            grouping: 'clustered',
+            categories: { sheet: 'Время', r1: kindHeader + 1, c1: 0, r2: kindHeader + n, c2: 0 },
+            series: [
+              { name: 'Среднее', values: { sheet: 'Время', r1: kindHeader + 1, c1: 2, r2: kindHeader + n, c2: 2 } },
+              { name: 'Медиана', values: { sheet: 'Время', r1: kindHeader + 1, c1: 3, r2: kindHeader + n, c2: 3 } },
+            ],
+            legend: true,
+            at: { col: 7, row: 0, toCol: 16, toRow: 20 },
+            valueFormat: '0.0',
+          },
+        ]
+      : [],
+  };
+}
 
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const monthLabel = (iso: string) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
@@ -228,5 +308,5 @@ export function buildReport(d: ReportData): Sheet[] {
       : [],
   };
 
-  return [sheet1, sheet2, sheet3, sheet4];
+  return d.time ? [sheet1, sheet2, sheet3, sheet4, timeSheet(d.time, period)] : [sheet1, sheet2, sheet3, sheet4];
 }

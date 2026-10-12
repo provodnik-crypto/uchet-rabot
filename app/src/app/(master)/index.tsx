@@ -13,7 +13,7 @@ import { useDraft } from '../../lib/draft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
-import { myEntries, myMonthSummary } from '../../lib/shift';
+import { myEntries, myMonthSummary, myOpenRequests } from '../../lib/shift';
 import { storeToday } from '../../lib/today';
 import { goToShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
@@ -26,7 +26,8 @@ export default function MasterHome() {
   const { data: entries } = useFocusQuery(() => myEntries(14));
   const { data: month } = useFocusQuery(myMonthSummary);
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
-  const hasDraft = !!draft && draft.entries.length > 0;
+  const { data: open } = useFocusQuery(myOpenRequests);
+  const hasDraft = !!draft && (draft.entries.length > 0 || !!draft.requests?.some((r) => r.minutes));
 
   return (
     <Screen>
@@ -67,7 +68,14 @@ export default function MasterHome() {
           />
         </>
       ) : (
-        <BigButton title="Закрыть смену" size="big" disabled={!ready} onPress={() => router.push('/shift/date')} />
+        <>
+          <BigButton title="Закрыть смену" size="big" disabled={!ready} onPress={() => router.push('/shift/date')} />
+          {open?.length ? (
+            <Text style={styles.draftNote}>
+              Не закончено: {open.map((r) => `${r.number} (с ${formatDate(r.since).slice(0, 5)})`).join(', ')} — будет вверху смены
+            </Text>
+          ) : null}
+        </>
       )}
 
       <Tile title="Команда" subtitle="Рейтинг и суммы по месяцам" onPress={() => router.push('/team')} />
