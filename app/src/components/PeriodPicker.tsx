@@ -9,7 +9,7 @@ import { Segmented } from './Segmented';
 
 const PRESETS: PeriodPreset[] = ['month', 'prev', 'year', 'custom'];
 /** Короткие подписи, чтобы весь выбор помещался в одну строку. */
-const short: Record<PeriodPreset, string> = { month: 'Этот месяц', prev: 'Прошлый', year: 'Год', custom: 'Свой' };
+const short: Record<PeriodPreset, string> = { month: 'Месяц', prev: 'Прошлый', year: 'Год', custom: 'Свой' };
 
 type Props = { preset: PeriodPreset; period: Period; onChange: (preset: PeriodPreset, period: Period) => void };
 
