@@ -14,5 +14,5 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: radius.card, padding: 16 },
+  card: { backgroundColor: colors.card, borderRadius: radius.card, padding: 12 },
 });

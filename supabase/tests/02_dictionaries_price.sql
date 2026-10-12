@@ -51,7 +51,7 @@ do $$ begin
   raise exception 'ПРОВАЛ: мастер добавил отдел';
 exception when insufficient_privilege then raise notice 'ok: мастер не добавляет отделы';
 end $$;
-select pg_temp.assert((select count(*) from public.departments where is_active) = 7, 'мастер видит 7 отделов');
+select pg_temp.assert((select count(*) from public.departments where is_active) = 20, 'мастер видит 20 отделов');
 rollback;
 
 -- Руководитель: цены, история, правка позиций и отделов.
@@ -82,11 +82,11 @@ end $$;
 update public.price_items set is_active = true where full_name = 'Установка скамеек';
 select pg_temp.assert((select is_active from public.price_items where full_name = 'Установка скамеек'), 'руководитель включает позицию');
 
-insert into public.departments (name) values ('Склад');
+insert into public.departments (name) values ('Мебель');
 do $$ begin
-  insert into public.departments (name) values ('  склад ');
+  insert into public.departments (name) values ('  мебель ');
   raise exception 'ПРОВАЛ: дубль отдела';
-exception when unique_violation then raise notice 'ok: «Склад» и «склад» — один отдел';
+exception when unique_violation then raise notice 'ok: «Мебель» и «мебель» — один отдел';
 end $$;
 select public.set_default_department((select id from public.departments where name = 'Плитка'));
 select pg_temp.assert((select string_agg(name, ',') from public.departments where is_default) = 'Плитка', 'отдел по умолчанию один');

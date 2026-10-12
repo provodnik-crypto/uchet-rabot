@@ -34,12 +34,19 @@
   установить новый файл поверх старого; данные и вход сохраняются. Обновления «по воздуху»
   выпускаются для версии среды из `app/app.json` → `runtimeVersion` (сейчас `2`): старые
   установочные файлы их не получают, пока на телефон не поставят новый APK.
+* **Полоса «Вышла новая сборка»**: приложение сверяет свою версию среды с таблицей
+  `app_release` в базе. Если телефон отстаёт — сверху чёрная полоса с кнопкой «Скачать».
+  После каждой новой сборки APK обновить строку (см. ниже), иначе полоса не появится.
+* **Отделы** (с 11.10.2026 — 20 по списку заказчика). «Магазин» мастер не выбирает: в фильтре
+  «Работ» он означает весь магазин; старые записи с отделом «Магазин» сохранены.
 
 Для Claude (из облачной сессии):
 ```bash
 cd app && set -a && . ./.env && set +a
 npx eas-cli@latest update --branch preview --environment preview --message "что изменилось" --platform android --non-interactive
 npx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait   # только когда нужен новый APK
+# после сборки — сообщить телефонам о новом APK (SQL через Management API):
+#   update app_release set runtime_version = '<новый runtimeVersion>', apk_url = '<ссылка на .apk>', updated_at = now() where platform = 'android';
 ```
 Изменения базы — файлы в `supabase/migrations/`, применяются по порядку; серверные функции —
 `npx supabase functions deploy <имя> --use-api`. Проверки: `bash supabase/tests/run.sh`.

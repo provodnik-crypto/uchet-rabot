@@ -13,6 +13,12 @@ export async function listDepartments(): Promise<Department[]> {
   return data as Department[];
 }
 
+/**
+ * Старый отдел «Магазин»: мастер его больше не выбирает, в фильтрах «Магазин» — это весь магазин.
+ * Записи прошлых лет с этим отделом остаются как есть.
+ */
+export const isWholeStore = (d: Pick<Department, 'name'>) => d.name.trim().toLowerCase() === 'магазин';
+
 export async function getDepartment(id: number): Promise<Department> {
   const { data, error } = await supabase.from('departments').select('id, name, is_default, is_active, sort').eq('id', id).single();
   if (error) throw error;

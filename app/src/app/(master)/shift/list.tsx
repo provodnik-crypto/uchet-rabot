@@ -59,6 +59,7 @@ export default function ShiftListScreen() {
           <BigButton
             title={g.request ? `+ Работа по ${g.request}` : '+ Работа без заявки'}
             variant="secondary"
+            size="small"
             onPress={() => {
               setRequest(g.request);
               router.push('/shift/work');
@@ -67,7 +68,7 @@ export default function ShiftListScreen() {
           <RequestTimeCard time={g.time} info={g.request ? info[g.request] : undefined} onChange={(p) => setRequestTime(g.request, p)} />
         </View>
       ))}
-      <BigButton title="+ Другая заявка" variant="secondary" onPress={() => router.push('/shift/request')} />
+      <BigButton title="+ Другая заявка" variant="secondary" size="small" onPress={() => router.push('/shift/request')} />
       <BigButton
         title="Проверить и отправить"
         size="big"
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
   date: { fontSize: font.body, fontWeight: '700' },
   total: { fontSize: font.small, color: colors.muted, fontWeight: '600' },
   warn: { color: colors.danger, fontWeight: '800' },
-  group: { gap: 10 },
-  request: { fontSize: font.small, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },
+  group: { gap: 6 },
+  request: { fontSize: font.small, fontWeight: '700', color: colors.secondary, marginTop: 6 },
   empty: { color: colors.muted, fontSize: font.body },
 });

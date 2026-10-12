@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
-import { Chip } from '../../../components/Chip';
 import { Screen } from '../../../components/Screen';
+import { Segmented } from '../../../components/Segmented';
 import { formatDate } from '../../../lib/dates';
 import { groupIsSent, shiftGroups, useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
@@ -95,10 +95,14 @@ export default function ReviewScreen() {
     <Screen>
       <Card style={styles.card}>
         <Text style={styles.h}>Дата смены</Text>
-        <View style={styles.chips}>
-          <Chip label={`Сегодня · ${formatDate(today)}`} selected={draft.workDate === today} onPress={() => setWorkDate(today)} />
-          <Chip label={`Вчера · ${formatDate(yesterday)}`} selected={draft.workDate === yesterday} onPress={() => setWorkDate(yesterday)} />
-        </View>
+        <Segmented
+          options={[
+            { value: today, label: `Сегодня · ${formatDate(today)}` },
+            { value: yesterday, label: `Вчера · ${formatDate(yesterday)}` },
+          ]}
+          value={draft.workDate}
+          onChange={setWorkDate}
+        />
       </Card>
 
       {groups.map((g) => (
@@ -121,7 +125,7 @@ export default function ReviewScreen() {
               <Text style={styles.meta}>
                 {e.departmentName} · {e.performerNames.join(', ')}
                 {e.note ? ` · ${e.note}` : ''}
-                {e.photos?.length ? ` · 📷 ${e.photos.length}` : ''}
+                {e.photos?.length ? ` · фото: ${e.photos.length}` : ''}
               </Text>
             </View>
           ))}
@@ -147,15 +151,14 @@ export default function ReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: 8 },
   h: { fontSize: font.body, fontWeight: '700' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  request: { fontSize: font.small, fontWeight: '800', color: colors.muted, textTransform: 'uppercase' },
+  request: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
   row: { gap: 2, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 },
-  name: { fontSize: font.body, fontWeight: '700' },
+  name: { fontSize: font.body, fontWeight: '600' },
   custom: { fontSize: font.small, color: colors.muted, fontWeight: '400' },
-  qty: { fontSize: font.body, fontWeight: '800' },
-  meta: { fontSize: font.small, color: colors.muted },
+  qty: { fontSize: font.body, fontWeight: '700' },
+  meta: { fontSize: font.small, color: colors.secondary },
   time: { fontSize: font.body, fontWeight: '800' },
   missing: { color: colors.danger },
   over: { color: colors.danger },

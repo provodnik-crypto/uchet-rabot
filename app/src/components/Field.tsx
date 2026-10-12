@@ -20,15 +20,15 @@ export const Field = forwardRef<TextInput, Props>(function Field({ label, error,
 });
 
 const styles = StyleSheet.create({
-  wrap: { gap: 6 },
+  wrap: { gap: 4 },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
   input: {
     minHeight: touch.min,
     backgroundColor: colors.card,
     borderRadius: radius.control,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     fontSize: font.body,
     color: colors.text,
   },

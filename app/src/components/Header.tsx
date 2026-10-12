@@ -5,7 +5,7 @@ export const stackHeader = {
   headerShown: true,
   headerStyle: { backgroundColor: colors.brand },
   headerTintColor: colors.black,
-  headerTitleStyle: { fontWeight: '700' as const, fontSize: 20 },
+  headerTitleStyle: { fontWeight: '700' as const, fontSize: 18 },
   headerShadowVisible: false,
   headerBackTitle: 'Назад',
   contentStyle: { backgroundColor: colors.bg },

@@ -6,6 +6,7 @@ import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
+import { Segmented } from '../../../components/Segmented';
 import { useDraft } from '../../../lib/draft';
 import { formatRequestDigits, myRecentRequests, requestError, requestNumber, type RequestPrefix } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -33,10 +34,14 @@ export default function RequestScreen() {
     <Screen>
       <Card style={styles.card}>
         <Text style={styles.h}>Номер заявки</Text>
-        <View style={styles.row}>
-          <Chip label="RFS" selected={prefix === 'RFS'} onPress={() => setPrefix('RFS')} />
-          <Chip label="INC" selected={prefix === 'INC'} onPress={() => setPrefix('INC')} />
-        </View>
+        <Segmented<RequestPrefix>
+          options={[
+            { value: 'RFS', label: 'RFS' },
+            { value: 'INC', label: 'INC' },
+          ]}
+          value={prefix}
+          onChange={setPrefix}
+        />
         <Field
           label={`Цифры номера: ${prefix}${formatRequestDigits(digits) || '______ ____'}`}
           value={formatRequestDigits(digits)}
@@ -78,9 +83,8 @@ export default function RequestScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: 10 },
   h: { fontSize: font.body, fontWeight: '700' },
-  row: { flexDirection: 'row', gap: 8 },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  section: { fontSize: font.small, fontWeight: '700', color: colors.secondary, marginBottom: -4 },
 });
