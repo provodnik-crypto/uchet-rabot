@@ -82,7 +82,10 @@ Python-сервис (FastAPI + XlsxWriter + openpyxl)
 | `price_items` | id, source_id (id из CSV), full_name, short_name, category, subcategory, unit_id, is_material, is_active, origin (`csv`/`manual`), source_block, source_row, поиск (pg_trgm) | мастер: только `is_active and not is_material` |
 | `price_lists` | id, title («Прайс 2026»), valid_from, file_name, uploaded_by, applied_at, stats (jsonb: изменено/добавлено/выключено) | руководитель |
 | `price_item_prices` | price_item_id, price_list_id, price_kop, valid_from | **только руководитель** |
-| `requests` | id, number (`^(RFS\|INC)\d{6}_\d{4}$`, уникально), subject, created_by (только номер и тема — данных людей не храним) | все: номер; детали — руководитель |
+| `requests` | id, number (`^(RFS\|INC)\d{6}_\d{4}$`, уникально), subject, source (`manual`/`itsm`), store_id, service, operation, description (очищено от телефонов и ФИО), itsm_status, registered_at, requester («Имя Ф. (ldap)»), is_open, assignee_id / to_contractor | мастер: всё, кроме requester (через `open_requests` — «Имя Ф.»); детали — руководитель |
+| `stores` | id, code (`031`), name («Тюмень 1»); у сотрудника store_id | все |
+| `work_calendar` | day, is_workday — праздники в будни и рабочие субботы (2026–2027) | все |
+| `request_imports` | кто, когда, окно дат, сколько строк: в файле, новых, уже было, вне окна, с ошибками, закрыто. Без содержимого файла | руководитель |
 
 ### Журнал
 | Таблица | Поля | Кто видит |

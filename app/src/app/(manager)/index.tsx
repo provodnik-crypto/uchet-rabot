@@ -27,9 +27,10 @@ export default function ManagerHome() {
       <Tile title="На оценке" subtitle="Работы вне прайса без цены" badge={data?.pending_count} onPress={() => router.push('/pending')} />
       <Tile title="Работы" subtitle="Журнал с фильтрами, правка записей" onPress={() => router.push('/entries')} />
       <Tile title="Сводка" subtitle="Выработка по сотрудникам и месяцам" onPress={() => router.push('/summary')} />
+      <Tile title="Загрузить заявки" subtitle="Выгрузка из ITSM (Excel), раз в день" onPress={() => router.push('/import')} />
       <Tile title="Выгрузить в Excel" subtitle="Отчёт с диаграммами за период" onPress={() => router.push('/export')} />
       <Text style={styles.section}>Справочники</Text>
-      <Tile title="Заявки" subtitle="Заявитель, тема, состояние" onPress={() => router.push('/requests')} />
+      <Tile title="Заявки" subtitle="Список, назначение мастеру или подрядчику" onPress={() => router.push('/requests')} />
       <Tile title="Сотрудники" subtitle="Учётные записи и пароли" onPress={() => router.push('/employees')} />
       <Tile title="Прайс" subtitle="Поиск, цены, включение позиций" onPress={() => router.push('/price')} />
       <Tile title="Отделы" subtitle="Список для выбора мастером" onPress={() => router.push('/departments')} />

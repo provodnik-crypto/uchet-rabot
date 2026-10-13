@@ -145,6 +145,17 @@ export type RequestRow = {
   subject: string | null;
   entries: number;
   last_work_date: string | null;
+  source: 'manual' | 'itsm';
+  service: string | null;
+  operation: string | null;
+  description: string | null;
+  itsm_status: string | null;
+  registered_at: string | null;
+  requester: string | null;
+  is_open: boolean;
+  assignee_id: number | null;
+  assignee_name: string | null;
+  to_contractor: boolean;
 };
 
 export const listRequests = (q: string) => rpc<RequestRow[]>('list_requests', { q, p_limit: 200 });

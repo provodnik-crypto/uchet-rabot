@@ -20,6 +20,7 @@ export default function ManagerLayout() {
       <Stack.Screen name="export" options={{ title: 'Выгрузка в Excel' }} />
       <Stack.Screen name="requests/index" options={{ title: 'Заявки' }} />
       <Stack.Screen name="requests/[id]" options={{ title: 'Заявка' }} />
+      <Stack.Screen name="import" options={{ title: 'Загрузка заявок' }} />
     </Stack>
   );
 }

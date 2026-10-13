@@ -4,8 +4,9 @@ select pg_temp.assert((select string_agg(display_name, ',' order by id) from pub
   = 'Николай Х.,Михаил М.,Евгений Г.,Владимир К.', 'мастера записаны как «Имя Ф.»');
 select pg_temp.assert(not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'employees'
   and column_name in ('nickname', 'photo_path', 'photo_thumb')), 'полей с фото и короткими именами больше нет');
+-- С загрузкой из ITSM у заявки появились очищенные поля; заявитель — только «Имя Ф. (ldap)» (проверки в 09).
 select pg_temp.assert(not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'requests'
-  and column_name not in ('id', 'number', 'subject', 'created_by', 'created_at')), 'у заявки только номер и тема');
+  and column_name in ('note', 'state', 'phone', 'email')), 'у заявки нет примечаний, телефонов и почт');
 select pg_temp.assert((select count(distinct icon) from public.employees where role = 'master') = 4, 'значки у мастеров не повторяются');
 select pg_temp.assert((select icon from public.employees where role = 'service') is null, 'служебному значок не нужен');
 
