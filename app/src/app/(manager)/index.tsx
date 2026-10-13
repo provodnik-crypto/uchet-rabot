@@ -6,7 +6,7 @@ import { Icon, type IconName } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
-import { managerDashboard, monthName } from '../../lib/manager';
+import { listRequests, managerDashboard, monthName } from '../../lib/manager';
 import { reviewCount } from '../../lib/requests';
 import { formatKop } from '../../lib/money';
 import { storeToday } from '../../lib/today';
@@ -20,6 +20,12 @@ export default function ManagerHome() {
   const { me, signOut } = useAuth();
   const { data } = useFocusQuery(managerDashboard);
   const { data: review } = useFocusQuery(reviewCount);
+  // Счётчики открытых заявок по статусам — для главной плашки «Заявки».
+  const { data: counts } = useFocusQuery(async () => {
+    const rows = await listRequests('', 'open');
+    const n = (st: string) => rows.filter((r) => r.status === st).length;
+    return { waiting: n('waiting'), in_work: n('in_work'), review: n('review') };
+  });
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // первый вход на этом телефоне — обучение, после обновлений — «Что нового»
@@ -54,6 +60,26 @@ export default function ManagerHome() {
       </Card>
       </TourTarget>
 
+      <TourTarget id="mhome.requests">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Заявки"
+          onPress={() => router.push('/requests')}
+          style={({ pressed }) => [styles.req, pressed && { opacity: 0.8 }]}
+        >
+          <Icon name="doc" size={26} strokeWidth={2} />
+          <View style={styles.flex}>
+            <Text style={styles.reqTitle}>Заявки</Text>
+            <Text style={styles.reqSub}>
+              {counts
+                ? `Ожидают: ${counts.waiting} · В работе: ${counts.in_work} · На проверке: ${counts.review}`
+                : 'Назначение, приоритет, проверка, план и факт'}
+            </Text>
+          </View>
+          <Icon name="chevronRight" size={18} strokeWidth={2.4} />
+        </Pressable>
+      </TourTarget>
+
       <Text style={styles.section}>Действия</Text>
       <View style={styles.grid}>
         <ActionTile tourId="mhome.review" title="На проверке" subtitle="заявки мастеров" icon="check" badge={review ?? undefined} href="/review" />
@@ -69,7 +95,6 @@ export default function ManagerHome() {
 
       <Text style={styles.section}>Справочники</Text>
       <Card style={styles.list}>
-        <ListRow tourId="mhome.requests" title="Заявки" subtitle="назначение, план и факт по времени" icon="doc" href="/requests" />
         <ListRow title="Сотрудники" subtitle="учётные записи и пароли" icon="users" href="/employees" />
         <ListRow title="Прайс" subtitle="поиск, цены, включение позиций" icon="tag" href="/price" />
         <ListRow title="Отделы" subtitle="список для выбора мастером" icon="grid" href="/departments" last />
@@ -131,6 +156,9 @@ const styles = StyleSheet.create({
   warn: { marginTop: 6, minHeight: 40, borderRadius: 8, backgroundColor: '#1F1F1F', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   warnText: { flex: 1, fontSize: font.small, color: '#FFFFFF' },
   warnStrong: { fontWeight: '700', color: colors.brand },
+  req: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.brand, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 16 },
+  reqTitle: { fontSize: font.title, fontWeight: '800' },
+  reqSub: { fontSize: font.small, fontWeight: '600', color: colors.black },
   section: { fontSize: font.body + 2, fontWeight: '700', marginTop: 4, marginBottom: -4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tileBox: { width: '48.5%', flexGrow: 1 },
