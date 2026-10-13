@@ -1,4 +1,5 @@
 // Заявки из ITSM: выбор файла, предпросмотр, загрузка, список для мастера, назначение.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { parseItsmFile, type ItsmFile } from './itsm';
 import { supabase } from './supabase';
@@ -100,6 +101,58 @@ export type OpenRequest = {
 };
 export const openRequests = (q: string, filter: RequestFilter) =>
   rpc<OpenRequest[]>('open_requests', { q, p_filter: filter, p_limit: 300 });
+
+// ---------- Карточка заявки ----------
+export type RequestWork = {
+  work_date: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  status: 'priced' | 'pending' | 'rejected';
+  performers: string | null;
+};
+export type RequestCard = {
+  id: number;
+  number: string;
+  source: 'manual' | 'itsm';
+  subject: string | null;
+  service: string | null;
+  operation: string | null;
+  description: string | null;
+  registered_at: string | null;
+  requester_name: string | null;
+  is_open: boolean;
+  state: 'open' | 'done' | null;
+  to_contractor: boolean;
+  assignee_id: number | null;
+  assignee_name: string | null;
+  mine: boolean;
+  works: RequestWork[];
+};
+export const requestCard = (ref: { id?: number; number?: string }) =>
+  rpc<RequestCard | null>('request_card', { p_id: ref.id ?? null, p_number: ref.number ?? null });
+
+// ---------- Счётчики на главной мастера ----------
+// «Новые» — загруженные после последнего просмотра списка; время просмотра хранится на телефоне.
+const seenKey = (userId: number) => `requests-seen-v1:${userId}`;
+
+export async function myRequestsBadge(userId: number): Promise<{ assigned: number; fresh: number }> {
+  const since = await AsyncStorage.getItem(seenKey(userId)).catch(() => null);
+  const rows = await rpc<{ assigned: number; fresh: number }[]>('my_requests_badge', { p_since: since });
+  return rows[0] ?? { assigned: 0, fresh: 0 };
+}
+
+export function markRequestsSeen(userId: number) {
+  AsyncStorage.setItem(seenKey(userId), new Date().toISOString()).catch(() => {});
+}
+
+/** Описание для списка: без вежливого вступления в начале («Добрый день!», «Здравствуйте,», «Прошу»…). */
+export function previewText(text: string | null | undefined): string {
+  let s = (text ?? '').trim();
+  const lead = /^(добрый\s+(день|вечер)|доброе\s+утро|здравствуйте|приветствую|коллеги|прошу|просьба|просим|пожалуйста)[\s!.,:;–—-]*/i;
+  for (let i = 0; i < 3 && lead.test(s); i++) s = s.replace(lead, '').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : (text ?? '').trim();
+}
 
 // ---------- Руководитель ----------
 export const assignRequest = (id: number, employeeId: number | null, contractor: boolean) =>

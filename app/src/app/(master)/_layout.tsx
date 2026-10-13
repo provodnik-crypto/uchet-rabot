@@ -9,6 +9,8 @@ export default function MasterLayout() {
         <Stack.Screen name="index" options={{ title: 'Учёт работ' }} />
         <Stack.Screen name="shift/date" options={{ title: 'Дата смены' }} />
         <Stack.Screen name="shift/request" options={{ title: 'Заявка' }} />
+        <Stack.Screen name="req/index" options={{ title: 'Заявки' }} />
+        <Stack.Screen name="req/[id]" options={{ title: 'Заявка' }} />
         <Stack.Screen name="shift/work" options={{ title: 'Выбор работы' }} />
         <Stack.Screen name="shift/entry" options={{ title: 'Работа' }} />
         <Stack.Screen name="shift/list" options={{ title: 'Работы смены' }} />

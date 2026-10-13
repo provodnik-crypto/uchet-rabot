@@ -5,7 +5,8 @@ import { colors, radius } from '../theme';
 export function Card({ children, onPress, style }: { children: ReactNode; onPress?: () => void; style?: StyleProp<ViewStyle> }) {
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.card, style, pressed && { opacity: 0.7 }]}>
+      // Небольшая задержка подсветки: при прокрутке карточка под пальцем не бледнеет.
+      <Pressable onPress={onPress} unstable_pressDelay={120} style={({ pressed }) => [styles.card, style, pressed && { opacity: 0.7 }]}>
         {children}
       </Pressable>
     );

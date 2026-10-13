@@ -1,49 +1,21 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
+import { RequestList } from '../../../components/RequestList';
 import { Screen } from '../../../components/Screen';
-import { SearchBox } from '../../../components/SearchBox';
 import { Segmented } from '../../../components/Segmented';
-import { StateView } from '../../../components/StateView';
 import { useDraft } from '../../../lib/draft';
-import { humanError } from '../../../lib/errors';
-import { formatRegistered, openRequests, type OpenRequest, type RequestFilter } from '../../../lib/requests';
 import { formatRequestDigits, requestError, requestNumber, type RequestPrefix } from '../../../lib/shift';
 import { TourTarget } from '../../../lib/tour';
-import { colors, font, radius } from '../../../theme';
+import { colors, font } from '../../../theme';
 
 export default function RequestScreen() {
   const { draft, setRequest } = useDraft();
-  const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<RequestFilter>('all');
-  const [rows, setRows] = useState<OpenRequest[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [tick, setTick] = useState(0);
   const [manual, setManual] = useState(false);
-
-  useFocusEffect(useCallback(() => setTick((t) => t + 1), []));
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    const t = setTimeout(
-      () => {
-        openRequests(q, filter)
-          .then((r) => alive && (setRows(r), setError(null)))
-          .catch((e) => alive && setError(humanError(e)))
-          .finally(() => alive && setLoading(false));
-      },
-      q ? 300 : 0,
-    );
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [q, filter, tick]);
 
   // Номера, уже добавленные в эту смену, — первыми, одним касанием.
   const inShift = Array.from(
@@ -68,45 +40,12 @@ export default function RequestScreen() {
         </>
       ) : null}
 
-      <SearchBox label="Поиск заявки" value={q} onChangeText={setQ} placeholder="Номер или слово из текста" autoCorrect={false} />
-      <Segmented<RequestFilter>
-        options={[
-          { value: 'all', label: 'Все' },
-          { value: 'mine', label: 'Назначены мне' },
-          { value: 'contractor', label: 'Подрядчик' },
-        ]}
-        value={filter}
-        onChange={setFilter}
+      <RequestList
+        mode="select"
+        tourId="request.list"
+        onChoose={(r) => choose(r.number)}
+        onOpen={(r) => router.push({ pathname: '/req/[id]', params: { id: String(r.id), select: '1' } })}
       />
-
-      {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
-      {rows && !rows.length ? (
-        <Text style={styles.meta}>{q || filter !== 'all' ? 'Ничего не найдено' : 'Открытых заявок нет'}</Text>
-      ) : null}
-      {rows?.map((r, i) => (
-        <TourTarget key={r.id} id={i === 0 ? 'request.list' : `request.${r.id}`}>
-          <Card style={[styles.card, r.mine && styles.mine]} onPress={() => choose(r.number)}>
-            {r.mine ? <Text style={styles.badge}>Назначено вам</Text> : null}
-            <Text style={styles.number}>{r.number}</Text>
-            {r.operation ? <Text style={styles.operation}>{r.operation}</Text> : null}
-            {r.description ? (
-              <Text style={styles.desc} numberOfLines={2}>
-                {r.description}
-              </Text>
-            ) : null}
-            <Text style={styles.meta}>
-              {[
-                formatRegistered(r.registered_at),
-                r.requester_name,
-                !r.mine && r.assignee_name ? `назначена: ${r.assignee_name}` : null,
-                r.to_contractor ? 'подрядчик' : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          </Card>
-        </TourTarget>
-      ))}
 
       <TourTarget id="request.manualOpen">
         {manual ? (
@@ -167,21 +106,6 @@ function ManualNumber({ onDone }: { onDone: (number: string) => void }) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 3 },
-  mine: { borderWidth: 2, borderColor: colors.brand },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.brand,
-    borderRadius: radius.chip,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    fontSize: font.small,
-    fontWeight: '800',
-    overflow: 'hidden',
-  },
-  number: { fontSize: font.body, fontWeight: '800' },
-  operation: { fontSize: font.small, fontWeight: '700' },
-  desc: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.secondary },
   manual: { gap: 10 },
   h: { fontSize: font.body, fontWeight: '700' },

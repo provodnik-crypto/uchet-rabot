@@ -10,6 +10,7 @@ import { Segmented } from '../../../components/Segmented';
 import { StateView } from '../../../components/StateView';
 import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
+import { previewText, requestCard, type RequestCard } from '../../../lib/requests';
 import { myWorkItems, searchWork, workCategories, type CategoryRow, type WorkItem } from '../../../lib/shift';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font, radius, touch } from '../../../theme';
@@ -33,6 +34,20 @@ export default function WorkPickerScreen() {
   const reqId = useRef(0);
 
   const searching = q.trim().length > 0;
+
+  // Суть заявки над выбором работы: операция и описание.
+  const [info, setInfo] = useState<RequestCard | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const currentRequest = draft?.currentRequest;
+  useEffect(() => {
+    let alive = true;
+    setInfo(null);
+    setExpanded(false);
+    if (currentRequest) requestCard({ number: currentRequest }).then((r) => alive && setInfo(r)).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [currentRequest]);
 
   useEffect(() => {
     const my = ++reqId.current;
@@ -109,6 +124,24 @@ export default function WorkPickerScreen() {
             <Text style={styles.request}>
               Заявка: {draft?.currentRequest ?? 'без заявки'}
             </Text>
+            {info && (info.operation || info.description) ? (
+              <TourTarget id="work.request">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={expanded ? 'Свернуть описание заявки' : 'Показать описание заявки полностью'}
+                  onPress={() => setExpanded((e) => !e)}
+                  style={styles.reqBox}
+                >
+                  {info.operation ? <Text style={styles.reqOp}>{info.operation}</Text> : null}
+                  {info.description ? (
+                    <Text style={styles.reqDesc} numberOfLines={expanded ? undefined : 3} selectable={expanded}>
+                      {expanded ? info.description : previewText(info.description)}
+                    </Text>
+                  ) : null}
+                  <Text style={styles.reqMore}>{expanded ? 'Свернуть' : 'Показать полностью'}</Text>
+                </Pressable>
+              </TourTarget>
+            ) : null}
             <TourTarget id="work.search">
               <SearchBox label="Поиск работы" value={q} onChangeText={setQ} placeholder="Поиск работы, например розетка" autoCorrect={false} />
             </TourTarget>
@@ -172,6 +205,10 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingTop: 12, gap: 6, paddingBottom: 16 },
   header: { gap: 8, marginBottom: 2 },
   request: { fontSize: font.small, color: colors.secondary, fontWeight: '600' },
+  reqBox: { backgroundColor: colors.card, borderRadius: radius.card, padding: 10, gap: 2, borderLeftWidth: 3, borderLeftColor: colors.brand },
+  reqOp: { fontSize: font.small, fontWeight: '700' },
+  reqDesc: { fontSize: font.body },
+  reqMore: { fontSize: font.small, color: colors.secondary, fontWeight: '600', marginTop: 2 },
   crumb: { minHeight: 40, justifyContent: 'center' },
   crumbText: { fontSize: font.body, fontWeight: '700' },
   item: { gap: 2, minHeight: touch.min, justifyContent: 'center', paddingVertical: 10 },

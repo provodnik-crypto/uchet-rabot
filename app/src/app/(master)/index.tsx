@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
+import { Icon } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
 import { Tile } from '../../components/Tile';
 import { appVersionLabel } from '../../lib/appUpdate';
@@ -14,6 +15,7 @@ import { useDraft } from '../../lib/draft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
+import { myRequestsBadge } from '../../lib/requests';
 import { myEntries, myMonthSummary, myOpenRequests } from '../../lib/shift';
 import { storeToday } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
@@ -29,6 +31,7 @@ export default function MasterHome() {
   const { data: month } = useFocusQuery(myMonthSummary);
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
   const { data: open } = useFocusQuery(myOpenRequests);
+  const { data: badge } = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
   const hasDraft = !!draft && (draft.entries.length > 0 || !!draft.requests?.some((r) => r.minutes));
   const { autoStart } = useTour();
   const focused = useIsFocused();
@@ -92,6 +95,20 @@ export default function MasterHome() {
         </>
       )}
 
+      <TourTarget id="home.requests">
+        <Card style={[styles.reqCard, badge?.assigned ? styles.reqMine : null]} onPress={() => router.push('/req')}>
+          <View style={styles.reqRow}>
+            <View style={styles.reqText}>
+              <Text style={styles.reqTitle}>Заявки</Text>
+              <Text style={styles.reqSub}>
+                {badge ? `Назначено вам: ${badge.assigned} · Новые: ${badge.fresh}` : 'Открытые заявки магазина'}
+              </Text>
+            </View>
+            <Icon name="chevronRight" size={18} color={colors.secondary} strokeWidth={2.4} />
+          </View>
+        </Card>
+      </TourTarget>
+
       <Tile title="Команда" subtitle="Рейтинг и суммы по месяцам" onPress={() => router.push('/team')} />
       <TourTarget id="home.history">
         <Tile title="Моя история" subtitle="Внесённые работы и их статусы" onPress={() => router.push('/history')} />
@@ -120,5 +137,11 @@ const styles = StyleSheet.create({
   draftNote: { textAlign: 'center', color: colors.muted, fontSize: font.small, marginTop: -8 },
   shiftBox: { gap: 4 },
   openNote: { textAlign: 'center', color: colors.muted, fontSize: font.small },
+  reqCard: { minHeight: 56, justifyContent: 'center' },
+  reqMine: { borderWidth: 2, borderColor: colors.brand },
+  reqRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  reqText: { flex: 1, gap: 2 },
+  reqTitle: { fontSize: font.body, fontWeight: '700' },
+  reqSub: { fontSize: font.small, color: colors.secondary },
   role: { textAlign: 'center', color: colors.muted, fontSize: font.small },
 });
