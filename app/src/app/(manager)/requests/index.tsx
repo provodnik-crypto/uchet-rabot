@@ -5,10 +5,11 @@ import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
+import { Segmented } from '../../../components/Segmented';
 import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { listRequests, type RequestRow } from '../../../lib/manager';
+import { listRequests, type RequestRow, type RequestStatusFilter } from '../../../lib/manager';
 import { formatRegistered } from '../../../lib/requests';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { TourTarget } from '../../../lib/tour';
@@ -16,6 +17,7 @@ import { colors, font } from '../../../theme';
 
 export default function RequestsScreen() {
   const [q, setQ] = useState('');
+  const [status, setStatus] = useState<RequestStatusFilter>('open');
   const [rows, setRows] = useState<RequestRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ export default function RequestsScreen() {
     let alive = true;
     setLoading(true);
     const t = setTimeout(() => {
-      listRequests(q)
+      listRequests(q, status)
         .then((r) => alive && (setRows(r), setError(null)))
         .catch((e) => alive && setError(humanError(e)))
         .finally(() => alive && setLoading(false));
@@ -35,15 +37,25 @@ export default function RequestsScreen() {
       alive = false;
       clearTimeout(t);
     };
-  }, [q, tick]);
+  }, [q, status, tick]);
 
   return (
     <Screen>
       <Field label="Поиск" value={q} onChangeText={setQ} placeholder="номер, операция или текст" autoCorrect={false} />
+      <Segmented<RequestStatusFilter>
+        options={[
+          { value: 'open', label: 'Открытые' },
+          { value: 'closed', label: 'Закрытые' },
+          { value: 'all', label: 'Все' },
+        ]}
+        value={status}
+        onChange={setStatus}
+      />
       <BigButton title="Загрузить заявки из ITSM" onPress={() => router.push('/import')} />
-      <Text style={styles.meta}>Сначала открытые. Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или задать плановое время. Красная рамка — потрачено больше плана.</Text>
+      <BigButton title="Закрыть старые заявки" variant="secondary" onPress={() => router.push('/requests/close-old')} />
+      <Text style={styles.meta}>Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или открыть снова, задать плановое время. Красная рамка — потрачено больше плана.</Text>
       {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
-      {rows && !rows.length ? <Text style={styles.meta}>Заявок не найдено</Text> : null}
+      {rows && !rows.length ? <Text style={styles.meta}>{status === 'closed' ? 'Закрытых заявок нет' : 'Заявок не найдено'}</Text> : null}
       {rows?.map((r, i) => (
         <TourTarget key={r.id} id={i === 0 ? 'requests.first' : `requests.${r.id}`}>
         <Card

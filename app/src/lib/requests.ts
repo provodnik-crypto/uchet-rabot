@@ -106,6 +106,11 @@ export const assignRequest = (id: number, employeeId: number | null, contractor:
   rpc<void>('assign_request', { p_id: id, p_employee_id: employeeId, p_contractor: contractor });
 export const setRequestOpen = (id: number, open: boolean) => rpc<void>('set_request_open', { p_id: id, p_open: open });
 
+// ---------- Старые заявки: закрыть пачкой ----------
+export type OldRequest = { id: number; number: string; operation: string | null; description: string | null; registered_at: string };
+export const oldOpenRequests = (before: string) => rpc<OldRequest[]>('old_open_requests', { p_before: before });
+export const closeOldRequests = (before: string) => rpc<number>('close_old_requests', { p_before: before });
+
 /** «2026-10-09 14:05:00» → «09.10.2026 14:05». */
 export function formatRegistered(ts: string | null | undefined): string {
   if (!ts) return '—';

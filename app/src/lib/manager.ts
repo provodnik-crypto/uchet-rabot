@@ -164,7 +164,9 @@ export type RequestRow = {
   to_contractor: boolean;
 };
 
-export const listRequests = (q: string) => rpc<RequestRow[]>('list_requests', { q, p_limit: 200 });
+export type RequestStatusFilter = 'open' | 'closed' | 'all';
+export const listRequests = (q: string, status: RequestStatusFilter = 'all') =>
+  rpc<RequestRow[]>('list_requests', { q, p_limit: 300, p_status: status });
 
 export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'subject' | 'plan_minutes'>>) {
   const { error } = await supabase.from('requests').update(patch).eq('id', id);
