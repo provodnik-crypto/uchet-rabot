@@ -8,6 +8,7 @@ import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { PhotoPicker } from '../../../components/PhotoPicker';
 import { Screen } from '../../../components/Screen';
+import { SelectField } from '../../../components/SelectField';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
 import { useDraft, type DraftEntry } from '../../../lib/draft';
@@ -26,6 +27,7 @@ import {
 import { goToShiftList } from '../../../lib/shiftNav';
 import { uuid } from '../../../lib/today';
 import type { DraftPhoto } from '../../../lib/workPhotos';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 type Params = {
@@ -93,9 +95,10 @@ export default function EntryScreen() {
   const unitCode = priceChoice?.unitCode ?? unit?.code ?? '';
   const integerOnly = priceChoice?.integerOnly ?? unit?.integer_only ?? false;
 
-  // Отдел по умолчанию — из справочника, если в смене ещё ничего не выбирали.
+  // Отдел по умолчанию — из справочника, если в смене ещё ничего не выбирали
+  // или выбранный раньше отдел выключили (например, «Магазин»).
   useEffect(() => {
-    if (refs && departmentId == null) setDepartmentId(refs.departments.find((d) => d.is_default)?.id ?? refs.departments[0]?.id ?? null);
+    if (refs && (departmentId == null || !refs.departments.some((d) => d.id === departmentId))) setDepartmentId(refs.departments.find((d) => d.is_default)?.id ?? refs.departments[0]?.id ?? null);
   }, [refs, departmentId]);
 
   // Подсказки, пока мастер печатает название своей работы: чтобы не плодить дубли.
@@ -185,6 +188,7 @@ export default function EntryScreen() {
 
       {isCustom ? (
         <Card style={styles.card}>
+          <TourTarget id="entry.customName">
           <Field
             label="Название работы"
             value={customName}
@@ -194,6 +198,7 @@ export default function EntryScreen() {
             autoFocus={!editing}
             multiline
           />
+          </TourTarget>
           {suggesting ? <ActivityIndicator color={colors.black} /> : null}
           {suggestions.length ? (
             <View style={styles.sug}>
@@ -226,12 +231,14 @@ export default function EntryScreen() {
               ))}
             </View>
           ) : null}
-          <Text style={styles.label}>Единица измерения</Text>
-          <View style={styles.chips}>
-            {units.map((u) => (
-              <Chip key={u.id} label={u.code} selected={u.id === unitId} onPress={() => setUnitId(u.id)} />
-            ))}
-          </View>
+          <TourTarget id="entry.unit" style={styles.card}>
+            <Text style={styles.label}>Единица измерения</Text>
+            <View style={styles.chips}>
+              {units.map((u) => (
+                <Chip key={u.id} label={u.code} selected={u.id === unitId} onPress={() => setUnitId(u.id)} />
+              ))}
+            </View>
+          </TourTarget>
           {errors.unit ? <Text style={styles.err}>{errors.unit}</Text> : null}
           <Text style={styles.meta}>Цену назначит руководитель. До этого работа будет со статусом «На оценке».</Text>
         </Card>
@@ -242,6 +249,7 @@ export default function EntryScreen() {
         </Card>
       )}
 
+      <TourTarget id="entry.qty">
       <Card style={styles.card}>
         <Field
           label={unitCode ? `Объём, ${unitCode}` : 'Объём'}
@@ -255,18 +263,19 @@ export default function EntryScreen() {
           hint={unitCode ? undefined : 'Сначала выберите единицу'}
         />
       </Card>
+      </TourTarget>
 
       <Card style={styles.card}>
-        <Text style={styles.label}>Отдел</Text>
-        <View style={styles.chips}>
-          {refs.departments.map((d) => (
-            <Chip key={d.id} label={d.name} selected={d.id === departmentId} onPress={() => setDepartmentId(d.id)} />
-          ))}
-        </View>
-        {errors.department ? <Text style={styles.err}>{errors.department}</Text> : null}
-      </Card>
-
-      <Card style={styles.card}>
+        <TourTarget id="entry.dept">
+        <SelectField
+          label="Отдел"
+          value={departmentId}
+          onChange={setDepartmentId}
+          options={refs.departments.map((d) => ({ value: d.id, label: d.name }))}
+          error={errors.department}
+        />
+        </TourTarget>
+        <TourTarget id="entry.perf" style={styles.card}>
         <Text style={styles.label}>Исполнители (сумма делится поровну)</Text>
         <View style={styles.chips}>
           {masters.map((m) => (
@@ -275,38 +284,43 @@ export default function EntryScreen() {
               label={m.id === me?.id ? `${m.display_name} (я)` : m.display_name}
               selected={performerIds.includes(m.id)}
               onPress={() => togglePerformer(m.id)}
-              left={<Avatar name={m.display_name} icon={icons[m.id]} size={36} />}
+              left={<Avatar name={m.display_name} icon={icons[m.id]} size={28} />}
             />
           ))}
         </View>
+        </TourTarget>
         {errors.performers ? <Text style={styles.err}>{errors.performers}</Text> : null}
       </Card>
 
+      <TourTarget id="entry.photo">
       <Card style={styles.card}>
         <Text style={styles.label}>Фото работы</Text>
         <PhotoPicker photos={workPhotos} onChange={setWorkPhotos} hint={isCustom} />
       </Card>
+      </TourTarget>
 
       <Card style={styles.card}>
         <Field label="Примечание (необязательно)" value={note} onChangeText={setNote} multiline maxLength={500} />
       </Card>
 
-      <BigButton title={editing ? 'Сохранить' : 'Добавить в смену'} size="big" onPress={save} />
+      <TourTarget id="entry.add">
+        <BigButton title={editing ? 'Сохранить' : 'Добавить в смену'} size="big" onPress={save} />
+      </TourTarget>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: 10 },
   cat: { fontSize: font.small, color: colors.muted },
-  workName: { fontSize: font.title, fontWeight: '800' },
+  workName: { fontSize: font.title, fontWeight: '700' },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
   meta: { fontSize: font.small, color: colors.muted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   err: { color: colors.danger, fontSize: font.small },
   sug: { gap: 8 },
   sugTitle: { fontSize: font.small, fontWeight: '700' },
-  sugItem: { backgroundColor: colors.bg, padding: 12, gap: 2 },
+  sugItem: { backgroundColor: colors.bg, padding: 10, gap: 2 },
   sugName: { fontSize: font.body, fontWeight: '600' },
   sugMeta: { fontSize: font.small, color: colors.muted },
 });

@@ -10,6 +10,8 @@ import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { listRequests, type RequestRow } from '../../../lib/manager';
 import { formatRegistered } from '../../../lib/requests';
+import { formatMinutes, formatPlan } from '../../../lib/requestTime';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 export default function RequestsScreen() {
@@ -39,11 +41,16 @@ export default function RequestsScreen() {
     <Screen>
       <Field label="Поиск" value={q} onChangeText={setQ} placeholder="номер, операция или текст" autoCorrect={false} />
       <BigButton title="Загрузить заявки из ITSM" onPress={() => router.push('/import')} />
-      <Text style={styles.meta}>Сначала открытые. Нажмите на заявку, чтобы назначить её сотруднику или подрядчику либо закрыть.</Text>
+      <Text style={styles.meta}>Сначала открытые. Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или задать плановое время. Красная рамка — потрачено больше плана.</Text>
       {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
       {rows && !rows.length ? <Text style={styles.meta}>Заявок не найдено</Text> : null}
-      {rows?.map((r) => (
-        <Card key={r.id} style={styles.card} onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(r.id), data: JSON.stringify(r) } })}>
+      {rows?.map((r, i) => (
+        <TourTarget key={r.id} id={i === 0 ? 'requests.first' : `requests.${r.id}`}>
+        <Card
+          key={r.id}
+          style={[styles.card, overPlan(r) && styles.over]}
+          onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(r.id), data: JSON.stringify(r) } })}
+        >
           <Text style={styles.number}>
             {r.number}
             {r.source === 'itsm' && !r.is_open ? <Text style={styles.closed}>  закрыта</Text> : null}
@@ -52,6 +59,17 @@ export default function RequestsScreen() {
           {r.description || r.subject ? (
             <Text style={styles.subject} numberOfLines={2}>
               {r.description ?? r.subject}
+            </Text>
+          ) : null}
+          {r.state ? (
+            <Text style={[styles.state, r.state === 'open' && styles.open]}>
+              {r.state === 'done' ? 'Выполнена' : 'Не закончена'}
+              {r.carries ? ` · переносов: ${r.carries}` : ''}
+            </Text>
+          ) : null}
+          {r.spent_minutes != null || r.plan_minutes != null ? (
+            <Text style={[styles.meta, overPlan(r) && styles.overText]}>
+              {r.plan_minutes != null ? `План ${formatPlan(r.plan_minutes)} · ` : ''}факт {formatMinutes(r.spent_minutes ?? 0)}
             </Text>
           ) : null}
           <Text style={styles.meta}>
@@ -65,12 +83,19 @@ export default function RequestsScreen() {
               .join(' · ')}
           </Text>
         </Card>
+        </TourTarget>
       ))}
     </Screen>
   );
 }
 
+const overPlan = (r: RequestRow) => r.plan_minutes != null && (r.spent_minutes ?? 0) > r.plan_minutes;
+
 const styles = StyleSheet.create({
+  over: { borderWidth: 3, borderColor: colors.danger },
+  overText: { color: colors.danger, fontWeight: '800' },
+  state: { fontSize: font.small, fontWeight: '800', color: colors.success },
+  open: { color: '#8A6500' },
   card: { gap: 4 },
   number: { fontSize: font.body, fontWeight: '800' },
   subject: { fontSize: font.body },

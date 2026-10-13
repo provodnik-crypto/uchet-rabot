@@ -6,7 +6,7 @@ import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
-import { getDepartment, setDefaultDepartment, updateDepartment } from '../../../lib/departments';
+import { getDepartment, isWholeStore, setDefaultDepartment, updateDepartment } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
@@ -48,46 +48,57 @@ export default function DepartmentScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: dep.name }} />
-      <Card style={styles.card}>
-        <Text style={styles.meta}>
-          {dep.is_active ? 'Активен' : 'Выключен'}
-          {dep.is_default ? ' · подставляется мастеру по умолчанию' : ''}
-        </Text>
-        <Field label="Название" value={name} onChangeText={setName} />
-        <BigButton
-          title="Сохранить название"
-          variant="secondary"
-          disabled={!name.trim() || name.trim() === dep.name}
-          loading={busy === 'name'}
-          onPress={() => run('name', () => updateDepartment(dep.id, { name }), 'Название сохранено')}
-        />
-      </Card>
-
-      {dep.is_active && !dep.is_default ? (
-        <BigButton
-          title="Сделать отделом по умолчанию"
-          loading={busy === 'default'}
-          onPress={() => run('default', () => setDefaultDepartment(dep.id), 'Теперь этот отдел подставляется по умолчанию')}
-        />
-      ) : null}
-
-      {message ? <Text style={[styles.msg, { color: message.ok ? colors.success : colors.danger }]}>{message.text}</Text> : null}
-
-      {dep.is_default ? (
-        <Text style={styles.meta}>Отдел по умолчанию нельзя выключить: сначала назначьте другой.</Text>
+      {isWholeStore(dep) ? (
+        <Card style={styles.card}>
+          <Text style={styles.meta}>
+            «Магазин» — это весь магазин. В «Работах» им смотрят все работы по всем отделам; мастер его не выбирает.
+            Старые записи с этим отделом сохранены.
+          </Text>
+        </Card>
       ) : (
-        <BigButton
-          title={dep.is_active ? 'Выключить отдел' : 'Включить отдел'}
-          variant={dep.is_active ? 'danger' : 'primary'}
-          loading={busy === 'active'}
-          onPress={() =>
-            run(
-              'active',
-              () => updateDepartment(dep.id, { is_active: !dep.is_active }),
-              dep.is_active ? 'Отдел выключен: в новых работах его не выбрать, старые записи сохранены' : 'Отдел включён',
-            )
-          }
-        />
+        <>
+          <Card style={styles.card}>
+            <Text style={styles.meta}>
+              {dep.is_active ? 'Активен' : 'Выключен'}
+              {dep.is_default ? ' · подставляется мастеру по умолчанию' : ''}
+            </Text>
+            <Field label="Название" value={name} onChangeText={setName} />
+            <BigButton
+              title="Сохранить название"
+              variant="secondary"
+              disabled={!name.trim() || name.trim() === dep.name}
+              loading={busy === 'name'}
+              onPress={() => run('name', () => updateDepartment(dep.id, { name }), 'Название сохранено')}
+            />
+          </Card>
+
+          {dep.is_active && !dep.is_default ? (
+            <BigButton
+              title="Сделать отделом по умолчанию"
+              loading={busy === 'default'}
+              onPress={() => run('default', () => setDefaultDepartment(dep.id), 'Теперь этот отдел подставляется по умолчанию')}
+            />
+          ) : null}
+
+          {message ? <Text style={[styles.msg, { color: message.ok ? colors.success : colors.danger }]}>{message.text}</Text> : null}
+
+          {dep.is_default ? (
+            <Text style={styles.meta}>Отдел по умолчанию нельзя выключить: сначала назначьте другой.</Text>
+          ) : (
+            <BigButton
+              title={dep.is_active ? 'Выключить отдел' : 'Включить отдел'}
+              variant={dep.is_active ? 'danger' : 'primary'}
+              loading={busy === 'active'}
+              onPress={() =>
+                run(
+                  'active',
+                  () => updateDepartment(dep.id, { is_active: !dep.is_active }),
+                  dep.is_active ? 'Отдел выключен: в новых работах его не выбрать, старые записи сохранены' : 'Отдел включён',
+                )
+              }
+            />
+          )}
+        </>
       )}
     </Screen>
   );

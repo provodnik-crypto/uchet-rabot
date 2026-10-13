@@ -126,7 +126,8 @@ create index requests_open_idx on public.requests (store_id, registered_at desc)
 
 -- Мастер читает заявки, но не заявителя (в нём номер ldap): только через open_requests, «Имя Ф.».
 revoke select on public.requests from authenticated;
-grant select (id, number, subject, created_by, created_at, source, store_id, service, operation, description,
+grant select (id, number, subject, created_by, created_at, plan_minutes, state, manager_closed_at,
+              source, store_id, service, operation, description,
               itsm_status, registered_at, is_open, closed_at, assignee_id, to_contractor)
   on public.requests to authenticated;
 
@@ -267,6 +268,7 @@ end $$;
 
 -- ---------- Открытые заявки магазина (мастер и руководитель) ----------
 -- p_filter: all | mine | contractor. Сначала назначенные мне, потом свежие.
+-- Заявки, которые мастер отметил «Выполнено» (state = done), в списке не показываются.
 create function public.open_requests(q text default '', p_filter text default 'all', p_limit integer default 300)
 returns table (id bigint, number text, service text, operation text, description text, registered_at timestamp,
                requester_name text, assignee_id bigint, assignee_name text, to_contractor boolean, mine boolean)
@@ -283,7 +285,7 @@ begin
            coalesce(r.assignee_id = me, false)
     from requests r
     left join employees a on a.id = r.assignee_id
-    where r.source = 'itsm' and r.is_open and r.store_id = v_store
+    where r.source = 'itsm' and r.is_open and r.store_id = v_store and r.state is distinct from 'done'
       and (p_filter is distinct from 'mine' or r.assignee_id = me)
       and (p_filter is distinct from 'contractor' or r.to_contractor)
       and public.search_words_match(public.normalize_search(
@@ -292,10 +294,11 @@ begin
     limit least(greatest(p_limit, 1), 500);
 end $$;
 
--- ---------- Список заявок руководителя: с полями ITSM ----------
+-- ---------- Список заявок руководителя: время по заявкам (20261012000001) + поля ITSM ----------
 drop function public.list_requests(text, integer);
 create function public.list_requests(q text default '', p_limit integer default 100)
 returns table (id bigint, number text, subject text, entries bigint, last_work_date date,
+               plan_minutes integer, spent_minutes integer, state text, carries integer, since date,
                source text, service text, operation text, description text, itsm_status text,
                registered_at timestamp, requester text, is_open boolean, assignee_id bigint,
                assignee_name text, to_contractor boolean)
@@ -303,17 +306,25 @@ language plpgsql stable security definer set search_path = public as $$
 begin
   perform public.require_manager();
   return query
-    select r.id, r.number, r.subject, count(e.id), max(s.work_date),
+    select r.id, r.number, r.subject,
+           (select count(*) from work_entries e where e.request_id = r.id),
+           greatest((select max(s.work_date) from work_entries e join shifts s on s.id = e.shift_id where e.request_id = r.id),
+                    (select max(s.work_date) from shift_requests x join shifts s on s.id = x.shift_id where x.request_id = r.id)),
+           r.plan_minutes,
+           (select sum(x.minutes)::int from shift_requests x where x.request_id = r.id),
+           r.state,
+           (select count(*)::int from shift_requests x where x.request_id = r.id and x.status = 'unfinished'),
+           (select min(s.work_date) from shift_requests x join shifts s on s.id = x.shift_id where x.request_id = r.id),
            r.source, r.service, r.operation, r.description, r.itsm_status,
            r.registered_at, r.requester, r.is_open, r.assignee_id, a.display_name, r.to_contractor
     from requests r
-    left join work_entries e on e.request_id = r.id
-    left join shifts s on s.id = e.shift_id
     left join employees a on a.id = r.assignee_id
     where public.search_words_match(public.normalize_search(
             r.number || ' ' || coalesce(r.subject, '') || ' ' || coalesce(r.operation, '') || ' ' || coalesce(r.description, '')), q)
-    group by r.id, a.display_name
-    order by r.is_open desc, greatest(max(s.work_date)::timestamp, r.registered_at, r.created_at::timestamp) desc nulls last
+    order by r.is_open desc, greatest(
+               (select max(s.work_date) from work_entries e join shifts s on s.id = e.shift_id where e.request_id = r.id)::timestamp,
+               (select max(s.work_date) from shift_requests x join shifts s on s.id = x.shift_id where x.request_id = r.id)::timestamp,
+               r.registered_at, r.created_at::timestamp) desc nulls last
     limit least(greatest(p_limit, 1), 300);
 end $$;
 

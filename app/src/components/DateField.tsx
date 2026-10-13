@@ -46,6 +46,6 @@ export function DateField({ label, value, onChange, error, hint, quick = true }:
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8 },
+  wrap: { gap: 6 },
   chips: { flexDirection: 'row', gap: 8 },
 });

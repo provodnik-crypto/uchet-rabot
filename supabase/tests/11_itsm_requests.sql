@@ -106,6 +106,13 @@ exception when others then
 end $$;
 reset role;
 
+-- заявку, отмеченную мастером «Выполнено», в списке не показываем
+update public.requests set state = 'done' where number = 'INC261009_0002';
+select pg_temp.login_as('kolya');
+select pg_temp.assert(not exists (select 1 from public.open_requests('', 'all') where number = 'INC261009_0002'), 'выполненная мастером — не в списке');
+reset role;
+update public.requests set state = null where number = 'INC261009_0002';
+
 -- закрыть пропавшую: только по подтверждению руководителя
 select pg_temp.login_as('boss');
 select public.request_import_apply(jsonb_build_object('rows', '[]'::jsonb, 'file_rows', 0,
@@ -114,5 +121,7 @@ select pg_temp.assert(not (select is_open from public.requests where number = 'R
 select pg_temp.assert((select is_open from public.requests where number = 'INC261009_0002'), 'остальные открыты');
 select public.set_request_open((select id from public.requests where number = 'RFS261010_0003'), true);
 select pg_temp.assert((select is_open from public.requests where number = 'RFS261010_0003'), 'руководитель может открыть снова');
+select pg_temp.assert((select operation = 'Ремонт стульев' and plan_minutes is null and spent_minutes is null
+                       from public.list_requests('RFS261009_0001', 10)), 'список руководителя: поля ITSM и время вместе');
 reset role;
 rollback;

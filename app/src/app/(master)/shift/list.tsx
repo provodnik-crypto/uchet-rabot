@@ -2,14 +2,19 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { EntryCard } from '../../../components/EntryCard';
+import { RequestTimeCard } from '../../../components/RequestTimeCard';
 import { Screen } from '../../../components/Screen';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
-import { groupByRequest, useDraft } from '../../../lib/draft';
+import { shiftGroups, useDraft } from '../../../lib/draft';
+import { formatMinutes, SHIFT_MINUTES } from '../../../lib/requestTime';
+import { useRequestInfo } from '../../../lib/useRequestInfo';
+import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 export default function ShiftListScreen() {
-  const { draft, removeEntry, setRequest } = useDraft();
+  const { draft, removeEntry, setRequest, setRequestTime } = useDraft();
+  const info = useRequestInfo(draft);
   if (!draft) {
     return (
       <Screen>
@@ -18,15 +23,20 @@ export default function ShiftListScreen() {
       </Screen>
     );
   }
-  const groups = groupByRequest(draft.entries);
+  const groups = shiftGroups(draft);
+  const total = groups.reduce((a, g) => a + (g.time.minutes ?? 0), 0);
 
   return (
     <Screen>
       <Text style={styles.date}>
         {draft.editing ? 'Правка смены' : 'Смена'} за {formatDate(draft.workDate)} · работ: {draft.entries.length}
       </Text>
+      <Text style={[styles.total, total > SHIFT_MINUTES && styles.warn]}>
+        Время за смену: {formatMinutes(total)} из {formatMinutes(SHIFT_MINUTES)}
+        {total > SHIFT_MINUTES ? ' — больше смены, проверьте' : ''}
+      </Text>
       {groups.length === 0 ? <Text style={styles.empty}>Пока нет ни одной работы.</Text> : null}
-      {groups.map((g) => (
+      {groups.map((g, gi) => (
         <View key={g.request ?? '—'} style={styles.group}>
           <Text style={styles.request}>{g.request ? `Заявка ${g.request}` : 'Без заявки'}</Text>
           {g.entries.map((e) => (
@@ -50,22 +60,35 @@ export default function ShiftListScreen() {
           <BigButton
             title={g.request ? `+ Работа по ${g.request}` : '+ Работа без заявки'}
             variant="secondary"
+            size="small"
             onPress={() => {
               setRequest(g.request);
               router.push('/shift/work');
             }}
           />
+          <RequestTimeCard tour={gi === 0} time={g.time} info={g.request ? info[g.request] : undefined} onChange={(p) => setRequestTime(g.request, p)} />
         </View>
       ))}
-      <BigButton title="+ Другая заявка" variant="secondary" onPress={() => router.push('/shift/request')} />
-      <BigButton title="Проверить и отправить" size="big" disabled={!draft.entries.length} onPress={() => router.push('/shift/review')} />
+      <TourTarget id="list.addRequest">
+        <BigButton title="+ Другая заявка" variant="secondary" size="small" onPress={() => router.push('/shift/request')} />
+      </TourTarget>
+      <TourTarget id="list.review">
+      <BigButton
+        title="Проверить и отправить"
+        size="big"
+        disabled={!draft.entries.length && !groups.some((g) => (g.time.minutes ?? 0) > 0)}
+        onPress={() => router.push('/shift/review')}
+      />
+      </TourTarget>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   date: { fontSize: font.body, fontWeight: '700' },
-  group: { gap: 10 },
-  request: { fontSize: font.small, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },
+  total: { fontSize: font.small, color: colors.muted, fontWeight: '600' },
+  warn: { color: colors.danger, fontWeight: '800' },
+  group: { gap: 6 },
+  request: { fontSize: font.small, fontWeight: '700', color: colors.secondary, marginTop: 6 },
   empty: { color: colors.muted, fontSize: font.body },
 });

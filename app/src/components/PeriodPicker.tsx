@@ -4,8 +4,12 @@ import { formatDate, parseDate } from '../lib/dates';
 import { periodLabel, presetPeriod, type Period, type PeriodPreset } from '../lib/manager';
 import { colors, font } from '../theme';
 import { BigButton } from './BigButton';
-import { Chip } from './Chip';
 import { DateField } from './DateField';
+import { Segmented } from './Segmented';
+
+const PRESETS: PeriodPreset[] = ['month', 'prev', 'year', 'custom'];
+/** Короткие подписи, чтобы весь выбор помещался в одну строку. */
+const short: Record<PeriodPreset, string> = { month: 'Месяц', prev: 'Прошлый', year: 'Год', custom: 'Свой' };
 
 type Props = { preset: PeriodPreset; period: Period; onChange: (preset: PeriodPreset, period: Period) => void };
 
@@ -17,19 +21,14 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.chips}>
-        {(Object.keys(periodLabel) as PeriodPreset[]).map((p) => (
-          <Chip
-            key={p}
-            label={periodLabel[p]}
-            selected={preset === p}
-            onPress={() => {
-              if (p === 'custom') onChange('custom', period);
-              else onChange(p, presetPeriod(p));
-            }}
-          />
-        ))}
-      </View>
+      <Segmented
+        options={PRESETS.map((p) => ({ value: p, label: short[p], a11y: periodLabel[p] }))}
+        value={preset}
+        onChange={(p) => {
+          if (p === 'custom') onChange('custom', period);
+          else onChange(p, presetPeriod(p));
+        }}
+      />
       {preset === 'custom' ? (
         <View style={styles.custom}>
           <View style={styles.row}>
@@ -64,11 +63,10 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 10 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  custom: { gap: 10 },
-  row: { flexDirection: 'row', gap: 10 },
+  wrap: { gap: 8 },
+  custom: { gap: 8 },
+  row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
-  range: { fontSize: font.small, color: colors.muted },
+  range: { fontSize: font.small - 1, color: colors.secondary, paddingHorizontal: 2 },
   err: { color: colors.danger, fontSize: font.small },
 });

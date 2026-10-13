@@ -17,6 +17,7 @@ export default function MasterLayout() {
         <Stack.Screen name="history" options={{ title: 'Моя история' }} />
         <Stack.Screen name="fix" options={{ title: 'Исправить работу' }} />
         <Stack.Screen name="team" options={{ title: 'Команда' }} />
+        <Stack.Screen name="help" options={{ title: 'Помощь' }} />
       </Stack>
     </DraftProvider>
   );

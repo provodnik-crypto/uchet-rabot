@@ -1,4 +1,4 @@
-"""Проверяет файл отчёта: открывается openpyxl, 4 листа, есть нативные диаграммы, итоги сходятся до копейки."""
+"""Проверяет файл отчёта: открывается openpyxl, 5 листов, есть нативные диаграммы, итоги сходятся до копейки."""
 import sys
 import zipfile
 from decimal import Decimal
@@ -13,10 +13,14 @@ with zipfile.ZipFile(path) as z:
     charts = [n for n in z.namelist() if n.startswith('xl/charts/')]
     images = [n for n in z.namelist() if n.startswith('xl/media/')]
 print('диаграмм:', len(charts), '| картинок:', len(images))
-assert len(charts) >= 4 and not images, 'диаграммы должны быть объектами Excel, а не картинками'
+assert len(charts) >= 5 and not images, 'диаграммы должны быть объектами Excel, а не картинками'
 
 wb = openpyxl.load_workbook(path)
-assert wb.sheetnames == ['Сотрудники', 'Итого за месяц', 'Основной подсчет', 'По видам работ'], wb.sheetnames
+assert wb.sheetnames == ['Сотрудники', 'Итого за месяц', 'Основной подсчет', 'По видам работ', 'Время'], wb.sheetnames
+tv = list(wb['Время'].iter_rows(values_only=True))
+assert tv[3][:4] == ('Вид работ', 'Заявок', 'Среднее, ч', 'Медиана, ч'), tv[3]
+assert any(r[0] == 'Мастер' for r in tv) and any(r[0] == 'Дольше плана' for r in tv), 'лист «Время»: мастера и заявки дольше плана'
+print('лист «Время»:', tv[4])
 ws = wb['Основной подсчет']
 assert [c.value for c in ws[1]][:10] == ['Дата', 'Отдел', 'Заявка', 'Наименование работ', 'Ед. измерения', 'Кол-во',
                                          'Стоимость за ед.', 'Стоимость общая', 'Примечание', 'Исполнитель']
