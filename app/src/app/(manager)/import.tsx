@@ -9,7 +9,7 @@ import { confirm } from '../../lib/confirm';
 import { formatDate, maskDateInput, parseDate } from '../../lib/dates';
 import { humanError } from '../../lib/errors';
 import { inWindow, recheckDescription, type ItsmFile, type ItsmRow } from '../../lib/itsm';
-import { formatRegistered, importApply, importContext, pickItsmFile, type ImportContext } from '../../lib/requests';
+import { formatRegistered, formatStoreTime, importApply, importContext, pickItsmFile, type ImportContext } from '../../lib/requests';
 import { colors, font, radius } from '../../theme';
 
 type Result = { inserted: number; skipped: number; closed: number; outside: number; errors: number };
@@ -335,12 +335,6 @@ export default function ImportScreen() {
       <BigButton title="Отмена" variant="secondary" onPress={() => { reset(); setError(null); }} />
     </Screen>
   );
-}
-
-/** Время в Тюмени (UTC+5) из отметки базы. */
-function formatStoreTime(iso: string): string {
-  const d = new Date(new Date(iso).getTime() + 5 * 60 * 60 * 1000).toISOString();
-  return formatRegistered(`${d.slice(0, 10)} ${d.slice(11, 16)}`);
 }
 
 function Stat({ label, value, warn }: { label: string; value: number; warn?: boolean }) {

@@ -106,12 +106,12 @@ exception when others then
 end $$;
 reset role;
 
--- заявку, отмеченную мастером «Выполнено», в списке не показываем
-update public.requests set state = 'done' where number = 'INC261009_0002';
+-- принятую заявку в списке мастера не показываем
+update public.requests set status = 'accepted' where number = 'INC261009_0002';
 select pg_temp.login_as('kolya');
-select pg_temp.assert(not exists (select 1 from public.open_requests('', 'all') where number = 'INC261009_0002'), 'выполненная мастером — не в списке');
+select pg_temp.assert(not exists (select 1 from public.open_requests('', 'all') where number = 'INC261009_0002'), 'принятая — не в списке');
 reset role;
-update public.requests set state = null where number = 'INC261009_0002';
+update public.requests set status = 'waiting' where number = 'INC261009_0002';
 
 -- закрыть пропавшую: только по подтверждению руководителя
 select pg_temp.login_as('boss');

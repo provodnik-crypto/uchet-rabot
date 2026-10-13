@@ -57,6 +57,8 @@ type DraftState = {
   setRequestTime: (number: string | null, patch: Partial<Pick<DraftRequest, 'minutes' | 'status'>>) => void;
   setRequest: (request: string | null) => void;
   setWorkDate: (workDate: string) => void;
+  /** Черновик отправлен, но день продолжается: дальнейшие правки отправятся заменой той же смены. */
+  markSent: () => void;
   upsertEntry: (entry: DraftEntry) => void;
   removeEntry: (key: string) => void;
   clear: () => void;
@@ -178,11 +180,13 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const markSent = useCallback(() => setDraft((d) => (d ? { ...d, editing: true } : d)), []);
+
   const clear = useCallback(() => setDraft(null), []);
 
   const value = useMemo(
-    () => ({ ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, upsertEntry, removeEntry, clear }),
-    [ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, upsertEntry, removeEntry, clear],
+    () => ({ ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, markSent, upsertEntry, removeEntry, clear }),
+    [ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, markSent, upsertEntry, removeEntry, clear],
   );
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }

@@ -29,7 +29,7 @@ export default function ShiftListScreen() {
   return (
     <Screen>
       <Text style={styles.date}>
-        {draft.editing ? 'Правка смены' : 'Смена'} за {formatDate(draft.workDate)} · работ: {draft.entries.length}
+        {draft.editing ? 'Итог дня (уже отправлялся)' : 'Итог дня'} за {formatDate(draft.workDate)} · работ: {draft.entries.length}
       </Text>
       <Text style={[styles.total, total > SHIFT_MINUTES && styles.warn]}>
         Время за смену: {formatMinutes(total)} из {formatMinutes(SHIFT_MINUTES)}
@@ -74,7 +74,7 @@ export default function ShiftListScreen() {
       </TourTarget>
       <TourTarget id="list.review">
       <BigButton
-        title="Проверить и отправить"
+        title="Закрыть смену"
         size="big"
         disabled={!draft.entries.length && !groups.some((g) => (g.time.minutes ?? 0) > 0)}
         onPress={() => router.push('/shift/review')}

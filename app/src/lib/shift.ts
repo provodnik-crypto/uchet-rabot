@@ -46,7 +46,7 @@ export type MyEntry = {
   integer_only: boolean;
   quantity: number;
   note: string | null;
-  status: 'priced' | 'pending' | 'rejected';
+  status: 'priced' | 'pending' | 'rejected' | 'awaiting';
   reject_comment: string | null;
   performer_ids: number[];
   performer_names: string;
@@ -56,6 +56,7 @@ export const statusLabel: Record<MyEntry['status'], string> = {
   priced: 'Принято',
   pending: 'На оценке',
   rejected: 'Отклонено',
+  awaiting: 'Ждёт приёмки',
 };
 
 export type SubmitEntry = {
@@ -182,7 +183,7 @@ export const resubmitEntry = (
   });
 
 // ---------- Итоги для мастера (без цен отдельных работ) ----------
-export type MyMonthSummary = { total_kop: number; requests: number; entries: number; pending: number };
+export type MyMonthSummary = { total_kop: number; requests: number; entries: number; pending: number; awaiting?: number };
 export type TeamRow = { employee_id: number; display_name: string; total_kop: number; entries: number; requests: number };
 export type TeamMonthRow = { month: string; employee_id: number; display_name: string; total_kop: number };
 

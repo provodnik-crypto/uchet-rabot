@@ -1,11 +1,13 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { humanError } from '../lib/errors';
 import { formatRegistered, openRequests, previewText, type OpenRequest, type RequestFilter } from '../lib/requests';
 import { TourTarget } from '../lib/tour';
 import { colors, font, radius } from '../theme';
+import { formatPlan } from '../lib/requestTime';
 import { Card } from './Card';
+import { RequestBadges } from './RequestBadges';
 import { SearchBox } from './SearchBox';
 import { Segmented } from './Segmented';
 import { StateView } from './StateView';
@@ -66,10 +68,25 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
       ) : null}
       {rows?.map((r, i) => (
         <TourTarget key={r.id} id={i === 0 ? tourId : `${tourId}.${r.id}`}>
-          <Card style={[styles.card, r.mine && styles.mine]} onPress={() => (mode === 'select' && onChoose ? onChoose(r) : onOpen(r))}>
+          <Card
+            style={[styles.card, r.mine && styles.mine, r.status === 'in_work' && !r.mine && !r.member && styles.locked]}
+            onPress={() => {
+              if (mode !== 'select' || !onChoose) return onOpen(r);
+              const why = blockedReason(r);
+              if (why) Alert.alert('Выбрать нельзя', why);
+              else onChoose(r);
+            }}
+          >
             <View style={styles.row}>
               <View style={styles.flex}>
-                {r.mine ? <Text style={styles.badge}>Назначено вам</Text> : null}
+                <RequestBadges
+                  status={r.status}
+                  priority={r.priority}
+                  mine={r.mine}
+                  responsibleName={r.mine ? null : r.responsible_name}
+                />
+                {r.member ? <Text style={styles.memberText}>Вы напарник</Text> : null}
+                {r.returned && r.mine ? <Text style={styles.returned}>Вернули — откройте заявку</Text> : null}
                 <Text style={styles.number}>{r.number}</Text>
                 {r.operation ? <Text style={styles.operation}>{r.operation}</Text> : null}
               </View>
@@ -96,8 +113,8 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
               {[
                 formatRegistered(r.registered_at),
                 r.requester_name,
-                !r.mine && r.assignee_name ? `назначена: ${r.assignee_name}` : null,
-                r.to_contractor ? 'подрядчик' : null,
+                !r.mine && r.assignee_name && r.status === 'waiting' ? `назначена: ${r.assignee_name}` : null,
+                r.status === 'in_work' && r.plan_minutes ? `~${formatPlan(r.plan_minutes)}` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -109,21 +126,23 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
   );
 }
 
+/** Почему заявку нельзя выбрать для своей смены (null — можно). */
+function blockedReason(r: OpenRequest): string | null {
+  if (r.status === 'contractor') return 'Заявка у подрядчика.';
+  if (r.status === 'review') return 'Заявка уже на проверке у руководителя.';
+  if (r.status === 'in_work' && !r.mine) return `Заявку взял ${r.responsible_name ?? 'другой мастер'}.`;
+  if (r.status === 'waiting' && r.assignee_id && !r.mine) return `Заявка назначена: ${r.assignee_name}.`;
+  return null;
+}
+
 const styles = StyleSheet.create({
   card: { gap: 3 },
   mine: { borderWidth: 2, borderColor: colors.brand },
+  locked: { opacity: 0.6 },
+  memberText: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
+  returned: { fontSize: font.small, fontWeight: '800', color: colors.danger },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   flex: { flex: 1, gap: 3 },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.brand,
-    borderRadius: radius.chip,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    fontSize: font.small,
-    fontWeight: '800',
-    overflow: 'hidden',
-  },
   number: { fontSize: font.body, fontWeight: '800' },
   operation: { fontSize: font.small, fontWeight: '700' },
   desc: { fontSize: font.body },

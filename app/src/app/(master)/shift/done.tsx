@@ -10,7 +10,7 @@ export default function DoneScreen() {
   return (
     <Screen>
       <Card style={styles.card}>
-        <Text style={styles.title}>{edited === '1' ? 'Смена изменена' : 'Смена отправлена'}</Text>
+        <Text style={styles.title}>{edited === '1' ? 'Смена изменена' : 'Смена закрыта'}</Text>
         <Text style={styles.text}>Работ: {entries}</Text>
         {Number(pending) > 0 ? <Text style={styles.text}>Вне прайса, ждут оценки руководителя: {pending}</Text> : null}
         <Text style={styles.hint}>Исправить смену можно до конца сегодняшнего дня в разделе «Моя история».</Text>

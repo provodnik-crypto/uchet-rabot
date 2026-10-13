@@ -1,4 +1,5 @@
--- Время по заявкам, перенос незаконченной заявки, план и статистика времени.
+-- Время по заявкам, заявка «В работе» переходит на следующий день, план и статистика времени.
+-- (С 14.10.2026 «Не закончено» нет: заявка в работе, пока мастер не отправит её на проверку.)
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
   select id from public.employees where first_name = p_name or display_name = p_name $$;
 create or replace function pg_temp.bench(p_req text, p_qty int, p_perf bigint[]) returns jsonb language sql as $$
@@ -30,9 +31,9 @@ select public.submit_shift(jsonb_build_object('client_uuid', (select v from _ids
   'requests', jsonb_build_array(
     jsonb_build_object('request_number', 'RFS261011_0100', 'minutes', 120, 'status', 'unfinished'),
     jsonb_build_object('request_number', null, 'minutes', 60))));
-select pg_temp.assert((select state from public.requests where number = 'RFS261011_0100') = 'open', 'незаконченная заявка открыта');
-select pg_temp.assert((select number || ' ' || since || ' ' || spent_minutes || ' ' || entries from public.my_open_requests())
-  = 'RFS261011_0100 ' || (public.app_today() - 1) || ' 120 1', 'незаконченная заявка переходит к мастеру: с какого дня, сколько времени и работ');
+select pg_temp.assert((select status || '/' || state from public.requests where number = 'RFS261011_0100') = 'in_work/open', 'заявка с работами — в работе у мастера');
+select pg_temp.assert((select number || ' ' || spent_minutes || ' ' || entries from public.my_open_requests())
+  = 'RFS261011_0100 120 1', 'заявка в работе переходит к мастеру: сколько времени и работ');
 
 -- другой мастер её не получает
 reset role;
@@ -40,24 +41,30 @@ select pg_temp.login_as('misha');
 select pg_temp.assert(not exists (select 1 from public.my_open_requests()), 'чужая незаконченная заявка у другого мастера не появляется');
 reset role;
 
--- сегодня: доделали вдвоём, 3 ч, выполнено
+-- сегодня: доделали вдвоём, 3 ч, отправили на проверку, руководитель принял
 select pg_temp.login_as('kolya');
 select public.submit_shift(jsonb_build_object('client_uuid', (select v from _ids where k = 't'), 'work_date', public.app_today(),
   'entries', jsonb_build_array(pg_temp.bench('RFS261011_0100', 1, array[pg_temp.emp('Николай'), pg_temp.emp('Михаил')])),
   'requests', jsonb_build_array(jsonb_build_object('request_number', 'RFS261011_0100', 'minutes', 180, 'status', 'done'))));
-select pg_temp.assert((select state from public.requests where number = 'RFS261011_0100') = 'done', 'отметка «Выполнено» закрывает заявку');
-select pg_temp.assert(not exists (select 1 from public.my_open_requests()), 'выполненная заявка больше не переносится');
+select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0100'));
+reset role;
+select pg_temp.login_as('boss');
+select public.accept_request((select id from public.requests where number = 'RFS261011_0100'));
+reset role;
+select pg_temp.login_as('kolya');
+select pg_temp.assert((select state from public.requests where number = 'RFS261011_0100') = 'done', 'принятая заявка — выполнена');
+select pg_temp.assert(not exists (select 1 from public.my_open_requests()), 'принятая заявка больше не переносится');
 select pg_temp.assert((select spent_minutes from public.requests_time(array['RFS261011_0100'])) = 300, 'время по заявке копится по дням: 2 ч + 3 ч');
 select pg_temp.assert((select spent_minutes from public.requests_time(array['RFS261011_0100'], (select v from _ids where k = 't'))) = 120,
   'при правке смены её собственное время не считается дважды');
 select pg_temp.assert((select string_agg(coalesce(request_number, '—') || ':' || minutes || ':' || coalesce(status, '—'), ',')
-  from public.my_shift_requests((select v from _ids where k = 'y'))) = 'RFS261011_0100:120:unfinished,—:60:—', 'время своей смены для правки');
+  from public.my_shift_requests((select v from _ids where k = 'y'))) = 'RFS261011_0100:120:done,—:60:—', 'время своей смены для правки');
 
 -- смена только со временем по перенесённой заявке (без новых работ)
 select public.submit_shift(jsonb_build_object('client_uuid', (select v from _ids where k = 't2'), 'work_date', public.app_today(),
   'entries', '[]'::jsonb,
   'requests', jsonb_build_array(jsonb_build_object('request_number', 'RFS261011_0101', 'minutes', 60, 'status', 'unfinished'))));
-select pg_temp.assert((select count(*) from public.my_open_requests()) = 1, 'смена только со временем принимается');
+select pg_temp.assert((select count(*) from public.my_open_requests()) = 1, 'смена только со временем принимается, заявка берётся в работу');
 
 select pg_temp.fails($q$select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(), 'entries', '[]'::jsonb))$q$,
   'пустая смена без времени не принимается');
@@ -83,7 +90,7 @@ reset role;
 select pg_temp.login_as('boss');
 update public.requests set plan_minutes = 240 where number = 'RFS261011_0100';
 select pg_temp.assert((select plan_minutes || '/' || spent_minutes || '/' || state || '/' || carries from public.list_requests('0100'))
-  = '240/300/done/1', 'в списке заявок: план, факт, состояние, переносы');
+  = '240/300/done/0', 'в списке заявок: план, факт, состояние (переносов «Не закончено» больше нет)');
 select pg_temp.assert((select (s -> 'over_plan' -> 0 ->> 'number') from public.time_stats(public.app_today() - 1, public.app_today()) s) = 'RFS261011_0100',
   'заявка дольше плана попадает в статистику');
 select pg_temp.assert((select (s -> 'kinds') @> '[{"kind": "Благоустройство", "jobs": 1, "avg_minutes": 300, "median_minutes": 300}]'
@@ -92,19 +99,16 @@ select pg_temp.assert((select (s -> 'kinds') @> '[{"kind": "Работы вне 
   from public.time_stats(public.app_today() - 1, public.app_today()) s), 'работы без заявки — отдельным заданием за смену');
 select pg_temp.assert((select (s -> 'masters') @> '[{"display_name": "Михаил М.", "requests": 1, "minutes": 300, "ratio": 1.0}]'
   from public.time_stats(public.app_today() - 1, public.app_today()) s), 'напарнику засчитывается время бригады, сравнение со средним');
-select pg_temp.assert((select (s ->> 'requests')::int = 2 and (s ->> 'carried')::int = 2
-  from public.time_stats(public.app_today() - 1, public.app_today()) s), 'доля перенесённых заявок');
+select pg_temp.assert((select (s ->> 'requests')::int = 2
+  from public.time_stats(public.app_today() - 1, public.app_today()) s), 'заявок со временем за период');
 select pg_temp.assert(not ((select s -> 'kinds' from public.time_stats(public.app_today() - 1, public.app_today()) s) @> '[{"kind": "Без категории"}]'),
   'незакрытая заявка в среднее не входит');
 
-select public.set_request_state((select id from public.requests where number = 'RFS261011_0101'), true);
+-- руководитель снимает заявку с мастера
+select public.set_request_responsible((select id from public.requests where number = 'RFS261011_0101'), null);
 reset role;
 select pg_temp.login_as('kolya');
-select pg_temp.assert(not exists (select 1 from public.my_open_requests()), 'руководитель закрыл заявку — у мастера она больше не появляется');
-reset role;
-select pg_temp.login_as('boss');
-select public.set_request_state((select id from public.requests where number = 'RFS261011_0101'), false);
-select pg_temp.assert((select state from public.requests where number = 'RFS261011_0101') = 'open', 'руководитель возвращает заявку в работу');
+select pg_temp.assert(not exists (select 1 from public.my_open_requests()), 'руководитель снял заявку — у мастера она больше не появляется');
 reset role;
 
 -- правка сегодняшней смены пересчитывает время
@@ -113,6 +117,6 @@ select public.submit_shift(jsonb_build_object('client_uuid', (select v from _ids
   'entries', jsonb_build_array(pg_temp.bench('RFS261011_0100', 1, array[pg_temp.emp('Николай')])),
   'requests', jsonb_build_array(jsonb_build_object('request_number', 'RFS261011_0100', 'minutes', 60, 'status', 'unfinished'))));
 select pg_temp.assert((select spent_minutes from public.requests_time(array['RFS261011_0100'])) = 180, 'правка смены меняет время заявки');
-select pg_temp.assert(exists (select 1 from public.my_open_requests() where number = 'RFS261011_0100'), 'правка статуса на «Не закончено» возвращает перенос');
+select pg_temp.assert((select status from public.requests where number = 'RFS261011_0100') = 'accepted', 'правка смены не меняет статус принятой заявки');
 reset role;
 rollback;

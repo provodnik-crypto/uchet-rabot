@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DraftRequest } from '../lib/draft';
 import { formatDate } from '../lib/dates';
-import { formatMinutes, formatPlan, QUICK_TIMES, statusText, TIME_STEP, type RequestStatus } from '../lib/requestTime';
+import { formatMinutes, formatPlan, QUICK_TIMES, TIME_STEP } from '../lib/requestTime';
 import type { RequestTime } from '../lib/shift';
 import { colors, font, radius, touch } from '../theme';
 import { Chip } from './Chip';
@@ -25,10 +25,11 @@ type Props = {
   /** Подсветка частей карточки в обучении. */
   tour?: boolean;
   onChange: (patch: Partial<Pick<DraftRequest, 'minutes' | 'status'>>) => void;
+  label?: string;
 };
 
-/** Сколько времени ушло на заявку за смену и закончена ли она. Крупные кнопки — под палец. */
-export function RequestTimeCard({ time, info, onChange, tour }: Props) {
+/** Сколько времени ушло на заявку за смену. Крупные кнопки — под палец. */
+export function RequestTimeCard({ time, info, onChange, tour, label }: Props) {
   const minutes = time.minutes ?? 0;
   const before = info?.spent_minutes ?? time.carried?.spent ?? 0;
   const plan = info?.plan_minutes ?? time.carried?.plan ?? null;
@@ -41,7 +42,7 @@ export function RequestTimeCard({ time, info, onChange, tour }: Props) {
       {time.carried ? (
         <Mark on={tour} id="list.carried">
           <Text style={styles.carried}>
-            Перенесено с {formatDate(time.carried.since).slice(0, 5)} · уже потрачено {formatMinutes(time.carried.spent)} · работ:{' '}
+            В работе с {formatDate(time.carried.since).slice(0, 5)} · уже потрачено {formatMinutes(time.carried.spent)} · работ:{' '}
             {time.carried.entries}
           </Text>
         </Mark>
@@ -54,7 +55,7 @@ export function RequestTimeCard({ time, info, onChange, tour }: Props) {
       ) : null}
 
       <Mark on={tour} id="list.time">
-        <Text style={styles.label}>Время за смену</Text>
+        <Text style={styles.label}>{label ?? 'Время за смену'}</Text>
         <View style={styles.chips}>
           {QUICK_TIMES.map((q) => (
             <Chip key={q.label} label={q.label} selected={time.minutes === q.minutes} onPress={() => onChange({ minutes: q.minutes })} />
@@ -83,19 +84,6 @@ export function RequestTimeCard({ time, info, onChange, tour }: Props) {
         </View>
       </Mark>
 
-      {time.number ? (
-        <>
-          <Mark on={tour} id="list.status">
-            <Text style={styles.label}>Заявка</Text>
-            <View style={styles.chips}>
-              {(['done', 'unfinished'] as RequestStatus[]).map((st) => (
-                <Chip key={st} label={statusText[st]} selected={time.status === st} onPress={() => onChange({ status: st })} />
-              ))}
-            </View>
-          </Mark>
-          {time.status === 'unfinished' ? <Text style={styles.hint}>Заявка останется у вас и появится вверху следующей смены.</Text> : null}
-        </>
-      ) : null}
     </View>
   );
 }
@@ -140,5 +128,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   empty: { color: colors.muted, fontSize: font.body, fontWeight: '600' },
-  hint: { fontSize: font.small, color: colors.muted },
 });

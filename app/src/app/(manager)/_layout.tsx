@@ -24,6 +24,8 @@ export default function ManagerLayout() {
       <Stack.Screen name="requests/[id]" options={{ title: 'Заявка' }} />
       <Stack.Screen name="requests/close-old" options={{ title: 'Закрыть старые заявки' }} />
       <Stack.Screen name="import" options={{ title: 'Загрузка заявок' }} />
+      <Stack.Screen name="review/index" options={{ title: 'На проверке' }} />
+      <Stack.Screen name="review/[id]" options={{ title: 'Проверка заявки' }} />
     </Stack>
   );
 }

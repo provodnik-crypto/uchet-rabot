@@ -15,11 +15,13 @@ import { useDraft } from '../../lib/draft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
-import { myRequestsBadge } from '../../lib/requests';
+import { myRequests, myRequestsBadge } from '../../lib/requests';
+import { formatMinutes, formatPlan } from '../../lib/requestTime';
+import { RequestBadges } from '../../components/RequestBadges';
 import { myEntries, myMonthSummary, myOpenRequests } from '../../lib/shift';
 import { storeToday } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
-import { goToShiftList } from '../../lib/shiftNav';
+import { openShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font } from '../../theme';
 
@@ -32,6 +34,7 @@ export default function MasterHome() {
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
   const { data: open } = useFocusQuery(myOpenRequests);
   const { data: badge } = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
+  const { data: mineList } = useFocusQuery(myRequests);
   const hasDraft = !!draft && (draft.entries.length > 0 || !!draft.requests?.some((r) => r.minutes));
   const { autoStart } = useTour();
   const focused = useIsFocused();
@@ -55,9 +58,36 @@ export default function MasterHome() {
           Выполнено заявок: {month?.requests ?? '…'} · работ: {month?.entries ?? '…'}
         </Text>
         {month?.pending ? <Text style={styles.monthMeta}>Ещё на оценке: {month.pending} — добавятся после оценки</Text> : null}
+        {month?.awaiting ? <Text style={styles.monthMeta}>Работ по заявкам ждут приёмки: {month.awaiting} — добавятся, когда руководитель примет</Text> : null}
         <Text style={styles.monthLink}>Рейтинг команды →</Text>
       </Card>
       </TourTarget>
+
+      {mineList?.length ? (
+        <TourTarget id="home.mine" style={styles.mineBox}>
+          <Text style={styles.section}>Мои заявки</Text>
+          {mineList.map((r) => (
+            <Card
+              key={r.id}
+              style={[styles.mineCard, r.returned_comment ? styles.mineReturned : null]}
+              onPress={() => router.push({ pathname: '/req/[id]', params: { id: String(r.id) } })}
+            >
+              <RequestBadges status={r.status === 'in_work' ? 'waiting' : r.status} priority={r.priority} />
+              <Text style={styles.mineNumber}>
+                {r.number}
+                {r.operation ? <Text style={styles.mineOp}> · {r.operation}</Text> : null}
+              </Text>
+              <Text style={styles.mineMeta}>
+                {r.returned_comment
+                  ? `Вернули: ${r.returned_comment}`
+                  : r.status === 'review'
+                    ? 'На проверке у руководителя'
+                    : `${r.responsible ? '' : `Взял ${r.responsible_name} · вы напарник · `}${formatMinutes(r.spent_minutes)}${r.plan_minutes != null ? ` из ~${formatPlan(r.plan_minutes)}` : ''}`}
+              </Text>
+            </Card>
+          ))}
+        </TourTarget>
+      ) : null}
 
       {rejected ? (
         <Card onPress={() => router.push('/history')} style={styles.alert}>
@@ -69,7 +99,7 @@ export default function MasterHome() {
       {hasDraft ? (
         <>
           <TourTarget id="home.shift">
-            <BigButton title={`Продолжить смену · ${draft.entries.length}`} size="big" onPress={goToShiftList} />
+            <BigButton title={`Продолжить смену · ${draft.entries.length}`} size="big" onPress={openShiftList} />
           </TourTarget>
           <Text style={styles.draftNote}>
             {draft.editing ? 'Правка отправленной смены' : 'Черновик не отправлен'} · {formatDate(draft.workDate)}
@@ -137,6 +167,13 @@ const styles = StyleSheet.create({
   draftNote: { textAlign: 'center', color: colors.muted, fontSize: font.small, marginTop: -8 },
   shiftBox: { gap: 4 },
   openNote: { textAlign: 'center', color: colors.muted, fontSize: font.small },
+  section: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
+  mineBox: { gap: 6 },
+  mineCard: { gap: 3, borderLeftWidth: 4, borderLeftColor: colors.brand },
+  mineReturned: { borderLeftColor: colors.danger },
+  mineNumber: { fontSize: font.body, fontWeight: '800' },
+  mineOp: { fontWeight: '600' },
+  mineMeta: { fontSize: font.small, color: colors.secondary },
   reqCard: { minHeight: 56, justifyContent: 'center' },
   reqMine: { borderWidth: 2, borderColor: colors.brand },
   reqRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

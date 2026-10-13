@@ -7,6 +7,7 @@ import { Screen } from '../../components/Screen';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { managerDashboard, monthName } from '../../lib/manager';
+import { reviewCount } from '../../lib/requests';
 import { formatKop } from '../../lib/money';
 import { storeToday } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
@@ -18,6 +19,7 @@ type Href = Parameters<typeof router.push>[0];
 export default function ManagerHome() {
   const { me, signOut } = useAuth();
   const { data } = useFocusQuery(managerDashboard);
+  const { data: review } = useFocusQuery(reviewCount);
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // первый вход на этом телефоне — обучение, после обновлений — «Что нового»
@@ -54,6 +56,7 @@ export default function ManagerHome() {
 
       <Text style={styles.section}>Действия</Text>
       <View style={styles.grid}>
+        <ActionTile tourId="mhome.review" title="На проверке" subtitle="заявки мастеров" icon="check" badge={review ?? undefined} href="/review" />
         <ActionTile tourId="mhome.pending" title="На оценке" subtitle="без цены" icon="clock" badge={data?.pending_count} href="/pending" />
         <ActionTile tourId="mhome.entries" title="Работы" subtitle="журнал и правка" icon="list" href="/entries" />
         <ActionTile tourId="mhome.summary" title="Сводка" subtitle="по сотрудникам" icon="chart" href="/summary" />

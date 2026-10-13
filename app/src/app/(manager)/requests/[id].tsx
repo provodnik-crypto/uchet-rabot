@@ -9,8 +9,20 @@ import { Screen } from '../../../components/Screen';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { setRequestState, updateRequest, type RequestRow } from '../../../lib/manager';
-import { assignRequest, formatRegistered, setRequestOpen } from '../../../lib/requests';
+import { updateRequest, type RequestRow } from '../../../lib/manager';
+import {
+  assignRequest,
+  eventLabel,
+  formatRegistered,
+  formatStoreTime,
+  lifecycleLabel,
+  priorityLabel,
+  requestCard,
+  setRequestOpen,
+  setRequestPriority,
+  setRequestResponsible,
+  type Priority,
+} from '../../../lib/requests';
 import { formatMinutes, formatPlan, PLAN_TIMES } from '../../../lib/requestTime';
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -24,7 +36,7 @@ export default function RequestScreen() {
   const r = JSON.parse(data) as RequestRow;
   const [subject, setSubject] = useState(r.subject ?? '');
   const [plan, setPlan] = useState<number | null>(r.plan_minutes);
-  const [state, setState] = useState(r.state);
+  const { data: card, reload: reloadCard } = useFocusQuery(() => requestCard({ id: r.id }));
   const { data: masters } = useFocusQuery(listMasters);
   const [assignee, setAssignee] = useState<number | null>(r.assignee_id);
   const [contractor, setContractor] = useState(r.to_contractor);
@@ -41,19 +53,6 @@ export default function RequestScreen() {
     try {
       await updateRequest(r.id, { subject: subject.trim() || null, plan_minutes: plan });
       router.back();
-    } catch (e) {
-      setMessage(humanError(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function changeState(done: boolean) {
-    setBusy('state');
-    setMessage(null);
-    try {
-      await setRequestState(r.id, done);
-      setState(done ? 'done' : 'open');
     } catch (e) {
       setMessage(humanError(e));
     } finally {
@@ -78,6 +77,7 @@ export default function RequestScreen() {
       await assignRequest(r.id, employeeId, toContractor);
       setAssignee(employeeId);
       setContractor(toContractor);
+      reloadCard();
     });
 
   async function toggleOpen() {
@@ -161,19 +161,57 @@ export default function RequestScreen() {
 
       <TourTarget id="rdetail.state">
       <Card style={styles.card}>
-        <Text style={styles.h}>Состояние: {state === 'done' ? 'выполнена' : state === 'open' ? 'не закончена' : 'время не отмечали'}</Text>
-        {state === 'done' ? (
-          <BigButton title="Вернуть в работу" variant="secondary" loading={busy === 'state'} disabled={!!busy} onPress={() => changeState(false)} />
-        ) : (
-          <BigButton title="Отметить выполненной" variant="secondary" loading={busy === 'state'} disabled={!!busy} onPress={() => changeState(true)} />
-        )}
-        <Text style={styles.hint}>
-          {state === 'done'
-            ? 'Вернуть — заявка снова станет незаконченной и появится у мастера в следующей смене.'
-            : 'Например, если мастер в отпуске. Заявка перестанет переноситься на следующие смены.'}
+        <Text style={styles.h}>
+          Статус: {card ? lifecycleLabel[card.status] : lifecycleLabel[r.status]}
+          {card?.responsible_name ? ` · ${card.responsible_name}` : ''}
         </Text>
+        {card?.status === 'review' ? (
+          <BigButton title="Проверить заявку" onPress={() => router.push({ pathname: '/review/[id]', params: { id: String(r.id) } })} />
+        ) : null}
+        <Text style={styles.label}>Приоритет</Text>
+        <View style={styles.chips}>
+          {([1, 2, 3, 4] as Priority[]).map((p) => (
+            <Chip
+              key={p}
+              label={priorityLabel[p]}
+              selected={(card?.priority ?? r.priority) === p}
+              onPress={() => run('priority', async () => (await setRequestPriority(r.id, p), reloadCard()))}
+            />
+          ))}
+        </View>
+        {card && (card.status === 'in_work' || card.status === 'waiting') && isOpen ? (
+          <>
+            <Text style={styles.label}>{card.status === 'in_work' ? 'Переназначить или снять с мастера' : 'Отдать в работу мастеру'}</Text>
+            <View style={styles.chips}>
+              {card.status === 'in_work' ? (
+                <Chip label="Снять с мастера" onPress={() => run('resp', async () => (await setRequestResponsible(r.id, null), reloadCard()))} />
+              ) : null}
+              {(masters ?? []).map((m) => (
+                <Chip
+                  key={m.id}
+                  label={m.display_name}
+                  selected={card.responsible_id === m.id}
+                  onPress={() => run('resp', async () => (await setRequestResponsible(r.id, m.id), reloadCard()))}
+                />
+              ))}
+            </View>
+            <Text style={styles.hint}>«Снять» — заявка снова «Ожидает». Мастер, которому переназначили, увидит её в «Мои заявки».</Text>
+          </>
+        ) : null}
       </Card>
       </TourTarget>
+
+      {card?.events.length ? (
+        <Card style={styles.card}>
+          <Text style={styles.label}>История</Text>
+          {card.events.map((e, i) => (
+            <Text key={i} style={styles.hint}>
+              {formatStoreTime(e.at)} · {e.author ?? 'Система'}: {eventLabel[e.kind].toLowerCase()}
+              {e.comment ? ` — ${e.comment}` : ''}
+            </Text>
+          ))}
+        </Card>
+      ) : null}
 
       {itsm ? (
         <BigButton

@@ -15,7 +15,7 @@ import { useFocusQuery } from '../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../lib/workPhotos';
 import { colors, font } from '../../theme';
 
-const tone = { priced: 'ok', pending: 'wait', rejected: 'bad' } as const;
+const tone = { priced: 'ok', pending: 'wait', rejected: 'bad', awaiting: 'wait' } as const;
 
 export default function HistoryScreen() {
   const { data, error, loading, reload } = useFocusQuery(async () => {

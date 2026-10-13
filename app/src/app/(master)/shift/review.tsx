@@ -8,10 +8,9 @@ import { Segmented } from '../../../components/Segmented';
 import { formatDate } from '../../../lib/dates';
 import { groupIsSent, shiftGroups, useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
-import { formatMinutes, SHIFT_MINUTES, statusText } from '../../../lib/requestTime';
-import { parseQuantity, submitShift, type SubmitEntry, type SubmitRequest } from '../../../lib/shift';
+import { formatMinutes, SHIFT_MINUTES } from '../../../lib/requestTime';
+import { sendDraft } from '../../../lib/sendShift';
 import { storeToday, storeYesterday } from '../../../lib/today';
-import { toPayload, uploadPhotos, type DraftPhoto } from '../../../lib/workPhotos';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
@@ -44,42 +43,7 @@ export default function ReviewScreen() {
     setSending(true);
     setError(null);
     try {
-      // 1. Фото: загружаем недостающие; путь каждого загруженного сразу сохраняем в черновик,
-      //    поэтому при обрыве связи «Повторить» догрузит только оставшиеся.
-      const uploaded = new Map<string, DraftPhoto>();
-      const all = draft.entries.flatMap((e) => (e.photos ?? []).map((p) => ({ entry: e, photo: p })));
-      if (all.some(({ photo }) => !photo.path)) {
-        await uploadPhotos(
-          all.map((x) => x.photo),
-          (p) => {
-            uploaded.set(p.key, p);
-            const owner = all.find((x) => x.photo.key === p.key)!.entry;
-            upsertEntry({ ...owner, photos: (owner.photos ?? []).map((x) => uploaded.get(x.key) ?? x) });
-          },
-          (done, total) => setProgress(`Загружаем фото: ${done} из ${total}`),
-        );
-      }
-      setProgress('Отправляем смену…');
-      const withPhotos = (e: (typeof draft.entries)[number]) => (e.photos ?? []).map((p) => uploaded.get(p.key) ?? p);
-
-      // 2. Смена. Порядок работ — как на экране: по заявкам.
-      const entries: SubmitEntry[] = groups.flatMap((g) =>
-        g.entries.map((e) => ({
-          request_number: e.requestNumber,
-          department_id: e.departmentId,
-          ...(e.priceItemId ? { price_item_id: e.priceItemId } : { custom_name: e.customName ?? e.name, unit_id: e.unitId }),
-          quantity: parseQuantity(e.quantity, e.integerOnly).value ?? Number(e.quantity.replace(',', '.')),
-          note: e.note || null,
-          performer_ids: e.performerIds,
-          photos: toPayload(withPhotos(e)),
-        })),
-      );
-      const requests: SubmitRequest[] = groups.map((g) => ({
-        request_number: g.request,
-        minutes: g.time.minutes ?? 0,
-        ...(g.request ? { status: g.time.status } : {}),
-      }));
-      const res = await submitShift({ client_uuid: draft.clientUuid, work_date: draft.workDate, entries, requests });
+      const res = await sendDraft(draft, upsertEntry, setProgress);
       clear();
       router.dismissAll();
       router.push({ pathname: '/shift/done', params: { entries: String(res.entries), pending: String(res.pending), edited: draft.editing ? '1' : '0' } });
@@ -111,7 +75,6 @@ export default function ReviewScreen() {
           <Text style={styles.request}>{g.request ? `Заявка ${g.request}` : 'Без заявки'}</Text>
           <Text style={[styles.time, !g.time.minutes && styles.missing]}>
             {g.time.minutes ? `Время: ${formatMinutes(g.time.minutes)}` : 'Время не указано — вернитесь к списку'}
-            {g.request ? ` · ${statusText[g.time.status]}` : ''}
           </Text>
           {!g.entries.length ? <Text style={styles.meta}>Новых работ нет — только время</Text> : null}
           {g.entries.map((e) => (
@@ -146,7 +109,8 @@ export default function ReviewScreen() {
       {progress ? <Text style={styles.progress}>{progress}</Text> : null}
       {error ? <Text style={styles.error}>Не отправлено: {error}</Text> : null}
       <TourTarget id="review.send">
-        <BigButton title={error ? 'Повторить' : 'Отправить'} size="big" loading={sending} onPress={send} />
+        <BigButton title={error ? 'Повторить' : 'Закрыть смену'} size="big" loading={sending} onPress={send} />
+      <Text style={styles.meta}>Заявки останутся «В работе». На проверку заявку отправляют из её карточки: «Проверить и отправить».</Text>
       </TourTarget>
       <BigButton title="Вернуться к списку" variant="secondary" disabled={sending} onPress={() => router.back()} />
     </Screen>

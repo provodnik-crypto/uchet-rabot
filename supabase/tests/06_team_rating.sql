@@ -14,6 +14,16 @@ select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 
       'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))),
     jsonb_build_object('department_id', (select id from public.departments where is_default),
       'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
+select pg_temp.assert((select total_kop from public.my_month_summary()) = 0, 'до приёмки заявок сумма 0');
+select pg_temp.assert((select awaiting from public.my_month_summary()) = 2, 'две работы ждут приёмки заявки');
+select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0001'));
+select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0002'));
+reset role;
+select pg_temp.login_as('boss');
+select public.accept_request((select id from public.requests where number = 'RFS261011_0001'));
+select public.accept_request((select id from public.requests where number = 'RFS261011_0002'));
+reset role;
+select pg_temp.login_as('kolya');
 select pg_temp.assert((select total_kop from public.my_month_summary()) = 58800 + 58800, 'моя сумма за месяц: доля 588 + 588 ₽');
 select pg_temp.assert((select requests from public.my_month_summary()) = 2, 'выполнено заявок: 2');
 select pg_temp.assert((select pending from public.my_month_summary()) = 1, 'на оценке: 1, в сумму не входит');

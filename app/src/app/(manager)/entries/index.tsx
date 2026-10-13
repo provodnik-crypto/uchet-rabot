@@ -25,9 +25,9 @@ import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
 
-const STATUSES: EntryStatus[] = ['priced', 'pending', 'rejected'];
-const pill = StyleSheet.create({ priced: { backgroundColor: '#E0EDE9' }, pending: { backgroundColor: '#FFF3C4' }, rejected: { backgroundColor: '#F7DCD5' } });
-const dot = StyleSheet.create({ priced: { backgroundColor: colors.success }, pending: { backgroundColor: '#BE9200' }, rejected: { backgroundColor: colors.danger } });
+const STATUSES: EntryStatus[] = ['priced', 'awaiting', 'pending', 'rejected'];
+const pill = StyleSheet.create({ priced: { backgroundColor: '#E0EDE9' }, pending: { backgroundColor: '#FFF3C4' }, rejected: { backgroundColor: '#F7DCD5' }, awaiting: { backgroundColor: '#E8E4F3' } });
+const dot = StyleSheet.create({ priced: { backgroundColor: colors.success }, pending: { backgroundColor: '#BE9200' }, rejected: { backgroundColor: colors.danger }, awaiting: { backgroundColor: '#5E35B1' } });
 
 export default function EntriesScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');

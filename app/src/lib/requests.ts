@@ -86,6 +86,32 @@ export const importApply = (p: ImportPayload) =>
 
 // ---------- Список открытых заявок ----------
 export type RequestFilter = 'all' | 'mine' | 'contractor';
+// ---------- Статусы и приоритет ----------
+export type LifecycleStatus = 'waiting' | 'in_work' | 'review' | 'accepted' | 'contractor';
+export const lifecycleLabel: Record<LifecycleStatus, string> = {
+  waiting: 'Ожидает',
+  in_work: 'В работе',
+  review: 'На проверке',
+  accepted: 'Принята',
+  contractor: 'У подрядчика',
+};
+/** 1 — срочно … 4 — низкий. */
+export type Priority = 1 | 2 | 3 | 4;
+export const priorityLabel: Record<Priority, string> = { 1: 'Срочно', 2: 'Высокий', 3: 'Обычный', 4: 'Низкий' };
+/** Цвет метки приоритета (обычный не показываем). Подрядчик — отдельный фиолетовый, чтобы не путать. */
+export const priorityColor: Record<Priority, string> = { 1: '#C62828', 2: '#E65100', 3: '#595959', 4: '#757575' };
+export const CONTRACTOR_COLOR = '#5E35B1';
+
+/** Примерное время при взятии заявки. */
+export const ESTIMATES: { label: string; minutes: number }[] = [
+  { label: '30 мин', minutes: 30 },
+  { label: '1 ч', minutes: 60 },
+  { label: '2 ч', minutes: 120 },
+  { label: '4 ч', minutes: 240 },
+  { label: '1 день', minutes: 480 },
+  { label: '2–3 дня', minutes: 1200 },
+];
+
 export type OpenRequest = {
   id: number;
   number: string;
@@ -97,7 +123,17 @@ export type OpenRequest = {
   assignee_id: number | null;
   assignee_name: string | null;
   to_contractor: boolean;
+  /** Назначена мне или я взял. */
   mine: boolean;
+  status: LifecycleStatus;
+  priority: Priority;
+  responsible_id: number | null;
+  responsible_name: string | null;
+  plan_minutes: number | null;
+  spent_minutes: number;
+  returned: boolean;
+  /** Я напарник по заявке. */
+  member: boolean;
 };
 export const openRequests = (q: string, filter: RequestFilter) =>
   rpc<OpenRequest[]>('open_requests', { q, p_filter: filter, p_limit: 300 });
@@ -108,7 +144,7 @@ export type RequestWork = {
   name: string;
   quantity: number;
   unit: string;
-  status: 'priced' | 'pending' | 'rejected';
+  status: 'priced' | 'pending' | 'rejected' | 'awaiting';
   performers: string | null;
 };
 export type RequestCard = {
@@ -128,7 +164,42 @@ export type RequestCard = {
   assignee_name: string | null;
   mine: boolean;
   works: RequestWork[];
+  status: LifecycleStatus;
+  priority: Priority;
+  plan_minutes: number | null;
+  responsible_id: number | null;
+  responsible_name: string | null;
+  is_responsible: boolean;
+  taken_at: string | null;
+  sent_at: string | null;
+  returned_comment: string | null;
+  members: { id: number; name: string }[];
+  spent_minutes: number;
+  time_by_day: { work_date: string; minutes: number; author: string }[];
+  events: RequestEvent[];
 };
+export type RequestEvent = {
+  kind: 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate';
+  at: string;
+  from: LifecycleStatus | null;
+  to: LifecycleStatus | null;
+  comment: string | null;
+  author: string | null;
+};
+export const eventLabel: Record<RequestEvent['kind'], string> = {
+  take: 'Взял в работу',
+  refuse: 'Отказался',
+  send: 'Отправил на проверку',
+  accept: 'Принял',
+  return: 'Вернул',
+  priority: 'Приоритет',
+  assign: 'Назначение',
+  responsible: 'Ответственный',
+  contractor: 'Передал подрядчику',
+  plan: 'Примерное время',
+  migrate: 'Перенос в новую схему',
+};
+
 export const requestCard = (ref: { id?: number; number?: string }) =>
   rpc<RequestCard | null>('request_card', { p_id: ref.id ?? null, p_number: ref.number ?? null });
 
@@ -154,6 +225,34 @@ export function previewText(text: string | null | undefined): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : (text ?? '').trim();
 }
 
+// ---------- Жизненный цикл ----------
+export type MyRequest = {
+  id: number;
+  number: string;
+  operation: string | null;
+  description: string | null;
+  status: LifecycleStatus;
+  priority: Priority;
+  plan_minutes: number | null;
+  spent_minutes: number;
+  taken_at: string | null;
+  returned_comment: string | null;
+  responsible: boolean;
+  responsible_name: string | null;
+};
+export const myRequests = () => rpc<MyRequest[]>('my_requests');
+export const takeRequest = (id: number, planMinutes: number | null, memberIds: number[]) =>
+  rpc<void>('take_request', { p_id: id, p_plan_minutes: planMinutes, p_member_ids: memberIds });
+export const refuseRequest = (id: number, comment: string) => rpc<void>('refuse_request', { p_id: id, p_comment: comment });
+export const sendRequestForReview = (id: number, comment: string | null) =>
+  rpc<void>('send_request_for_review', { p_id: id, p_comment: comment });
+export const acceptRequest = (id: number, comment: string | null) => rpc<void>('accept_request', { p_id: id, p_comment: comment });
+export const returnRequest = (id: number, comment: string) => rpc<void>('return_request', { p_id: id, p_comment: comment });
+export const setRequestPriority = (id: number, priority: Priority) => rpc<void>('set_request_priority', { p_id: id, p_priority: priority });
+export const setRequestResponsible = (id: number, employeeId: number | null) =>
+  rpc<void>('set_request_responsible', { p_id: id, p_employee: employeeId });
+export const reviewCount = () => rpc<number>('review_count');
+
 // ---------- Руководитель ----------
 export const assignRequest = (id: number, employeeId: number | null, contractor: boolean) =>
   rpc<void>('assign_request', { p_id: id, p_employee_id: employeeId, p_contractor: contractor });
@@ -170,4 +269,10 @@ export function formatRegistered(ts: string | null | undefined): string {
   const [d, t] = ts.replace('T', ' ').split(' ');
   const [y, m, day] = d.split('-');
   return `${day}.${m}.${y}${t ? ' ' + t.slice(0, 5) : ''}`;
+}
+
+/** Отметка времени базы (UTC) → «09.10.2026 14:05» по Тюмени (UTC+5). */
+export function formatStoreTime(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + 5 * 60 * 60 * 1000).toISOString();
+  return formatRegistered(`${d.slice(0, 10)} ${d.slice(11, 16)}`);
 }

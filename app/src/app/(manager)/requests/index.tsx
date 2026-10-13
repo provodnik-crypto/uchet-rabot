@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -10,7 +10,11 @@ import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { listRequests, type RequestRow, type RequestStatusFilter } from '../../../lib/manager';
-import { formatRegistered } from '../../../lib/requests';
+import { formatRegistered, lifecycleLabel, priorityLabel, type LifecycleStatus, type Priority } from '../../../lib/requests';
+import { listMasters } from '../../../lib/shift';
+import { useFocusQuery } from '../../../lib/useQuery';
+import { FilterSelect } from '../../../components/FilterSelect';
+import { RequestBadges } from '../../../components/RequestBadges';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
@@ -18,6 +22,10 @@ import { colors, font } from '../../../theme';
 export default function RequestsScreen() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<RequestStatusFilter>('open');
+  const [lifecycle, setLifecycle] = useState<LifecycleStatus | null>(null);
+  const [priority, setPriority] = useState<Priority | null>(null);
+  const [employee, setEmployee] = useState<number | null>(null);
+  const { data: masters } = useFocusQuery(listMasters);
   const [rows, setRows] = useState<RequestRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +36,7 @@ export default function RequestsScreen() {
     let alive = true;
     setLoading(true);
     const t = setTimeout(() => {
-      listRequests(q, status)
+      listRequests(q, status, { lifecycle, priority, employee })
         .then((r) => alive && (setRows(r), setError(null)))
         .catch((e) => alive && setError(humanError(e)))
         .finally(() => alive && setLoading(false));
@@ -37,7 +45,7 @@ export default function RequestsScreen() {
       alive = false;
       clearTimeout(t);
     };
-  }, [q, status, tick]);
+  }, [q, status, lifecycle, priority, employee, tick]);
 
   return (
     <Screen>
@@ -51,6 +59,29 @@ export default function RequestsScreen() {
         value={status}
         onChange={setStatus}
       />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters} keyboardShouldPersistTaps="handled">
+        <FilterSelect
+          label="Статус"
+          allLabel="Все статусы"
+          value={lifecycle}
+          onChange={setLifecycle}
+          options={(Object.keys(lifecycleLabel) as LifecycleStatus[]).map((v) => ({ value: v, label: lifecycleLabel[v] }))}
+        />
+        <FilterSelect
+          label="Приоритет"
+          allLabel="Любой приоритет"
+          value={priority}
+          onChange={setPriority}
+          options={([1, 2, 3, 4] as Priority[]).map((v) => ({ value: v, label: priorityLabel[v] }))}
+        />
+        <FilterSelect
+          label="Мастер"
+          allLabel="Все мастера"
+          value={employee}
+          onChange={setEmployee}
+          options={(masters ?? []).map((m) => ({ value: m.id, label: m.display_name }))}
+        />
+      </ScrollView>
       <BigButton title="Загрузить заявки из ITSM" onPress={() => router.push('/import')} />
       <BigButton title="Закрыть старые заявки" variant="secondary" onPress={() => router.push('/requests/close-old')} />
       <Text style={styles.meta}>Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или открыть снова, задать плановое время. Красная рамка — потрачено больше плана.</Text>
@@ -63,6 +94,13 @@ export default function RequestsScreen() {
           style={[styles.card, overPlan(r) && styles.over]}
           onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(r.id), data: JSON.stringify(r) } })}
         >
+          <RequestBadges status={r.status} priority={r.priority} responsibleName={r.responsible_name} />
+          {r.status === 'in_work' && r.taken_at ? (
+            <Text style={[styles.meta, staleDays(r) >= 3 && styles.overText]}>
+              в работе {daysSince(r.taken_at)} дн.{staleDays(r) >= 3 ? ` · без действий ${staleDays(r)} дн.` : ''}
+              {r.returned_comment ? ' · возвращена' : ''}
+            </Text>
+          ) : null}
           <Text style={styles.number}>
             {r.number}
             {r.source === 'itsm' && !r.is_open ? <Text style={styles.closed}>  закрыта</Text> : null}
@@ -71,12 +109,6 @@ export default function RequestsScreen() {
           {r.description || r.subject ? (
             <Text style={styles.subject} numberOfLines={2}>
               {r.description ?? r.subject}
-            </Text>
-          ) : null}
-          {r.state ? (
-            <Text style={[styles.state, r.state === 'open' && styles.open]}>
-              {r.state === 'done' ? 'Выполнена' : 'Не закончена'}
-              {r.carries ? ` · переносов: ${r.carries}` : ''}
             </Text>
           ) : null}
           {r.spent_minutes != null || r.plan_minutes != null ? (
@@ -101,6 +133,11 @@ export default function RequestsScreen() {
   );
 }
 
+const DAY = 24 * 60 * 60 * 1000;
+const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY));
+/** Дней без действий (по календарю; подсветка рабочих дней — во второй части). */
+const staleDays = (r: RequestRow) => (r.last_activity_at ? daysSince(r.last_activity_at) : 0);
+
 const overPlan = (r: RequestRow) => r.plan_minutes != null && (r.spent_minutes ?? 0) > r.plan_minutes;
 
 const styles = StyleSheet.create({
@@ -112,5 +149,6 @@ const styles = StyleSheet.create({
   number: { fontSize: font.body, fontWeight: '800' },
   subject: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.muted },
+  filters: { gap: 8, paddingVertical: 2 },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
 });

@@ -1,28 +1,57 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
+import { Chip } from '../../../components/Chip';
+import { Field } from '../../../components/Field';
+import { RequestBadges } from '../../../components/RequestBadges';
+import { RequestTimeCard } from '../../../components/RequestTimeCard';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
+import { useAuth } from '../../../lib/auth';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
-import { useDraft } from '../../../lib/draft';
-import { formatRegistered, requestCard, type RequestWork } from '../../../lib/requests';
-import { formatQuantity, myOpenRequests } from '../../../lib/shift';
+import { requestList, useDraft } from '../../../lib/draft';
+import { humanError } from '../../../lib/errors';
+import {
+  ESTIMATES,
+  eventLabel,
+  formatRegistered,
+  formatStoreTime,
+  lifecycleLabel,
+  refuseRequest,
+  requestCard,
+  takeRequest,
+  type RequestWork,
+} from '../../../lib/requests';
+import { formatMinutes, formatPlan } from '../../../lib/requestTime';
+import { formatQuantity, listMasters, myOpenRequests } from '../../../lib/shift';
+import { returnToCardAfterEntry } from '../../../lib/shiftNav';
 import { storeToday } from '../../../lib/today';
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font, radius } from '../../../theme';
+import { colors, font, radius, touch } from '../../../theme';
 
-const statusLabel: Record<RequestWork['status'], string> = { priced: 'Принято', pending: 'На оценке', rejected: 'Отклонено' };
+const workStatus: Record<RequestWork['status'], string> = {
+  priced: 'Принято',
+  pending: 'На оценке',
+  rejected: 'Отклонено',
+  awaiting: 'Ждёт приёмки',
+};
 
-/** Карточка заявки: полный текст, кому назначена, работы по ней. */
+/** Карточка заявки: полный текст, статус, работы и время; действия по статусу. */
 export default function RequestCardScreen() {
   const { id, select } = useLocalSearchParams<{ id: string; select?: string }>();
+  const { me } = useAuth();
   const { data: r, error, loading, reload } = useFocusQuery(() => requestCard({ id: Number(id) }));
-  const { draft, start, setRequest } = useDraft();
+  const { draft, start, setRequest, setRequestTime } = useDraft();
+  const [panel, setPanel] = useState<null | 'take' | 'refuse'>(null);
   const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Вернулись в карточку — «после добавления работы вернуться сюда» больше не нужно.
+  useFocusEffect(useCallback(() => returnToCardAfterEntry(null), []));
 
   if (!r) {
     return (
@@ -32,52 +61,70 @@ export default function RequestCardScreen() {
     );
   }
 
-  // В выборе заявки при закрытии смены: та же заявка, сразу к выбору работы.
+  const today = storeToday();
+  const canTake = r.status === 'waiting' && r.is_open && !r.to_contractor && (!r.assignee_id || r.assignee_id === me?.id);
+  const working = r.status === 'in_work' && r.is_responsible;
+  const isMember = r.members.some((m) => m.id === me?.id);
+  const draftEntries = draft?.entries.filter((e) => e.requestNumber === r.number) ?? [];
+  const draftTime = draft ? requestList(draft).find((t) => t.number === r.number) : undefined;
+  const todayMinutes = draftTime?.minutes ?? 0;
+  const spent = r.spent_minutes + (draft?.editing ? 0 : todayMinutes);
+  const over = r.plan_minutes != null && spent > r.plan_minutes;
+
+  /** Черновик сегодняшнего дня: есть — используем (за другой день — спросим), нет — начинаем. */
+  async function ensureDraft(): Promise<boolean> {
+    if (draft) {
+      if (draft.workDate === today) return true;
+      return confirm(
+        'Есть неотправленная смена',
+        `${draft.editing ? 'Открыта правка смены' : 'Черновик'} за ${formatDate(draft.workDate)}. Внести в неё?`,
+        'Внести',
+      );
+    }
+    setBusy(true);
+    // Мои заявки «В работе» встают в начало дня, как при обычном закрытии смены.
+    const carried = await myOpenRequests().catch(() => []);
+    setBusy(false);
+    start(today, carried);
+    return true;
+  }
+
+  async function addWork() {
+    if (!r || !(await ensureDraft())) return;
+    setRequest(r.number);
+    returnToCardAfterEntry(r.id);
+    router.push('/shift/work');
+  }
+
+  async function changeTime(minutes: number | null) {
+    if (!r || !(await ensureDraft())) return;
+    setRequestTime(r.number, { minutes });
+  }
+
   const chooseForShift = () => {
     setRequest(r.number);
     router.replace('/shift/work');
   };
 
-  // С главной: начать смену сегодняшней датой с этой заявкой (или добавить её в неотправленный черновик).
-  async function addWork() {
-    if (!r) return;
-    if (draft && draft.workDate !== storeToday()) {
-      const ok = await confirm(
-        'Есть неотправленная смена',
-        `${draft.editing ? 'Открыта правка смены' : 'Черновик'} за ${formatDate(draft.workDate)}. Добавить работы по заявке в неё?`,
-        'Добавить',
-      );
-      if (!ok) return;
-    }
-    if (!draft) {
-      setBusy(true);
-      // Незаконченные заявки прошлых смен встают в начало списка, как при обычном закрытии смены.
-      const carried = await myOpenRequests().catch(() => []);
-      setBusy(false);
-      start(storeToday(), carried);
-    }
-    setRequest(r.number);
-    if (router.canDismiss()) router.dismissAll();
-    router.push('/shift/list');
-    router.push('/shift/work');
-  }
-
-  const who = r.to_contractor ? 'Подрядчик' : r.mine ? 'Вам' : r.assignee_name ?? 'Не назначена';
-
   return (
     <Screen>
       <TourTarget id="card.head">
         <View style={styles.head}>
-          {r.mine ? <Text style={styles.badge}>Назначено вам</Text> : null}
+          <RequestBadges status={r.status} priority={r.priority} contractor={r.to_contractor} mine={r.mine || r.is_responsible} />
           <Text style={styles.number} selectable>
             {r.number}
           </Text>
           {r.service || r.operation ? <Text style={styles.operation}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text> : null}
-          <Text style={styles.meta}>
-            {[r.registered_at ? formatRegistered(r.registered_at) : null, r.requester_name].filter(Boolean).join(' · ')}
-          </Text>
+          <Text style={styles.meta}>{[r.registered_at ? formatRegistered(r.registered_at) : null, r.requester_name].filter(Boolean).join(' · ')}</Text>
         </View>
       </TourTarget>
+
+      {r.returned_comment && r.status === 'in_work' ? (
+        <Card style={styles.returned}>
+          <Text style={styles.returnedTitle}>Руководитель вернул заявку</Text>
+          <Text style={styles.body}>{r.returned_comment}</Text>
+        </Card>
+      ) : null}
 
       <TourTarget id="card.text">
         <Card style={styles.card}>
@@ -90,72 +137,269 @@ export default function RequestCardScreen() {
       </TourTarget>
 
       <Card style={styles.card}>
-        <View style={styles.line}>
-          <Text style={styles.label}>Назначена</Text>
-          <Text style={styles.value}>{who}</Text>
-        </View>
-        <View style={styles.line}>
-          <Text style={styles.label}>Исполнитель</Text>
-          <Text style={styles.value}>{r.to_contractor ? 'Подрядчик' : 'Техники'}</Text>
-        </View>
-        {!r.is_open || r.state === 'done' ? <Text style={styles.closed}>{!r.is_open ? 'Заявка закрыта' : 'Отмечена выполненной'}</Text> : null}
+        <Line label="Статус" value={lifecycleLabel[r.status] + (r.status === 'review' && r.sent_at ? ` с ${formatDate(r.sent_at.slice(0, 10))}` : '')} />
+        {r.responsible_name ? <Line label="Взял" value={r.is_responsible ? 'Вы' : r.responsible_name} /> : null}
+        {r.members.length ? <Line label="Напарники" value={r.members.map((m) => (m.id === me?.id ? 'вы' : m.name)).join(', ')} /> : null}
+        {!r.responsible_name ? <Line label="Назначена" value={r.to_contractor ? 'Подрядчик' : r.assignee_id === me?.id ? 'Вам' : r.assignee_name ?? 'Не назначена'} /> : null}
+        <Line label="Исполнитель" value={r.to_contractor ? 'Подрядчик' : 'Техники'} />
+        {r.plan_minutes != null || spent > 0 ? (
+          <Line label="Время" value={`${formatMinutes(spent)}${r.plan_minutes != null ? ` из ~${formatPlan(r.plan_minutes)}` : ''}`} warn={over} />
+        ) : null}
+        {!r.is_open ? <Text style={styles.closed}>Заявка закрыта</Text> : null}
+        {isMember && !r.is_responsible ? <Text style={styles.hint}>Вы напарник: работы по заявке вносит {r.responsible_name}, сумма делится поровну.</Text> : null}
       </Card>
 
-      {r.works.length ? (
+      {/* ---------- Взять в работу ---------- */}
+      {canTake && !select ? (
+        panel === 'take' ? (
+          <TakePanel
+            requestId={r.id}
+            meId={me?.id ?? 0}
+            onDone={() => {
+              setPanel(null);
+              reload();
+            }}
+            onCancel={() => setPanel(null)}
+          />
+        ) : (
+          <TourTarget id="card.take">
+            <BigButton title="Взять в работу" size="big" onPress={() => setPanel('take')} />
+          </TourTarget>
+        )
+      ) : null}
+
+      {/* ---------- Работа над заявкой ---------- */}
+      {working && !select ? (
+        <>
+          <TourTarget id="card.add">
+            <BigButton title="+ Добавить работу" size="big" loading={busy} onPress={addWork} />
+          </TourTarget>
+          <TourTarget id="card.time">
+            <RequestTimeCard
+              label="Время за сегодня"
+              time={draftTime ?? { number: r.number, minutes: null, status: 'done' }}
+              onChange={(p) => changeTime(p.minutes ?? null)}
+            />
+          </TourTarget>
+        </>
+      ) : null}
+
+      {r.works.length || draftEntries.length ? (
         <Card style={styles.card}>
-          <Text style={styles.label}>Работы по заявке: {r.works.length}</Text>
+          <Text style={styles.label}>Работы по заявке: {r.works.length + (draft?.editing ? 0 : draftEntries.length)}</Text>
+          {!draft?.editing
+            ? draftEntries.map((e, i) => (
+                <View key={e.key} style={[styles.work, i > 0 && styles.workBorder]}>
+                  <Text style={styles.workName}>{e.name}</Text>
+                  <Text style={styles.meta}>
+                    {formatDate(draft!.workDate)} · {e.quantity} {e.unitCode} · {e.performerNames.join(', ')}
+                  </Text>
+                  <Text style={[styles.status, styles.wait]}>Ещё не отправлено</Text>
+                </View>
+              ))
+            : null}
           {r.works.map((w, i) => (
-            <View key={i} style={[styles.work, i > 0 && styles.workBorder]}>
+            <View key={i} style={[styles.work, (i > 0 || (!draft?.editing && draftEntries.length > 0)) && styles.workBorder]}>
               <Text style={styles.workName}>{w.name}</Text>
               <Text style={styles.meta}>
                 {formatDate(w.work_date)} · {formatQuantity(w.quantity)} {w.unit} · {w.performers ?? ''}
               </Text>
-              <Text style={[styles.status, w.status === 'rejected' && styles.bad, w.status === 'pending' && styles.wait]}>{statusLabel[w.status]}</Text>
+              <Text style={[styles.status, w.status === 'rejected' && styles.bad, (w.status === 'pending' || w.status === 'awaiting') && styles.wait]}>
+                {workStatus[w.status]}
+              </Text>
             </View>
           ))}
+          {draft?.editing && draftEntries.length ? <Text style={styles.hint}>Сегодняшние работы уже отправлены; правки уйдут при закрытии смены.</Text> : null}
         </Card>
       ) : (
         <Text style={styles.meta}>Работ по заявке ещё не вносили.</Text>
       )}
 
-      <TourTarget id="card.add">
-        {select ? (
+      {working && !select ? (
+        <>
+          <TourTarget id="card.send">
+            <BigButton title="Проверить и отправить" size="big" onPress={() => router.push({ pathname: '/req/send/[id]', params: { id: String(r.id) } })} />
+          </TourTarget>
+          <Text style={styles.hint}>Отправляйте, когда заявка сделана. Не успели за день — ничего не делайте, завтра она будет в «Мои заявки».</Text>
+          {panel === 'refuse' ? (
+            <RefusePanel
+              requestId={r.id}
+              onDone={() => {
+                setPanel(null);
+                reload();
+              }}
+              onCancel={() => setPanel(null)}
+            />
+          ) : (
+            <BigButton title="Отказаться от заявки" variant="secondary" onPress={() => setPanel('refuse')} />
+          )}
+        </>
+      ) : null}
+
+      {select ? (
+        canTake || working ? (
           <BigButton title="Выбрать эту заявку" size="big" onPress={chooseForShift} />
         ) : (
-          <BigButton title="Внести работы по заявке" size="big" loading={busy} onPress={addWork} />
-        )}
-      </TourTarget>
+          <Text style={styles.hint}>
+            {r.status === 'in_work' ? `Заявку взял ${r.responsible_name}.` : `Заявка: ${lifecycleLabel[r.status].toLowerCase()}.`} Выбрать её для своей смены нельзя.
+          </Text>
+        )
+      ) : null}
+
+      {r.events.length ? (
+        <Card style={styles.card}>
+          <Text style={styles.label}>История</Text>
+          {r.events.map((e, i) => (
+            <Text key={i} style={styles.event}>
+              {formatStoreTime(e.at)} · {e.author ?? 'Система'}: {eventLabel[e.kind].toLowerCase()}
+              {e.comment ? ` — ${e.comment}` : ''}
+            </Text>
+          ))}
+        </Card>
+      ) : null}
+
+      {message ? <Text style={styles.err}>{message}</Text> : null}
       <BigButton title="Назад" variant="secondary" onPress={() => router.back()} />
     </Screen>
+  );
+
+}
+
+function Line({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <View style={styles.line}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.value, warn && { color: colors.danger }]}>{value}</Text>
+    </View>
+  );
+}
+
+/** «Взять в работу»: примерное время и напарники. */
+function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; meId: number; onDone: () => void; onCancel: () => void }) {
+  const { data: masters } = useFocusQuery(listMasters);
+  const [plan, setPlan] = useState<number | null>(null);
+  const [custom, setCustom] = useState(false);
+  const [members, setMembers] = useState<number[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const step = (d: number) => setPlan((p) => Math.max(30, (p ?? 60) + d));
+  async function take() {
+    setSending(true);
+    setErr(null);
+    try {
+      await takeRequest(requestId, plan, members);
+      onDone();
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setSending(false);
+    }
+  }
+  return (
+    <Card style={styles.card}>
+      <Text style={styles.h}>Сколько примерно займёт?</Text>
+      <View style={styles.chips}>
+        {ESTIMATES.map((e) => (
+          <Chip key={e.label} label={e.label} selected={!custom && plan === e.minutes} onPress={() => (setCustom(false), setPlan(e.minutes))} />
+        ))}
+        <Chip label="Свой вариант" selected={custom} onPress={() => (setCustom(true), setPlan((p) => p ?? 60))} />
+      </View>
+      {custom ? (
+        <View style={styles.stepper}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Меньше на 30 минут" style={styles.stepBtn} onPress={() => step(-30)}>
+            <Text style={styles.stepText}>−30</Text>
+          </Pressable>
+          <Text style={styles.stepValue}>{plan != null ? formatPlan(plan) : '—'}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Больше на 30 минут" style={styles.stepBtn} onPress={() => step(30)}>
+            <Text style={styles.stepText}>+30</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      <Text style={styles.h}>Напарники (если работаете вместе)</Text>
+      <View style={styles.chips}>
+        {(masters ?? [])
+          .filter((m) => m.id !== meId)
+          .map((m) => (
+            <Chip
+              key={m.id}
+              label={m.display_name}
+              selected={members.includes(m.id)}
+              onPress={() => setMembers((x) => (x.includes(m.id) ? x.filter((y) => y !== m.id) : [...x, m.id]))}
+            />
+          ))}
+      </View>
+      <Text style={styles.hint}>Напарники числятся в заявке, сумма по её работам делится поровну. Работы вносите вы.</Text>
+      {err ? <Text style={styles.err}>{err}</Text> : null}
+      <BigButton title="Взять" size="big" loading={sending} disabled={plan == null} onPress={take} />
+      {plan == null ? <Text style={styles.hint}>Выберите примерное время.</Text> : null}
+      <BigButton title="Отмена" variant="secondary" onPress={onCancel} />
+    </Card>
+  );
+}
+
+/** Отказ от заявки — с обязательным комментарием. */
+function RefusePanel({ requestId, onDone, onCancel }: { requestId: number; onDone: () => void; onCancel: () => void }) {
+  const [text, setText] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  async function refuse() {
+    setSending(true);
+    setErr(null);
+    try {
+      await refuseRequest(requestId, text.trim());
+      onDone();
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setSending(false);
+    }
+  }
+  return (
+    <Card style={styles.card}>
+      <Field label="Почему отказываетесь?" value={text} onChangeText={setText} multiline placeholder="Например: нет запчасти, нужен подрядчик" />
+      <Text style={styles.hint}>Заявка снова станет «Ожидает», руководитель увидит ваш комментарий.</Text>
+      {err ? <Text style={styles.err}>{err}</Text> : null}
+      <BigButton title="Отказаться" variant="danger" loading={sending} disabled={text.trim().length < 3} onPress={refuse} />
+      <BigButton title="Отмена" variant="secondary" onPress={onCancel} />
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   head: { gap: 3 },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.brand,
-    borderRadius: radius.chip,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    fontSize: font.small,
-    fontWeight: '800',
-    overflow: 'hidden',
-  },
   number: { fontSize: font.title, fontWeight: '800' },
   operation: { fontSize: font.body, fontWeight: '700' },
   meta: { fontSize: font.small, color: colors.secondary },
+  body: { fontSize: font.body },
   card: { gap: 8 },
+  h: { fontSize: font.body, fontWeight: '700' },
   label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
   text: { fontSize: font.body + 1, lineHeight: 22 },
   hint: { fontSize: font.small - 1, color: colors.muted },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   value: { fontSize: font.body, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
+  returned: { gap: 4, borderWidth: 2, borderColor: colors.danger },
+  returnedTitle: { fontSize: font.body, fontWeight: '800', color: colors.danger },
   work: { gap: 2, paddingTop: 6 },
   workBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   workName: { fontSize: font.body, fontWeight: '600' },
   status: { fontSize: font.small, fontWeight: '700', color: colors.success },
   bad: { color: colors.danger },
   wait: { color: colors.secondary },
+  event: { fontSize: font.small, color: colors.muted },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stepBtn: {
+    width: touch.min + 8,
+    height: touch.min,
+    borderRadius: radius.control,
+    borderWidth: 2,
+    borderColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepText: { fontSize: font.body, fontWeight: '800' },
+  stepValue: { flex: 1, textAlign: 'center', fontSize: font.title, fontWeight: '800' },
+  err: { color: colors.danger, fontSize: font.body },
 });

@@ -52,7 +52,11 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
 * Новый нативный модуль → поднять `runtimeVersion` в `app/app.json` (сейчас `3`) и собрать APK,
   иначе обновление «по воздуху» уронит старые установки. После сборки обновить строку `app_release`
   (версия среды и ссылка на APK) — по ней старые телефоны видят полосу «Вышла новая сборка».
-* Время по заявкам: таблица `shift_requests` (минуты и статус за смену), `requests.plan_minutes/state`;
+* Жизненный цикл заявки: `requests.status` (waiting/in_work/review/accepted/contractor), `responsible_id`, `priority`,
+  `request_members`, `request_events`. Работы по заявке — статус `awaiting` до «Принята» (в суммы не идут).
+  Ключевые функции: `take_request`, `send_request_for_review`, `accept_request`, `return_request`; `submit_shift` —
+  обёртка над `submit_shift_core` с проверкой, чья заявка.
+* Время по заявкам: таблица `shift_requests` (минуты за смену; статус «Не закончено» больше не используется), `requests.plan_minutes/state`;
   длина смены — `public.shift_minutes()` = 480 и `SHIFT_MINUTES` в `app/src/lib/requestTime.ts`.
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
 * Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).

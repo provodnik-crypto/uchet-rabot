@@ -27,8 +27,8 @@ select pg_temp.assert((select count(*) from public.my_entries()) = 2, 'маст�
 select pg_temp.assert((select count(*) from public.entry_money) = 0, 'мастер не видит денег по работам');
 select pg_temp.assert((select count(*) from public.performer_money) = 0, 'мастер не видит доли в рублях');
 select pg_temp.assert(
-  (select string_agg(status, ',' order by entry_position) from public.my_entries()) = 'priced,pending',
-  'работа из прайса принята, вне прайса — на оценке');
+  (select string_agg(status, ',' order by entry_position) from public.my_entries()) = 'awaiting,pending',
+  'работа из прайса по заявке ждёт приёмки заявки, вне прайса — на оценке');
 select pg_temp.assert(
   (select request_number from public.my_entries() where entry_position = 1) = 'RFS260423_2283', 'номер заявки сохранён в верхнем регистре');
 select pg_temp.assert(exists (select 1 from public.requests where number = 'RFS260423_2283'), 'заявка добавилась в справочник');

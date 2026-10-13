@@ -1,3 +1,4 @@
+import type { LifecycleStatus, Priority } from './requests';
 import { supabase } from './supabase';
 import { storeToday } from './today';
 
@@ -75,7 +76,7 @@ export const replaceEntryWithItem = (entryId: number, itemId: number, quantity: 
 export const rejectEntry = (entryId: number, comment: string) => rpc<void>('reject_entry', { p_entry: entryId, p_comment: comment });
 
 // ---------- Журнал работ ----------
-export type EntryStatus = 'priced' | 'pending' | 'rejected';
+export type EntryStatus = 'priced' | 'pending' | 'rejected' | 'awaiting';
 export type AdminEntry = {
   entry_id: number;
   shift_id: number;
@@ -162,11 +163,26 @@ export type RequestRow = {
   assignee_id: number | null;
   assignee_name: string | null;
   to_contractor: boolean;
+  status: LifecycleStatus;
+  priority: Priority;
+  responsible_id: number | null;
+  responsible_name: string | null;
+  taken_at: string | null;
+  last_activity_at: string | null;
+  returned_comment: string | null;
 };
 
 export type RequestStatusFilter = 'open' | 'closed' | 'all';
-export const listRequests = (q: string, status: RequestStatusFilter = 'all') =>
-  rpc<RequestRow[]>('list_requests', { q, p_limit: 300, p_status: status });
+export type RequestListFilters = { lifecycle?: string | null; priority?: number | null; employee?: number | null };
+export const listRequests = (q: string, status: RequestStatusFilter = 'all', f: RequestListFilters = {}) =>
+  rpc<RequestRow[]>('list_requests', {
+    q,
+    p_limit: 300,
+    p_status: status,
+    p_lifecycle: f.lifecycle ?? null,
+    p_priority: f.priority ?? null,
+    p_employee: f.employee ?? null,
+  });
 
 export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'subject' | 'plan_minutes'>>) {
   const { error } = await supabase.from('requests').update(patch).eq('id', id);
