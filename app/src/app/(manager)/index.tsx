@@ -7,7 +7,8 @@ import { Screen } from '../../components/Screen';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { listRequests, managerDashboard, monthName } from '../../lib/manager';
-import { reviewCount } from '../../lib/requests';
+import { myNotifications, reviewCount } from '../../lib/requests';
+import { Notices, type Notice } from '../../components/Notices';
 import { formatKop } from '../../lib/money';
 import { storeToday } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
@@ -20,6 +21,19 @@ export default function ManagerHome() {
   const { me, signOut } = useAuth();
   const { data } = useFocusQuery(managerDashboard);
   const { data: review } = useFocusQuery(reviewCount);
+  const { data: notes } = useFocusQuery(myNotifications);
+  const notices: Notice[] = [
+    ...(notes?.unread ?? []).map((n) => ({
+      key: `u${n.id}`,
+      tone: n.refused ? ('red' as const) : ('blue' as const),
+      title: n.refused ? `Отказ от заявки ${n.number}` : `Новое по заявке ${n.number}`,
+      text: `Сообщений и событий: ${n.count}`,
+      onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
+    })),
+    ...(notes?.stale
+      ? [{ key: 'stale', tone: 'orange' as const, title: `Без действий больше 3 рабочих дней: ${notes.stale}`, text: 'Заявки «В работе» — откройте и уточните у мастера', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'in_work' } }) }]
+      : []),
+  ];
   // Счётчики открытых заявок по статусам — для главной плашки «Заявки».
   const { data: counts } = useFocusQuery(async () => {
     const rows = await listRequests('', 'open');
@@ -78,6 +92,10 @@ export default function ManagerHome() {
           </View>
           <Icon name="chevronRight" size={18} strokeWidth={2.4} />
         </Pressable>
+      </TourTarget>
+
+      <TourTarget id="mhome.notices">
+        <Notices items={notices} />
       </TourTarget>
 
       <Text style={styles.section}>Действия</Text>

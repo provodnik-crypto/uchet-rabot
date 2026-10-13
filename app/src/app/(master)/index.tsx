@@ -15,7 +15,8 @@ import { useDraft } from '../../lib/draft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
-import { myRequests, myRequestsBadge } from '../../lib/requests';
+import { myNotifications, myRequests, myRequestsBadge } from '../../lib/requests';
+import { Notices, type Notice } from '../../components/Notices';
 import { formatMinutes, formatPlan } from '../../lib/requestTime';
 import { RequestBadges } from '../../components/RequestBadges';
 import { myEntries, myMonthSummary, myOpenRequests } from '../../lib/shift';
@@ -35,6 +36,19 @@ export default function MasterHome() {
   const { data: open } = useFocusQuery(myOpenRequests);
   const { data: badge } = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
   const { data: mineList } = useFocusQuery(myRequests);
+  const { data: notes } = useFocusQuery(myNotifications);
+  const openCard = (id: number) => router.push({ pathname: '/req/[id]', params: { id: String(id) } });
+  const notices: Notice[] = [
+    ...(notes?.returned ?? []).map((n) => ({ key: `r${n.id}`, tone: 'red' as const, title: `Вернули ${n.number}`, text: n.comment, onPress: () => openCard(n.id) })),
+    ...(notes?.unread ?? []).map((n) => ({ key: `u${n.id}`, tone: 'blue' as const, title: `Новое по заявке ${n.number}`, text: `Сообщений и событий: ${n.count}`, onPress: () => openCard(n.id) })),
+    ...(notes?.urgent ?? []).map((n) => ({
+      key: `s${n.id}`,
+      tone: 'red' as const,
+      title: `● Срочно: ${n.number}`,
+      text: n.status === 'in_work' ? `Ваша заявка · ${n.operation ?? ''}` : `Свободна · ${n.operation ?? ''}`,
+      onPress: () => openCard(n.id),
+    })),
+  ];
   const hasDraft = !!draft && (draft.entries.length > 0 || !!draft.requests?.some((r) => r.minutes));
   const { autoStart } = useTour();
   const focused = useIsFocused();
@@ -63,6 +77,10 @@ export default function MasterHome() {
       </Card>
       </TourTarget>
 
+      <TourTarget id="home.notices">
+        <Notices items={notices} />
+      </TourTarget>
+
       {mineList?.length ? (
         <TourTarget id="home.mine" style={styles.mineBox}>
           <Text style={styles.section}>Мои заявки</Text>
@@ -72,7 +90,7 @@ export default function MasterHome() {
               style={[styles.mineCard, r.returned_comment ? styles.mineReturned : null]}
               onPress={() => router.push({ pathname: '/req/[id]', params: { id: String(r.id) } })}
             >
-              <RequestBadges status={r.status === 'in_work' ? 'waiting' : r.status} priority={r.priority} />
+              <RequestBadges status={r.status === 'in_work' ? 'waiting' : r.status} priority={r.priority} unread={r.unread} />
               <Text style={styles.mineNumber}>
                 {r.number}
                 {r.operation ? <Text style={styles.mineOp}> · {r.operation}</Text> : null}

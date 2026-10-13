@@ -170,6 +170,9 @@ export type RequestRow = {
   taken_at: string | null;
   last_activity_at: string | null;
   returned_comment: string | null;
+  unread: number;
+  /** Рабочих дней без действий (для «В работе»). */
+  stale_days: number;
 };
 
 export type RequestStatusFilter = 'open' | 'closed' | 'all';

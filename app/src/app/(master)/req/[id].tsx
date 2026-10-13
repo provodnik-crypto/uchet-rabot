@@ -6,6 +6,7 @@ import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { RequestBadges } from '../../../components/RequestBadges';
+import { RequestFeed } from '../../../components/RequestFeed';
 import { RequestTimeCard } from '../../../components/RequestTimeCard';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
@@ -18,8 +19,8 @@ import {
   ESTIMATES,
   eventLabel,
   formatRegistered,
-  formatStoreTime,
   lifecycleLabel,
+  markRequestRead,
   refuseRequest,
   requestCard,
   takeRequest,
@@ -52,6 +53,8 @@ export default function RequestCardScreen() {
 
   // Вернулись в карточку — «после добавления работы вернуться сюда» больше не нужно.
   useFocusEffect(useCallback(() => returnToCardAfterEntry(null), []));
+  // Открыли карточку — сообщения прочитаны.
+  useFocusEffect(useCallback(() => void markRequestRead(Number(id)), [id]));
 
   if (!r) {
     return (
@@ -246,17 +249,7 @@ export default function RequestCardScreen() {
         )
       ) : null}
 
-      {r.events.length ? (
-        <Card style={styles.card}>
-          <Text style={styles.label}>История</Text>
-          {r.events.map((e, i) => (
-            <Text key={i} style={styles.event}>
-              {formatStoreTime(e.at)} · {e.author ?? 'Система'}: {eventLabel[e.kind].toLowerCase()}
-              {e.comment ? ` — ${e.comment}` : ''}
-            </Text>
-          ))}
-        </Card>
-      ) : null}
+      {r ? <RequestFeed requestId={r.id} events={r.events} onSent={reload} /> : null}
 
       {message ? <Text style={styles.err}>{message}</Text> : null}
       <BigButton title="Назад" variant="secondary" onPress={() => router.back()} />

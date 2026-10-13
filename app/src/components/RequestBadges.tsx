@@ -9,6 +9,7 @@ export function RequestBadges({
   contractor,
   mine,
   responsibleName,
+  unread,
 }: {
   status: LifecycleStatus;
   priority: Priority;
@@ -16,10 +17,13 @@ export function RequestBadges({
   mine?: boolean;
   /** Для «В работе · Имя Ф.» у чужой заявки. */
   responsibleName?: string | null;
+  /** Новые сообщения и события. */
+  unread?: number;
 }) {
   const showStatus = status !== 'waiting' && !(status === 'contractor');
   return (
     <View style={styles.row}>
+      {unread ? <Text style={[styles.badge, styles.unread]}>💬 {unread} нов.</Text> : null}
       {mine ? <Text style={[styles.badge, styles.mine]}>{status === 'in_work' || status === 'review' ? 'Ваша заявка' : 'Назначено вам'}</Text> : null}
       {priority !== 3 ? (
         <Text style={[styles.badge, { borderColor: priorityColor[priority], color: priorityColor[priority] }, priority === 1 && styles.urgent]}>
@@ -50,6 +54,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mine: { backgroundColor: colors.brand, borderColor: colors.brand },
+  unread: { backgroundColor: '#1565C0', borderColor: '#1565C0', color: '#FFFFFF' },
   urgent: { backgroundColor: '#FDECEA' },
   contractor: { borderColor: CONTRACTOR_COLOR, color: CONTRACTOR_COLOR },
   status: { color: colors.secondary, backgroundColor: colors.bg },

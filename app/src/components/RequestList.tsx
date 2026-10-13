@@ -84,6 +84,7 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
                   priority={r.priority}
                   mine={r.mine}
                   responsibleName={r.mine ? null : r.responsible_name}
+                  unread={r.unread}
                 />
                 {r.member ? <Text style={styles.memberText}>Вы напарник</Text> : null}
                 {r.returned && r.mine ? <Text style={styles.returned}>Вернули — откройте заявку</Text> : null}

@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
@@ -22,7 +22,8 @@ import { colors, font } from '../../../theme';
 export default function RequestsScreen() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<RequestStatusFilter>('open');
-  const [lifecycle, setLifecycle] = useState<LifecycleStatus | null>(null);
+  const params = useLocalSearchParams<{ lifecycle?: LifecycleStatus }>();
+  const [lifecycle, setLifecycle] = useState<LifecycleStatus | null>(params.lifecycle ?? null);
   const [priority, setPriority] = useState<Priority | null>(null);
   const [employee, setEmployee] = useState<number | null>(null);
   const { data: masters } = useFocusQuery(listMasters);
@@ -91,13 +92,13 @@ export default function RequestsScreen() {
         <TourTarget key={r.id} id={i === 0 ? 'requests.first' : `requests.${r.id}`}>
         <Card
           key={r.id}
-          style={[styles.card, overPlan(r) && styles.over]}
+          style={[styles.card, overPlan(r) && styles.over, r.stale_days > 3 && styles.stale]}
           onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(r.id), data: JSON.stringify(r) } })}
         >
-          <RequestBadges status={r.status} priority={r.priority} responsibleName={r.responsible_name} />
+          <RequestBadges status={r.status} priority={r.priority} responsibleName={r.responsible_name} unread={r.unread} />
           {r.status === 'in_work' && r.taken_at ? (
-            <Text style={[styles.meta, staleDays(r) >= 3 && styles.overText]}>
-              в работе {daysSince(r.taken_at)} дн.{staleDays(r) >= 3 ? ` · без действий ${staleDays(r)} дн.` : ''}
+            <Text style={[styles.meta, r.stale_days > 3 && styles.overText]}>
+              в работе {daysSince(r.taken_at)} дн.{r.stale_days > 3 ? ` · без действий ${r.stale_days} раб. дн.` : ''}
               {r.returned_comment ? ' · возвращена' : ''}
             </Text>
           ) : null}
@@ -135,8 +136,6 @@ export default function RequestsScreen() {
 
 const DAY = 24 * 60 * 60 * 1000;
 const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY));
-/** Дней без действий (по календарю; подсветка рабочих дней — во второй части). */
-const staleDays = (r: RequestRow) => (r.last_activity_at ? daysSince(r.last_activity_at) : 0);
 
 const overPlan = (r: RequestRow) => r.plan_minutes != null && (r.spent_minutes ?? 0) > r.plan_minutes;
 
@@ -150,5 +149,6 @@ const styles = StyleSheet.create({
   subject: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.muted },
   filters: { gap: 8, paddingVertical: 2 },
+  stale: { borderWidth: 2, borderColor: '#E65100' },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
 });

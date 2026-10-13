@@ -1,17 +1,17 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
 import { RequestBadges } from '../../../components/RequestBadges';
+import { RequestFeed } from '../../../components/RequestFeed';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { acceptRequest, eventLabel, formatRegistered,
-  formatStoreTime, requestCard, returnRequest } from '../../../lib/requests';
+import { acceptRequest, markRequestRead, requestCard, returnRequest } from '../../../lib/requests';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { formatQuantity } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -26,6 +26,7 @@ export default function ReviewRequestScreen() {
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  useFocusEffect(useCallback(() => void markRequestRead(Number(id)), [id]));
 
   if (!r) return <Screen><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
   const over = r.plan_minutes != null && r.spent_minutes > r.plan_minutes;
@@ -109,17 +110,7 @@ export default function ReviewRequestScreen() {
         <Text style={styles.meta}>Заявка уже не на проверке.</Text>
       )}
 
-      {r.events.length ? (
-        <Card style={styles.card}>
-          <Text style={styles.label}>История</Text>
-          {r.events.map((e, i) => (
-            <Text key={i} style={styles.event}>
-              {formatStoreTime(e.at)} · {e.author ?? 'Система'}: {eventLabel[e.kind].toLowerCase()}
-              {e.comment ? ` — ${e.comment}` : ''}
-            </Text>
-          ))}
-        </Card>
-      ) : null}
+      {r ? <RequestFeed requestId={r.id} events={r.events} onSent={reload} /> : null}
     </Screen>
   );
 }

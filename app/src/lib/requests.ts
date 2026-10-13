@@ -134,6 +134,8 @@ export type OpenRequest = {
   returned: boolean;
   /** Я напарник по заявке. */
   member: boolean;
+  /** Новые сообщения и важные события от других. */
+  unread: number;
 };
 export const openRequests = (q: string, filter: RequestFilter) =>
   rpc<OpenRequest[]>('open_requests', { q, p_filter: filter, p_limit: 300 });
@@ -179,12 +181,14 @@ export type RequestCard = {
   events: RequestEvent[];
 };
 export type RequestEvent = {
-  kind: 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate';
+  kind: 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment';
   at: string;
   from: LifecycleStatus | null;
   to: LifecycleStatus | null;
   comment: string | null;
   author: string | null;
+  /** Моё сообщение или действие. */
+  mine?: boolean;
 };
 export const eventLabel: Record<RequestEvent['kind'], string> = {
   take: 'Взял в работу',
@@ -198,6 +202,7 @@ export const eventLabel: Record<RequestEvent['kind'], string> = {
   contractor: 'Передал подрядчику',
   plan: 'Примерное время',
   migrate: 'Перенос в новую схему',
+  comment: 'Сообщение',
 };
 
 export const requestCard = (ref: { id?: number; number?: string }) =>
@@ -239,6 +244,7 @@ export type MyRequest = {
   returned_comment: string | null;
   responsible: boolean;
   responsible_name: string | null;
+  unread: number;
 };
 export const myRequests = () => rpc<MyRequest[]>('my_requests');
 export const takeRequest = (id: number, planMinutes: number | null, memberIds: number[]) =>
@@ -252,6 +258,18 @@ export const setRequestPriority = (id: number, priority: Priority) => rpc<void>(
 export const setRequestResponsible = (id: number, employeeId: number | null) =>
   rpc<void>('set_request_responsible', { p_id: id, p_employee: employeeId });
 export const reviewCount = () => rpc<number>('review_count');
+
+// ---------- Переписка и уведомления ----------
+export const addRequestComment = (id: number, text: string) => rpc<void>('add_request_comment', { p_id: id, p_text: text });
+export const markRequestRead = (id: number) => rpc<void>('mark_request_read', { p_id: id }).catch(() => {});
+export type Notifications = {
+  unread: { id: number; number: string; count: number; refused?: boolean }[];
+  returned?: { id: number; number: string; comment: string }[];
+  urgent?: { id: number; number: string; operation: string | null; status: LifecycleStatus }[];
+  /** Руководителю: заявок «В работе» без действий больше 3 рабочих дней. */
+  stale?: number;
+};
+export const myNotifications = () => rpc<Notifications>('my_notifications');
 
 // ---------- Руководитель ----------
 export const assignRequest = (id: number, employeeId: number | null, contractor: boolean) =>

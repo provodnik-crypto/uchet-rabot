@@ -20,7 +20,7 @@ export default function ReviewQueueScreen() {
         const over = r.plan_minutes != null && (r.spent_minutes ?? 0) > r.plan_minutes;
         return (
           <Card key={r.id} style={styles.card} onPress={() => router.push({ pathname: '/review/[id]', params: { id: String(r.id) } })}>
-            <RequestBadges status={r.status} priority={r.priority} />
+            <RequestBadges status={r.status} priority={r.priority} unread={r.unread} />
             <Text style={styles.number}>{r.number}</Text>
             {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
             <Text style={[styles.meta, over && styles.over]}>

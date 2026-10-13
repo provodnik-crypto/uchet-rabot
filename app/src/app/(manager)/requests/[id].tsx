@@ -1,22 +1,23 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
+import { RequestFeed } from '../../../components/RequestFeed';
 import { Screen } from '../../../components/Screen';
+import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { updateRequest, type RequestRow } from '../../../lib/manager';
+import { listRequests, updateRequest, type RequestRow } from '../../../lib/manager';
 import {
   assignRequest,
-  eventLabel,
   formatRegistered,
-  formatStoreTime,
   lifecycleLabel,
   priorityLabel,
+  markRequestRead,
   requestCard,
   setRequestOpen,
   setRequestPriority,
@@ -31,12 +32,28 @@ import { colors, font, radius, touch } from '../../../theme';
 
 const PLAN_STEP = 30;
 
+/** Открывается из списка (данные строки в параметрах) или по номеру — из уведомлений на главной. */
 export default function RequestScreen() {
-  const { data } = useLocalSearchParams<{ id: string; data: string }>();
-  const r = JSON.parse(data) as RequestRow;
+  const { data, id, number } = useLocalSearchParams<{ id: string; data?: string; number?: string }>();
+  const { data: rows, error, loading, reload } = useFocusQuery(() =>
+    data ? Promise.resolve([JSON.parse(data) as RequestRow]) : listRequests(number ?? '', 'all'),
+  );
+  const row = rows?.find((x) => x.id === Number(id));
+  if (!row) {
+    return (
+      <Screen>
+        {loading || error ? <StateView loading={loading} error={error} onRetry={reload} /> : <Text style={styles.meta}>Заявка не найдена</Text>}
+      </Screen>
+    );
+  }
+  return <RequestDetail r={row} />;
+}
+
+function RequestDetail({ r }: { r: RequestRow }) {
   const [subject, setSubject] = useState(r.subject ?? '');
   const [plan, setPlan] = useState<number | null>(r.plan_minutes);
   const { data: card, reload: reloadCard } = useFocusQuery(() => requestCard({ id: r.id }));
+  useFocusEffect(useCallback(() => void markRequestRead(r.id), [r.id]));
   const { data: masters } = useFocusQuery(listMasters);
   const [assignee, setAssignee] = useState<number | null>(r.assignee_id);
   const [contractor, setContractor] = useState(r.to_contractor);
@@ -201,17 +218,7 @@ export default function RequestScreen() {
       </Card>
       </TourTarget>
 
-      {card?.events.length ? (
-        <Card style={styles.card}>
-          <Text style={styles.label}>История</Text>
-          {card.events.map((e, i) => (
-            <Text key={i} style={styles.hint}>
-              {formatStoreTime(e.at)} · {e.author ?? 'Система'}: {eventLabel[e.kind].toLowerCase()}
-              {e.comment ? ` — ${e.comment}` : ''}
-            </Text>
-          ))}
-        </Card>
-      ) : null}
+      {card ? <RequestFeed requestId={card.id} events={card.events} onSent={reloadCard} /> : null}
 
       {itsm ? (
         <BigButton

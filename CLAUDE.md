@@ -56,6 +56,8 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   `request_members`, `request_events`. Работы по заявке — статус `awaiting` до «Принята» (в суммы не идут).
   Ключевые функции: `take_request`, `send_request_for_review`, `accept_request`, `return_request`; `submit_shift` —
   обёртка над `submit_shift_core` с проверкой, чья заявка.
+* Переписка и уведомления (только внутри приложения): `add_request_comment`, `mark_request_read`, `my_notifications`;
+  непрочитанное — `request_unread` по `request_reads`. Пуш-уведомлений нет.
 * Время по заявкам: таблица `shift_requests` (минуты за смену; статус «Не закончено» больше не используется), `requests.plan_minutes/state`;
   длина смены — `public.shift_minutes()` = 480 и `SHIFT_MINUTES` в `app/src/lib/requestTime.ts`.
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
