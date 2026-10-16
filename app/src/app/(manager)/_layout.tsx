@@ -30,3 +30,6 @@ export default function ManagerLayout() {
     </Stack>
   );
 }
+
+/** Ошибка на любом экране раздела — сообщение вместо закрытия приложения. */
+export { ScreenError as ErrorBoundary } from '../../components/ScreenError';

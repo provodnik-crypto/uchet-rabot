@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { humanError } from '../lib/errors';
-import { addRequestComment, eventLabel, formatStoreTime, type RequestEvent } from '../lib/requests';
+import { addRequestComment, eventText, formatStoreTime, type RequestEvent } from '../lib/requests';
 import { TourTarget } from '../lib/tour';
 import { colors, font, radius } from '../theme';
 import { Card } from './Card';
@@ -48,7 +48,7 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
           </View>
         ) : (
           <Text key={i} style={styles.event}>
-            {formatStoreTime(e.at)} · {e.mine ? 'Вы' : e.author ?? 'Система'}: {eventLabel[e.kind].toLowerCase()}
+            {formatStoreTime(e.at)} · {e.mine ? 'Вы' : e.author ?? 'Система'}: {eventText(e.kind)}
             {e.comment ? ` — ${e.comment}` : ''}
           </Text>
         ),

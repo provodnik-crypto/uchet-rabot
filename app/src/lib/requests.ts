@@ -181,7 +181,7 @@ export type RequestCard = {
   events: RequestEvent[];
 };
 export type RequestEvent = {
-  kind: 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment';
+  kind: 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment' | 'create';
   at: string;
   from: LifecycleStatus | null;
   to: LifecycleStatus | null;
@@ -203,7 +203,11 @@ export const eventLabel: Record<RequestEvent['kind'], string> = {
   plan: 'Примерное время',
   migrate: 'Перенос в новую схему',
   comment: 'Сообщение',
+  create: 'Создал заявку',
 };
+
+/** Подпись события; незнакомое (из новой версии базы) не роняет экран. */
+export const eventText = (kind: string) => ((eventLabel as Record<string, string>)[kind] ?? 'Событие').toLowerCase();
 
 export const requestCard = (ref: { id?: number; number?: string }) =>
   rpc<RequestCard | null>('request_card', { p_id: ref.id ?? null, p_number: ref.number ?? null });
