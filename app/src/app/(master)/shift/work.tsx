@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
@@ -122,7 +123,7 @@ export default function WorkPickerScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.request}>
-              Заявка: {draft?.currentRequest ?? 'без заявки'}
+              Заявка: {draft?.currentRequest ? requestLabel(draft.currentRequest) : 'без заявки'}
             </Text>
             {info && (info.operation || info.description) ? (
               <TourTarget id="work.request">

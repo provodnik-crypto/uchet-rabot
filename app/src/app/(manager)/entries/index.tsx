@@ -1,4 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../components/Avatar';
@@ -152,7 +153,7 @@ export default function EntriesScreen() {
             </View>
             <View style={styles.row}>
               <Text style={styles.meta} numberOfLines={1}>
-                {formatDate(r.work_date)} · {r.request_number ?? 'без заявки'} · {r.department_name}
+                {formatDate(r.work_date)} · {r.request_number ? requestLabel(r.request_number) : 'без заявки'} · {r.department_name}
                 {r.is_custom ? ' · вне прайса' : ''}
                 {r.is_imported ? ' · из старого файла' : ''}
               </Text>

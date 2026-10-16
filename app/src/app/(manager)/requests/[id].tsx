@@ -22,8 +22,7 @@ import {
   setRequestOpen,
   setRequestPriority,
   setRequestResponsible,
-  type Priority,
-} from '../../../lib/requests';
+  type Priority, requestLabel } from '../../../lib/requests';
 import { formatMinutes, formatPlan, PLAN_TIMES } from '../../../lib/requestTime';
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -109,7 +108,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
 
   return (
     <Screen>
-      <Text style={styles.number}>{r.number}</Text>
+      <Text style={styles.number}>{requestLabel(r.number)}</Text>
       <Text style={styles.meta}>
         Работ по заявке: {r.entries}
         {r.since ? ` · в работе с ${formatDate(r.since)}` : ''}

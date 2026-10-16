@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../components/Avatar';
@@ -77,7 +78,7 @@ export default function AdminEntryScreen() {
     <Screen>
       <Card style={styles.card}>
         <Text style={styles.meta}>
-          {formatDate(e.work_date)} · {e.request_number ?? 'без заявки'} · {statusLabel[e.status]} · внёс {e.author_name}
+          {formatDate(e.work_date)} · {e.request_number ? requestLabel(e.request_number) : 'без заявки'} · {statusLabel[e.status]} · внёс {e.author_name}
         </Text>
         <Text style={styles.name}>{e.name}</Text>
         <Text style={styles.meta}>

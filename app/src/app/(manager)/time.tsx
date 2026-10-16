@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { requestLabel } from '../../lib/requests';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
@@ -112,7 +113,7 @@ export default function TimeScreen() {
           {data.over_plan.length === 0 ? <Text style={styles.meta}>Нет заявок, где факт больше плана.</Text> : null}
           {data.over_plan.map((o) => (
             <Card key={o.number} style={[styles.card, styles.over]}>
-              <Text style={styles.name}>{o.number}</Text>
+              <Text style={styles.name}>{requestLabel(o.number)}</Text>
               <Text style={[styles.meta, styles.bad]}>
                 факт {formatMinutes(o.spent_minutes)} при плане {formatPlan(o.plan_minutes)}
               </Text>

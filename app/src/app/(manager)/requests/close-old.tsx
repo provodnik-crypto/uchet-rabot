@@ -9,7 +9,7 @@ import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate, maskDateInput, parseDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { closeOldRequests, formatRegistered, oldOpenRequests, type OldRequest } from '../../../lib/requests';
+import { closeOldRequests, formatRegistered, oldOpenRequests, type OldRequest, requestLabel } from '../../../lib/requests';
 import { storeToday } from '../../../lib/today';
 import { colors, font } from '../../../theme';
 
@@ -105,7 +105,7 @@ export default function CloseOldScreen() {
             <Text style={styles.section}>Будут закрыты</Text>
             {rows.map((r) => (
               <Card key={r.id} style={styles.row}>
-                <Text style={styles.number}>{r.number}</Text>
+                <Text style={styles.number}>{requestLabel(r.number)}</Text>
                 {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
                 {r.description ? (
                   <Text style={styles.desc} numberOfLines={2}>

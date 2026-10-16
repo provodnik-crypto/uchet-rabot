@@ -24,8 +24,7 @@ import {
   refuseRequest,
   requestCard,
   takeRequest,
-  type RequestWork,
-} from '../../../lib/requests';
+  type RequestWork, requestLabel } from '../../../lib/requests';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { formatQuantity, listMasters, myOpenRequests } from '../../../lib/shift';
 import { returnToCardAfterEntry } from '../../../lib/shiftNav';
@@ -115,7 +114,7 @@ export default function RequestCardScreen() {
         <View style={styles.head}>
           <RequestBadges status={r.status} priority={r.priority} contractor={r.to_contractor} mine={r.mine || r.is_responsible} />
           <Text style={styles.number} selectable>
-            {r.number}
+            {requestLabel(r.number)}
           </Text>
           {r.service || r.operation ? <Text style={styles.operation}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text> : null}
           <Text style={styles.meta}>{[r.registered_at ? formatRegistered(r.registered_at) : null, r.requester_name].filter(Boolean).join(' · ')}</Text>

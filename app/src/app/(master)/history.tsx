@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../lib/requests';
 import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../components/BigButton';
@@ -55,7 +56,7 @@ export default function HistoryScreen() {
             <Fragment key={r.entry_id}>
               <EntryCard
                 name={r.name}
-                category={`${r.request_number ? `Заявка ${r.request_number}` : 'Без заявки'}${r.is_custom ? ' · вне прайса' : ''}`}
+                category={`${r.request_number ? `Заявка ${requestLabel(r.request_number)}` : 'Без заявки'}${r.is_custom ? ' · вне прайса' : ''}`}
                 isCustom={false}
                 quantity={formatQuantity(r.quantity)}
                 unitCode={r.unit_code}

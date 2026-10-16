@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
@@ -34,7 +35,7 @@ export default function RequestScreen() {
           <Text style={styles.section}>Уже в этой смене</Text>
           <View style={styles.wrap}>
             {inShift.map((n) => (
-              <Chip key={n} label={n} onPress={() => choose(n)} />
+              <Chip key={n} label={requestLabel(n)} onPress={() => choose(n)} />
             ))}
           </View>
         </>
@@ -48,12 +49,13 @@ export default function RequestScreen() {
       />
 
       <TourTarget id="request.manualOpen">
-        {manual ? (
-          <ManualNumber onDone={choose} />
-        ) : (
-          <BigButton title="Нет в списке — ввести номер" variant="secondary" onPress={() => setManual(true)} />
-        )}
+        <BigButton title="Нет в списке — + Новая заявка" variant="secondary" onPress={() => router.push({ pathname: '/req/new', params: { select: '1' } })} />
       </TourTarget>
+      {manual ? (
+        <ManualNumber onDone={choose} />
+      ) : (
+        <BigButton title="Ввести номер ITSM (RFS / INC) вручную" variant="secondary" size="small" onPress={() => setManual(true)} />
+      )}
       <BigButton title="Без заявки (плановые работы)" variant="secondary" onPress={() => choose(null)} />
     </Screen>
   );

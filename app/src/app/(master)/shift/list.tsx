@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { EntryCard } from '../../../components/EntryCard';
@@ -38,7 +39,7 @@ export default function ShiftListScreen() {
       {groups.length === 0 ? <Text style={styles.empty}>Пока нет ни одной работы.</Text> : null}
       {groups.map((g, gi) => (
         <View key={g.request ?? '—'} style={styles.group}>
-          <Text style={styles.request}>{g.request ? `Заявка ${g.request}` : 'Без заявки'}</Text>
+          <Text style={styles.request}>{g.request ? `Заявка ${requestLabel(g.request)}` : 'Без заявки'}</Text>
           {g.entries.map((e) => (
             <EntryCard
               key={e.key}
@@ -58,7 +59,7 @@ export default function ShiftListScreen() {
             />
           ))}
           <BigButton
-            title={g.request ? `+ Работа по ${g.request}` : '+ Работа без заявки'}
+            title={g.request ? `+ Работа по ${requestLabel(g.request)}` : '+ Работа без заявки'}
             variant="secondary"
             size="small"
             onPress={() => {

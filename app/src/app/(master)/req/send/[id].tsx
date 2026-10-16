@@ -9,7 +9,7 @@ import { StateView } from '../../../../components/StateView';
 import { formatDate } from '../../../../lib/dates';
 import { requestList, useDraft } from '../../../../lib/draft';
 import { humanError } from '../../../../lib/errors';
-import { requestCard, sendRequestForReview } from '../../../../lib/requests';
+import { requestCard, sendRequestForReview, requestLabel } from '../../../../lib/requests';
 import { formatMinutes, formatPlan } from '../../../../lib/requestTime';
 import { draftHasContent, sendDraft } from '../../../../lib/sendShift';
 import { formatQuantity } from '../../../../lib/shift';
@@ -58,7 +58,7 @@ export default function SendRequestScreen() {
 
   return (
     <Screen>
-      <Text style={styles.number}>{r.number}</Text>
+      <Text style={styles.number}>{requestLabel(r.number)}</Text>
       {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
 
       <Card style={styles.card}>

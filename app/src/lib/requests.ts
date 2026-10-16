@@ -281,6 +281,16 @@ export type OldRequest = { id: number; number: string; operation: string | null;
 export const oldOpenRequests = (before: string) => rpc<OldRequest[]>('old_open_requests', { p_before: before });
 export const closeOldRequests = (before: string) => rpc<number>('close_old_requests', { p_before: before });
 
+/** Номер для показа: простой номер ручной заявки — «№ 12», номер ITSM — как есть. */
+export function requestLabel(number: string | null | undefined): string {
+  if (!number) return '';
+  return /^\d+$/.test(number) ? `№ ${number}` : number;
+}
+
+// ---------- Ручные заявки ----------
+export const createManualRequest = (title: string, details: string | null, assigneeId: number | null) =>
+  rpc<{ id: number; number: string }>('create_manual_request', { p_title: title, p_details: details, p_assignee: assigneeId });
+
 /** «2026-10-09 14:05:00» → «09.10.2026 14:05». */
 export function formatRegistered(ts: string | null | undefined): string {
   if (!ts) return '—';

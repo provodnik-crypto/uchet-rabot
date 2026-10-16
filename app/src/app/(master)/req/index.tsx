@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
+import { BigButton } from '../../../components/BigButton';
 import { RequestList } from '../../../components/RequestList';
 import { Screen } from '../../../components/Screen';
 import { useAuth } from '../../../lib/auth';
@@ -14,6 +15,7 @@ export default function MasterRequestsScreen() {
   }, [me]);
   return (
     <Screen>
+      <BigButton title="+ Новая заявка" variant="secondary" onPress={() => router.push('/req/new')} />
       <RequestList mode="view" tourId="req.first" onOpen={(r) => router.push({ pathname: '/req/[id]', params: { id: String(r.id) } })} />
     </Screen>
   );

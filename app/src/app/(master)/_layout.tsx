@@ -11,6 +11,7 @@ export default function MasterLayout() {
         <Stack.Screen name="shift/request" options={{ title: 'Заявка' }} />
         <Stack.Screen name="req/index" options={{ title: 'Заявки' }} />
         <Stack.Screen name="req/[id]" options={{ title: 'Заявка' }} />
+        <Stack.Screen name="req/new" options={{ title: 'Новая заявка' }} />
         <Stack.Screen name="req/send/[id]" options={{ title: 'Проверить и отправить' }} />
         <Stack.Screen name="shift/work" options={{ title: 'Выбор работы' }} />
         <Stack.Screen name="shift/entry" options={{ title: 'Работа' }} />

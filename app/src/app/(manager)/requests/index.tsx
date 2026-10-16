@@ -10,7 +10,7 @@ import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { listRequests, type RequestRow, type RequestStatusFilter } from '../../../lib/manager';
-import { formatRegistered, lifecycleLabel, priorityLabel, type LifecycleStatus, type Priority } from '../../../lib/requests';
+import { formatRegistered, lifecycleLabel, priorityLabel, type LifecycleStatus, type Priority, requestLabel } from '../../../lib/requests';
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { FilterSelect } from '../../../components/FilterSelect';
@@ -83,7 +83,8 @@ export default function RequestsScreen() {
           options={(masters ?? []).map((m) => ({ value: m.id, label: m.display_name }))}
         />
       </ScrollView>
-      <BigButton title="Загрузить заявки из ITSM" onPress={() => router.push('/import')} />
+      <BigButton title="+ Новая заявка" onPress={() => router.push('/requests/new')} />
+      <BigButton title="Загрузить заявки из ITSM" variant="secondary" onPress={() => router.push('/import')} />
       <BigButton title="Закрыть старые заявки" variant="secondary" onPress={() => router.push('/requests/close-old')} />
       <Text style={styles.meta}>Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или открыть снова, задать плановое время. Красная рамка — потрачено больше плана.</Text>
       {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
@@ -103,7 +104,7 @@ export default function RequestsScreen() {
             </Text>
           ) : null}
           <Text style={styles.number}>
-            {r.number}
+            {requestLabel(r.number)}
             {r.source === 'itsm' && !r.is_open ? <Text style={styles.closed}>  закрыта</Text> : null}
           </Text>
           {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}

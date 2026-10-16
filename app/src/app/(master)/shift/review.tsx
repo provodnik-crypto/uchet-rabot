@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
@@ -72,7 +73,7 @@ export default function ReviewScreen() {
 
       {groups.map((g) => (
         <Card key={g.request ?? '—'} style={styles.card}>
-          <Text style={styles.request}>{g.request ? `Заявка ${g.request}` : 'Без заявки'}</Text>
+          <Text style={styles.request}>{g.request ? `Заявка ${requestLabel(g.request)}` : 'Без заявки'}</Text>
           <Text style={[styles.time, !g.time.minutes && styles.missing]}>
             {g.time.minutes ? `Время: ${formatMinutes(g.time.minutes)}` : 'Время не указано — вернитесь к списку'}
           </Text>

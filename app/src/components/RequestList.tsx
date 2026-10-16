@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { humanError } from '../lib/errors';
-import { formatRegistered, openRequests, previewText, type OpenRequest, type RequestFilter } from '../lib/requests';
+import { formatRegistered, openRequests, previewText, type OpenRequest, type RequestFilter, requestLabel } from '../lib/requests';
 import { TourTarget } from '../lib/tour';
 import { colors, font, radius } from '../theme';
 import { formatPlan } from '../lib/requestTime';
@@ -88,14 +88,14 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
                 />
                 {r.member ? <Text style={styles.memberText}>Вы напарник</Text> : null}
                 {r.returned && r.mine ? <Text style={styles.returned}>Вернули — откройте заявку</Text> : null}
-                <Text style={styles.number}>{r.number}</Text>
+                <Text style={styles.number}>{requestLabel(r.number)}</Text>
                 {r.operation ? <Text style={styles.operation}>{r.operation}</Text> : null}
               </View>
               {mode === 'select' ? (
                 <TourTarget id={i === 0 ? `${tourId}.info` : `${tourId}.info.${r.id}`}>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Подробнее о заявке ${r.number}`}
+                    accessibilityLabel={`Подробнее о заявке ${requestLabel(r.number)}`}
                     hitSlop={10}
                     onPress={() => onOpen(r)}
                     style={({ pressed }) => [styles.info, pressed && { opacity: 0.6 }]}

@@ -15,7 +15,7 @@ import { useDraft } from '../../lib/draft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
-import { myNotifications, myRequests, myRequestsBadge } from '../../lib/requests';
+import { myNotifications, myRequests, myRequestsBadge, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
 import { formatMinutes, formatPlan } from '../../lib/requestTime';
 import { RequestBadges } from '../../components/RequestBadges';
@@ -39,12 +39,12 @@ export default function MasterHome() {
   const { data: notes } = useFocusQuery(myNotifications);
   const openCard = (id: number) => router.push({ pathname: '/req/[id]', params: { id: String(id) } });
   const notices: Notice[] = [
-    ...(notes?.returned ?? []).map((n) => ({ key: `r${n.id}`, tone: 'red' as const, title: `Вернули ${n.number}`, text: n.comment, onPress: () => openCard(n.id) })),
-    ...(notes?.unread ?? []).map((n) => ({ key: `u${n.id}`, tone: 'blue' as const, title: `Новое по заявке ${n.number}`, text: `Сообщений и событий: ${n.count}`, onPress: () => openCard(n.id) })),
+    ...(notes?.returned ?? []).map((n) => ({ key: `r${n.id}`, tone: 'red' as const, title: `Вернули ${requestLabel(n.number)}`, text: n.comment, onPress: () => openCard(n.id) })),
+    ...(notes?.unread ?? []).map((n) => ({ key: `u${n.id}`, tone: 'blue' as const, title: `Новое по заявке ${requestLabel(n.number)}`, text: `Сообщений и событий: ${n.count}`, onPress: () => openCard(n.id) })),
     ...(notes?.urgent ?? []).map((n) => ({
       key: `s${n.id}`,
       tone: 'red' as const,
-      title: `● Срочно: ${n.number}`,
+      title: `● Срочно: ${requestLabel(n.number)}`,
       text: n.status === 'in_work' ? `Ваша заявка · ${n.operation ?? ''}` : `Свободна · ${n.operation ?? ''}`,
       onPress: () => openCard(n.id),
     })),
@@ -92,7 +92,7 @@ export default function MasterHome() {
             >
               <RequestBadges status={r.status === 'in_work' ? 'waiting' : r.status} priority={r.priority} unread={r.unread} />
               <Text style={styles.mineNumber}>
-                {r.number}
+                {requestLabel(r.number)}
                 {r.operation ? <Text style={styles.mineOp}> · {r.operation}</Text> : null}
               </Text>
               <Text style={styles.mineMeta}>

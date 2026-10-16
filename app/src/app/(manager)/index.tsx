@@ -7,7 +7,7 @@ import { Screen } from '../../components/Screen';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { listRequests, managerDashboard, monthName } from '../../lib/manager';
-import { myNotifications, reviewCount } from '../../lib/requests';
+import { myNotifications, reviewCount, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
 import { formatKop } from '../../lib/money';
 import { storeToday } from '../../lib/today';
@@ -26,7 +26,7 @@ export default function ManagerHome() {
     ...(notes?.unread ?? []).map((n) => ({
       key: `u${n.id}`,
       tone: n.refused ? ('red' as const) : ('blue' as const),
-      title: n.refused ? `Отказ от заявки ${n.number}` : `Новое по заявке ${n.number}`,
+      title: n.refused ? `Отказ от заявки ${requestLabel(n.number)}` : `Новое по заявке ${requestLabel(n.number)}`,
       text: `Сообщений и событий: ${n.count}`,
       onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
     })),

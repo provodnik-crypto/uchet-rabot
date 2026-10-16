@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../../components/Card';
 import { PhotoStrip } from '../../../components/PhotoStrip';
@@ -38,7 +39,7 @@ export default function PendingScreen() {
             <PhotoStrip photos={q?.photos[r.entry_id]} size="small" />
           </View>
           <Text style={styles.meta}>
-            {formatDate(r.work_date)} · {r.request_number ?? 'без заявки'} · {r.performer_names}
+            {formatDate(r.work_date)} · {r.request_number ? requestLabel(r.request_number) : 'без заявки'} · {r.performer_names}
           </Text>
           {r.note ? <Text style={styles.meta}>Примечание: {r.note}</Text> : null}
           {r.hint_price_kop ? (

@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { StyleSheet, Text } from 'react-native';
 import { Card } from '../../../components/Card';
 import { RequestBadges } from '../../../components/RequestBadges';
@@ -21,7 +22,7 @@ export default function ReviewQueueScreen() {
         return (
           <Card key={r.id} style={styles.card} onPress={() => router.push({ pathname: '/review/[id]', params: { id: String(r.id) } })}>
             <RequestBadges status={r.status} priority={r.priority} unread={r.unread} />
-            <Text style={styles.number}>{r.number}</Text>
+            <Text style={styles.number}>{requestLabel(r.number)}</Text>
             {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
             <Text style={[styles.meta, over && styles.over]}>
               {r.responsible_name} · работ: {r.entries} · {formatMinutes(r.spent_minutes ?? 0)}

@@ -11,7 +11,7 @@ import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { acceptRequest, markRequestRead, requestCard, returnRequest } from '../../../lib/requests';
+import { acceptRequest, markRequestRead, requestCard, returnRequest, requestLabel } from '../../../lib/requests';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { formatQuantity } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -56,7 +56,7 @@ export default function ReviewRequestScreen() {
   return (
     <Screen>
       <RequestBadges status={r.status} priority={r.priority} />
-      <Text style={styles.number}>{r.number}</Text>
+      <Text style={styles.number}>{requestLabel(r.number)}</Text>
       {r.operation ? <Text style={styles.op}>{r.operation}</Text> : null}
       {r.description ? <Text style={styles.body}>{r.description}</Text> : null}
       <Text style={styles.meta}>

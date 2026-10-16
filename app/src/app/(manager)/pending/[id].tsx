@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { requestLabel } from '../../../lib/requests';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
@@ -89,7 +90,7 @@ export default function PendingEntryScreen() {
           {formatQuantity(data.quantity)} {data.unit_code}
         </Text>
         <Text style={styles.meta}>
-          {formatDate(data.work_date)} · {data.request_number ?? 'без заявки'} · {data.department_name}
+          {formatDate(data.work_date)} · {data.request_number ? requestLabel(data.request_number) : 'без заявки'} · {data.department_name}
         </Text>
         <Text style={styles.meta}>
           Исполнители: {data.performer_names} · внёс {data.author_name}
