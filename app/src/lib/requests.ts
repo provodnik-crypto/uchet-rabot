@@ -148,6 +148,8 @@ export type RequestWork = {
   unit: string;
   status: 'priced' | 'pending' | 'rejected' | 'awaiting';
   performers: string | null;
+  /** client_uuid смены, в которой внесена работа. */
+  shift_uuid?: string;
 };
 export type RequestCard = {
   id: number;
@@ -177,7 +179,7 @@ export type RequestCard = {
   returned_comment: string | null;
   members: { id: number; name: string }[];
   spent_minutes: number;
-  time_by_day: { work_date: string; minutes: number; author: string }[];
+  time_by_day: { work_date: string; minutes: number; author: string; shift_uuid?: string }[];
   events: RequestEvent[];
 };
 export type RequestEvent = {

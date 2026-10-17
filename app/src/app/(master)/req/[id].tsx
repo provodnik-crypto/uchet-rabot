@@ -13,7 +13,8 @@ import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
-import { requestList, useDraft } from '../../../lib/draft';
+import { withDraft } from '../../../lib/requestDraft';
+import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import {
   ESTIMATES,
@@ -67,10 +68,8 @@ export default function RequestCardScreen() {
   const canTake = r.status === 'waiting' && r.is_open && !r.to_contractor && (!r.assignee_id || r.assignee_id === me?.id);
   const working = r.status === 'in_work' && r.is_responsible;
   const isMember = r.members.some((m) => m.id === me?.id);
-  const draftEntries = draft?.entries.filter((e) => e.requestNumber === r.number) ?? [];
-  const draftTime = draft ? requestList(draft).find((t) => t.number === r.number) : undefined;
-  const todayMinutes = draftTime?.minutes ?? 0;
-  const spent = r.spent_minutes + (draft?.editing ? 0 : todayMinutes);
+  // Сервер плюс смена на телефоне: черновик заменяет уже отправленную версию своего дня.
+  const { works, draftEntries, draftTime, spent } = withDraft(r, draft);
   const over = r.plan_minutes != null && spent > r.plan_minutes;
 
   /** Черновик сегодняшнего дня: есть — используем (за другой день — спросим), нет — начинаем. */
@@ -186,22 +185,20 @@ export default function RequestCardScreen() {
         </>
       ) : null}
 
-      {r.works.length || draftEntries.length ? (
+      {works.length || draftEntries.length ? (
         <Card style={styles.card}>
-          <Text style={styles.label}>Работы по заявке: {r.works.length + (draft?.editing ? 0 : draftEntries.length)}</Text>
-          {!draft?.editing
-            ? draftEntries.map((e, i) => (
-                <View key={e.key} style={[styles.work, i > 0 && styles.workBorder]}>
-                  <Text style={styles.workName}>{e.name}</Text>
-                  <Text style={styles.meta}>
-                    {formatDate(draft!.workDate)} · {e.quantity} {e.unitCode} · {e.performerNames.join(', ')}
-                  </Text>
-                  <Text style={[styles.status, styles.wait]}>Ещё не отправлено</Text>
-                </View>
-              ))
-            : null}
-          {r.works.map((w, i) => (
-            <View key={i} style={[styles.work, (i > 0 || (!draft?.editing && draftEntries.length > 0)) && styles.workBorder]}>
+          <Text style={styles.label}>Работы по заявке: {works.length + draftEntries.length}</Text>
+          {draftEntries.map((e, i) => (
+            <View key={e.key} style={[styles.work, i > 0 && styles.workBorder]}>
+              <Text style={styles.workName}>{e.name}</Text>
+              <Text style={styles.meta}>
+                {formatDate(draft!.workDate)} · {e.quantity} {e.unitCode} · {e.performerNames.join(', ')}
+              </Text>
+              <Text style={[styles.status, styles.wait]}>{draft!.editing ? 'Правка дня — уйдёт при отправке' : 'Ещё не отправлено'}</Text>
+            </View>
+          ))}
+          {works.map((w, i) => (
+            <View key={i} style={[styles.work, (i > 0 || draftEntries.length > 0) && styles.workBorder]}>
               <Text style={styles.workName}>{w.name}</Text>
               <Text style={styles.meta}>
                 {formatDate(w.work_date)} · {formatQuantity(w.quantity)} {w.unit} · {w.performers ?? ''}
@@ -211,7 +208,6 @@ export default function RequestCardScreen() {
               </Text>
             </View>
           ))}
-          {draft?.editing && draftEntries.length ? <Text style={styles.hint}>Сегодняшние работы уже отправлены; правки уйдут при закрытии смены.</Text> : null}
         </Card>
       ) : (
         <Text style={styles.meta}>Работ по заявке ещё не вносили.</Text>

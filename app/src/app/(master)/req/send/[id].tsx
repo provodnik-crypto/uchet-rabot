@@ -7,7 +7,8 @@ import { Field } from '../../../../components/Field';
 import { Screen } from '../../../../components/Screen';
 import { StateView } from '../../../../components/StateView';
 import { formatDate } from '../../../../lib/dates';
-import { requestList, useDraft } from '../../../../lib/draft';
+import { useDraft } from '../../../../lib/draft';
+import { withDraft } from '../../../../lib/requestDraft';
 import { humanError } from '../../../../lib/errors';
 import { requestCard, sendRequestForReview, requestLabel } from '../../../../lib/requests';
 import { formatMinutes, formatPlan } from '../../../../lib/requestTime';
@@ -28,13 +29,10 @@ export default function SendRequestScreen() {
 
   if (!r) return <Screen><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
 
-  // Сегодняшние работы и время по этой заявке, ещё не отправленные на сервер.
-  const unsent = draft && !draft.editing;
-  const draftEntries = unsent ? draft.entries.filter((e) => e.requestNumber === r.number) : [];
-  const todayMinutes = unsent ? requestList(draft).find((t) => t.number === r.number)?.minutes ?? 0 : 0;
-  const total = r.spent_minutes + todayMinutes;
+  // Работы и время с сервера плюс смена на телефоне (она заменяет уже отправленную версию того же дня).
+  const { works, timeByDay, draftEntries, todayMinutes, spent: total } = withDraft(r, draft);
   const over = r.plan_minutes != null && total > r.plan_minutes;
-  const nothing = !r.works.length && !draftEntries.length && total === 0;
+  const nothing = !works.length && !draftEntries.length && total === 0;
 
   async function send() {
     if (!r) return;
@@ -68,16 +66,16 @@ export default function SendRequestScreen() {
           {r.plan_minutes != null ? ` · примерно было ${formatPlan(r.plan_minutes)}` : ''}
         </Text>
         {over ? <Text style={styles.overText}>Дольше, чем планировали. Можно пояснить в комментарии.</Text> : null}
-        {r.time_by_day.map((t, i) => (
+        {timeByDay.map((t, i) => (
           <Text key={i} style={styles.meta}>
             {formatDate(t.work_date)} · {formatMinutes(t.minutes)} · {t.author}
           </Text>
         ))}
-        {todayMinutes ? <Text style={styles.meta}>{formatDate(draft!.workDate)} · {formatMinutes(todayMinutes)} · сегодня, ещё не отправлено</Text> : null}
+        {todayMinutes ? <Text style={styles.meta}>{formatDate(draft!.workDate)} · {formatMinutes(todayMinutes)} · {draft!.editing ? 'сегодня' : 'сегодня, ещё не отправлено'}</Text> : null}
       </Card>
 
       <Card style={styles.card}>
-        <Text style={styles.label}>Работы: {r.works.length + draftEntries.length}</Text>
+        <Text style={styles.label}>Работы: {works.length + draftEntries.length}</Text>
         {draftEntries.map((e) => (
           <View key={e.key} style={styles.row}>
             <Text style={styles.name}>{e.name}</Text>
@@ -86,7 +84,7 @@ export default function SendRequestScreen() {
             </Text>
           </View>
         ))}
-        {r.works.map((w, i) => (
+        {works.map((w, i) => (
           <View key={i} style={styles.row}>
             <Text style={styles.name}>{w.name}</Text>
             <Text style={styles.meta}>
@@ -94,7 +92,7 @@ export default function SendRequestScreen() {
             </Text>
           </View>
         ))}
-        {!r.works.length && !draftEntries.length ? <Text style={styles.meta}>Работ нет — только время.</Text> : null}
+        {!works.length && !draftEntries.length ? <Text style={styles.meta}>Работ нет — только время.</Text> : null}
       </Card>
 
       <Field label="Комментарий руководителю (необязательно)" value={comment} onChangeText={setComment} multiline placeholder="Что сделано, что осталось" />
