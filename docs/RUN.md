@@ -32,7 +32,7 @@
 создаст первого руководителя и опубликует приложение через EAS Update.
 
 ## Этап 1. Что проверить на телефоне
-**Android — установочный файл (APK):** https://expo.dev/artifacts/eas/3GjoYz4C5xPPVxA20r6EXOuZ6c4RUPCow1jPsftUyRk.apk (QR-код: `docs/apk-qr.png`).
+**Android — установочный файл (APK):** https://expo.dev/artifacts/eas/XngnYkDGKvwLUQ2Xp4siUpt2hPTDn5goTfhp4v3Q784.apk (QR-код: `docs/apk-qr.png`).
 В Expo Go обновление на телефоне заказчика не загрузилось («Failed to download remote update»),
 поэтому проверяем через APK. Новые версии приходят в APK сами через EAS Update (ветка `preview`).
 
@@ -252,3 +252,12 @@ cd app && set -a && . ./.env && set +a && \
 август 321 880, сентябрь 890 000, октябрь 360 450 ₽ (как в сверке).
 Копия удалённого — схема `backup_20261018` в базе (без доступа у приложения); вернуть — `insert … select` из неё
 в обратном порядке (request_imports → requests → events/reads/members → shifts → work_entries → деньги/исполнители/фото).
+
+## Новая иконка приложения (18.10.2026)
+* Иконка в стиле ЛМ: жёлтый фон `#FDC300`, чёрный домик со столбиками графика. Исходник — `app/assets/icon.svg`,
+  из него сделаны `icon.png`, адаптивная иконка Android (фон, рисунок, монохромная), `splash-icon.png`, `favicon.png`.
+* Значок на рабочем столе меняется только установкой нового APK — обновление «по воздуху» его не трогает.
+  Версия среды не менялась (`3`): старый APK продолжает получать обновления, переустановка — по желанию.
+* Новый APK: https://expo.dev/artifacts/eas/XngnYkDGKvwLUQ2Xp4siUpt2hPTDn5goTfhp4v3Q784.apk (QR — `docs/apk-qr.png`),
+  ссылка обновлена в `app_release` и в инструкции мастера.
+* Откат: вернуть PNG из коммита до этой доработки и собрать APK.
