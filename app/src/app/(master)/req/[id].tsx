@@ -33,6 +33,7 @@ import { storeToday } from '../../../lib/today';
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, radius, touch } from '../../../theme';
+import { DueLine } from '../../../components/DueLine';
 
 const workStatus: Record<RequestWork['status'], string> = {
   priced: 'Принято',
@@ -117,6 +118,7 @@ export default function RequestCardScreen() {
           </Text>
           {r.service || r.operation ? <Text style={styles.operation}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text> : null}
           <Text style={styles.meta}>{[r.registered_at ? formatRegistered(r.registered_at) : null, r.requester_name].filter(Boolean).join(' · ')}</Text>
+          <DueLine dueAt={r.due_at} status={r.status} isOpen={r.is_open} />
         </View>
       </TourTarget>
 

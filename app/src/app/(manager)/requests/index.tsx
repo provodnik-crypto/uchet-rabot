@@ -18,6 +18,7 @@ import { RequestBadges } from '../../../components/RequestBadges';
 import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
+import { DueLine } from '../../../components/DueLine';
 
 export default function RequestsScreen() {
   const [q, setQ] = useState('');
@@ -108,6 +109,7 @@ export default function RequestsScreen() {
             {r.source === 'itsm' && !r.is_open ? <Text style={styles.closed}>  закрыта</Text> : null}
           </Text>
           {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
+          <DueLine dueAt={r.due_at} status={r.status} isOpen={r.is_open} />
           {r.description || r.subject ? (
             <Text style={styles.subject} numberOfLines={2}>
               {r.description ?? r.subject}

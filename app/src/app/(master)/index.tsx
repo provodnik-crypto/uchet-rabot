@@ -25,6 +25,7 @@ import { TourTarget, useTour } from '../../lib/tour';
 import { openShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font } from '../../theme';
+import { DueLine } from '../../components/DueLine';
 
 export default function MasterHome() {
   const { me, signOut } = useAuth();
@@ -95,6 +96,7 @@ export default function MasterHome() {
                 {requestLabel(r.number)}
                 {r.operation ? <Text style={styles.mineOp}> · {r.operation}</Text> : null}
               </Text>
+              <DueLine dueAt={r.due_at} status={r.status} />
               <Text style={styles.mineMeta}>
                 {r.returned_comment
                   ? `Вернули: ${r.returned_comment}`

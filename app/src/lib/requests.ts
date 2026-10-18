@@ -70,9 +70,13 @@ export type ImportRow = {
   status: string | null;
   registered_at: string;
   requester: string | null;
+  /** Срок ITSM («Время разрешения»), местное время. */
+  due_at: string | null;
 };
 export type ImportPayload = {
   rows: ImportRow[];
+  /** Сроки уже загруженных заявок (меняется только срок). */
+  due_updates: { number: string; due_at: string }[];
   close_ids: number[];
   window_from: string | null;
   window_to: string | null;
@@ -136,6 +140,8 @@ export type OpenRequest = {
   member: boolean;
   /** Новые сообщения и важные события от других. */
   unread: number;
+  /** Срок ITSM, местное время. */
+  due_at: string | null;
 };
 export const openRequests = (q: string, filter: RequestFilter) =>
   rpc<OpenRequest[]>('open_requests', { q, p_filter: filter, p_limit: 300 });
@@ -160,6 +166,7 @@ export type RequestCard = {
   operation: string | null;
   description: string | null;
   registered_at: string | null;
+  due_at?: string | null;
   requester_name: string | null;
   is_open: boolean;
   state: 'open' | 'done' | null;
@@ -251,6 +258,7 @@ export type MyRequest = {
   responsible: boolean;
   responsible_name: string | null;
   unread: number;
+  due_at: string | null;
 };
 export const myRequests = () => rpc<MyRequest[]>('my_requests');
 export const takeRequest = (id: number, planMinutes: number | null, memberIds: number[]) =>
@@ -303,6 +311,14 @@ export function formatRegistered(ts: string | null | undefined): string {
   const [d, t] = ts.replace('T', ' ').split(' ');
   const [y, m, day] = d.split('-');
   return `${day}.${m}.${y}${t ? ' ' + t.slice(0, 5) : ''}`;
+}
+
+/** Срок ITSM (местное время магазина, «ГГГГ-ММ-ДД ЧЧ:ММ:СС») → текст и признак «просрочена». */
+export function dueState(dueAt: string | null | undefined): { text: string; overdue: boolean } | null {
+  if (!dueAt) return null;
+  const local = dueAt.replace('T', ' ').slice(0, 19);
+  const now = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+  return { text: formatRegistered(local), overdue: local < now };
 }
 
 /** Отметка времени базы (UTC) → «09.10.2026 14:05» по Тюмени (UTC+5). */

@@ -80,15 +80,18 @@ export function readXlsx(bytes: Uint8Array, preferSheet: string): { sheet: strin
 }
 
 // ---------- Столбцы ----------
+// Поддерживаются два шаблона выгрузки: старый (Операция, Краткое описание, Статус, Рабочая группа)
+// и новый case_*.xlsx с 18.10.2026 (Тема, Состояние, Ответственный, Время разрешения). Шаблон определяется сам.
 const KEEP = {
-  number: 'Номер',
-  service: 'Услуга',
-  operation: 'Операция',
-  description: 'Краткое описание',
-  status: 'Статус',
-  registered: 'Дата регистрации',
-  group: 'Рабочая группа',
-  requester: 'Конечный потребитель',
+  number: ['Номер'],
+  service: ['Услуга'],
+  operation: ['Операция'],
+  description: ['Краткое описание', 'Тема'],
+  status: ['Статус', 'Состояние'],
+  registered: ['Дата регистрации'],
+  group: ['Рабочая группа', 'Ответственный'],
+  requester: ['Конечный потребитель'],
+  due: ['Время разрешения'],
 } as const;
 type Key = keyof typeof KEEP;
 
@@ -96,8 +99,12 @@ type Key = keyof typeof KEEP;
 const DROP = [
   'Создал', 'Категория', 'Категория услуг', 'Рабочая группа.Линия поддержки', 'Исполнитель',
   'Дата закрытия', 'Техническое описание', 'Создавшая группа',
+  '80 процентов до времени разрешения', '50 процентов до времени разрешения',
+  'Просрочен по реакции', 'Просрочен по разрешению',
 ];
 const REQUIRED: Key[] = ['number', 'group', 'registered'];
+/** Необязательные, о которых не предупреждаем: в новом шаблоне их нет, название берётся из текста. */
+const QUIET: Key[] = ['operation', 'due'];
 
 const norm = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
 
@@ -290,6 +297,33 @@ export function cleanDescription(text: string, nameParts: string[]): { text: str
   return { text: cleaned.slice(0, 1000), suspects: findSuspects(cleaned) };
 }
 
+// ---------- Название из текста ----------
+const GREETING = /^(?:добр(?:ый|ое|ого)\s+(?:день|утро|вечер|времени\s+суток)|здравствуйте|приветствую|привет|коллеги|уважаемые\s+коллеги)[\s!.,:;)-]*/i;
+
+/**
+ * Короткое название заявки из текста (в новом шаблоне нет «Операции»): первая строка без приветствия,
+ * до 60 знаков по границе слова. По точкам не режем — «ауд. 2.30», «т.к.» встречаются часто.
+ */
+export function titleFromText(text: string, max = 60): string | null {
+  const strip = (l: string) => {
+    let t = l.replace(/\s+/g, ' ').trim();
+    for (let i = 0; i < 3; i++) {
+      const n = t.replace(GREETING, '').trim();
+      if (n === t) break;
+      t = n;
+    }
+    return t.replace(/^[\s!.,:;-]+/, '').replace(/[\s,;:-]+$/, '');
+  };
+  let s = text.split('\n').map(strip).find((l) => l.length >= 3) ?? '';
+  if (!s) return null;
+  if (s.length > max) {
+    const cut = s.slice(0, max);
+    const sp = cut.lastIndexOf(' ');
+    s = (sp > 25 ? cut.slice(0, sp) : cut).replace(/[\s,.;:-]+$/, '') + '…';
+  }
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 // ---------- Строки файла ----------
 export type ItsmRow = {
   line: number; // строка в Excel
@@ -300,6 +334,10 @@ export type ItsmRow = {
   description: string;
   status: string | null;
   registeredAt: string | null; // «ГГГГ-ММ-ДД ЧЧ:ММ:СС»
+  /** Срок ITSM («Время разрешения»), местное время; в старом шаблоне — null. */
+  dueAt: string | null;
+  /** Название собрано из текста (нового шаблона): после правки текста пересобрать. */
+  autoTitle: boolean;
   requester: string | null;
   requesterUnrecognized: boolean;
   suspects: string[];
@@ -327,7 +365,7 @@ const multiline = (v: Cell) =>
 
 /** Таблица → очищенные строки. Удаляемые столбцы не читаются дальше заголовка. */
 export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
-  const headerIdx = table.findIndex((r) => r.some((c) => norm(c) === norm(KEEP.number)));
+  const headerIdx = table.findIndex((r) => r.some((c) => KEEP.number.some((n) => norm(c) === norm(n))));
   if (headerIdx < 0) throw new Error('В файле нет столбца «Номер». Это точно выгрузка заявок из ITSM?');
   const header = table[headerIdx];
   const col = {} as Record<Key, number>;
@@ -335,12 +373,14 @@ export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
   header.forEach((h, i) => {
     const n = norm(h);
     if (!n) return;
-    const key = (Object.keys(KEEP) as Key[]).find((k) => norm(KEEP[k]) === n);
+    const key = (Object.keys(KEEP) as Key[]).find((k) => KEEP[k].some((name) => norm(name) === n));
     if (key && col[key] === undefined) col[key] = i;
     else if (!DROP.some((d) => norm(d) === n)) unknownColumns.push(String(h).trim());
   });
-  const missingColumns = REQUIRED.filter((k) => col[k] === undefined).map((k) => KEEP[k]);
-  const optionalMissing = (Object.keys(KEEP) as Key[]).filter((k) => !REQUIRED.includes(k) && col[k] === undefined).map((k) => KEEP[k]);
+  const missingColumns = REQUIRED.filter((k) => col[k] === undefined).map((k) => KEEP[k].join(' / '));
+  const optionalMissing = (Object.keys(KEEP) as Key[])
+    .filter((k) => !REQUIRED.includes(k) && !QUIET.includes(k) && col[k] === undefined)
+    .map((k) => KEEP[k].join(' / '));
   if (missingColumns.length) return { sheet, rows: [], unknownColumns, missingColumns, absentColumns: optionalMissing };
 
   const get = (r: Cell[], k: Key) => (col[k] === undefined ? null : r[col[k]] ?? null);
@@ -352,8 +392,9 @@ export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
     const number = (text(get(r, 'number')) ?? '').toUpperCase();
     if (!NUMBER_RE.test(number)) errors.push(`номер «${number || 'пусто'}» не похож на RFS/INC`);
     const group = text(get(r, 'group')) ?? '';
-    const storeCode = /MAG-(\d{3})\b/i.exec(group)?.[1] ?? null;
-    if (!storeCode) errors.push('в рабочей группе нет номера магазина');
+    // «L2-MAG-031» (рабочая группа) или «mag031 ing001 (…)» (ответственный)
+    const storeCode = /\bMAG-?(\d{3})\b/i.exec(group)?.[1] ?? null;
+    if (!storeCode) errors.push('нет номера магазина (MAG-031 / mag031)');
     const registeredAt = parseRegistered(get(r, 'registered'));
     if (!registeredAt) errors.push('нет даты регистрации');
     const req = parseRequester(get(r, 'requester'));
@@ -363,10 +404,12 @@ export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
       number,
       storeCode,
       service: text(get(r, 'service')),
-      operation: text(get(r, 'operation')),
+      operation: col.operation === undefined ? titleFromText(description) : text(get(r, 'operation')),
       description,
       status: text(get(r, 'status')),
       registeredAt,
+      dueAt: col.due === undefined ? null : parseRegistered(get(r, 'due')),
+      autoTitle: col.operation === undefined,
       requester: req.value,
       requesterUnrecognized: !req.recognized,
       suspects,

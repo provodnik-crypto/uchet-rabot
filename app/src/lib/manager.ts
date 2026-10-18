@@ -173,6 +173,8 @@ export type RequestRow = {
   unread: number;
   /** Рабочих дней без действий (для «В работе»). */
   stale_days: number;
+  /** Срок ITSM, местное время. */
+  due_at: string | null;
 };
 
 export type RequestStatusFilter = 'open' | 'closed' | 'all';

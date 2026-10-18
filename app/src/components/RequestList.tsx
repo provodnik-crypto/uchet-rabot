@@ -11,6 +11,7 @@ import { RequestBadges } from './RequestBadges';
 import { SearchBox } from './SearchBox';
 import { Segmented } from './Segmented';
 import { StateView } from './StateView';
+import { DueLine } from './DueLine';
 
 type Props = {
   /** view — нажатие открывает карточку; select — выбирает заявку для смены, «i» открывает карточку. */
@@ -110,6 +111,7 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
                 {previewText(r.description)}
               </Text>
             ) : null}
+            <DueLine dueAt={r.due_at} status={r.status} />
             <Text style={styles.meta}>
               {[
                 formatRegistered(r.registered_at),

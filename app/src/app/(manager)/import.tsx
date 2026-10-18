@@ -8,7 +8,7 @@ import { Screen } from '../../components/Screen';
 import { confirm } from '../../lib/confirm';
 import { formatDate, maskDateInput, parseDate } from '../../lib/dates';
 import { humanError } from '../../lib/errors';
-import { inWindow, recheckDescription, type ItsmFile, type ItsmRow } from '../../lib/itsm';
+import { inWindow, recheckDescription, titleFromText, type ItsmFile, type ItsmRow } from '../../lib/itsm';
 import { formatRegistered, formatStoreTime, importApply, importContext, pickItsmFile, type ImportContext } from '../../lib/requests';
 import { colors, font, radius } from '../../theme';
 
@@ -74,6 +74,7 @@ export default function ImportScreen() {
     const errors: { row: ItsmRow; why: string }[] = [];
     const unknownStores = new Set<string>();
     const fresh: ItsmRow[] = [];
+    const existingRows: ItsmRow[] = [];
     let existingCount = 0;
     for (const r of file.rows) {
       if (r.errors.length) {
@@ -90,29 +91,34 @@ export default function ImportScreen() {
         errors.push({ row: r, why: `магазина ${r.storeCode} нет в справочнике` });
         continue;
       }
-      if (existing.has(r.number)) existingCount++;
-      else fresh.push(r);
+      if (existing.has(r.number)) {
+        existingCount++;
+        existingRows.push(r);
+      } else fresh.push(r);
     }
     const inside = fresh.filter((r) => inWindow(r.registeredAt, windowFrom, windowTo));
     const outside = fresh.filter((r) => !inWindow(r.registeredAt, windowFrom, windowTo));
-    return { errors, unknownStores: Array.from(unknownStores), fresh, inside, outside, existingCount };
+    return { errors, unknownStores: Array.from(unknownStores), fresh, inside, outside, existingCount, existingRows };
   }, [file, ctx, windowFrom, windowTo]);
 
   const toLoad = plan ? (withOutside ? [...plan.inside, ...plan.outside] : plan.inside) : [];
   const descOf = (r: ItsmRow) => edits[r.line] ?? { text: r.description, suspects: r.suspects };
+  /** Название: в новом шаблоне собирается из текста — после правки текста пересобираем, чтобы убранное не осталось в названии. */
+  const titleOf = (r: ItsmRow) => (r.autoTitle && edits[r.line] ? titleFromText(recheckDescription(edits[r.line].text).text) : r.operation);
   const flagged = toLoad.filter((r) => descOf(r).suspects.length);
   const noRequester = toLoad.filter((r) => r.requesterUnrecognized);
   const closeIds = Object.entries(close).filter(([, v]) => v).map(([k]) => Number(k));
+  const dueUpdates = plan ? plan.existingRows.filter((r) => r.dueAt).map((r) => ({ number: r.number, due_at: r.dueAt! })) : [];
 
   async function upload() {
     if (!file || !ctx || !plan || windowError) return;
-    if (!toLoad.length && !closeIds.length) {
+    if (!toLoad.length && !closeIds.length && !dueUpdates.length) {
       setError('Загружать нечего: новых заявок в выбранном периоде нет и ничего не отмечено «Закрыть».');
       return;
     }
     const ok = await confirm(
       'Загрузить заявки?',
-      `Новых заявок: ${toLoad.length}${closeIds.length ? `\nЗакрыть пропавших: ${closeIds.length}` : ''}`,
+      `Новых заявок: ${toLoad.length}${dueUpdates.length ? `\nОбновить срок у загруженных раньше: ${dueUpdates.length}` : ''}${closeIds.length ? `\nЗакрыть пропавших: ${closeIds.length}` : ''}`,
       'Загрузить',
     );
     if (!ok) return;
@@ -124,13 +130,15 @@ export default function ImportScreen() {
           number: r.number,
           store_code: r.storeCode!,
           service: r.service,
-          operation: r.operation,
+          operation: titleOf(r),
           // правку руководителя ещё раз чистим от телефонов и почт
           description: edits[r.line] ? recheckDescription(edits[r.line].text).text : r.description,
           status: r.status,
           registered_at: r.registeredAt!,
           requester: r.requester,
+          due_at: r.dueAt,
         })),
+        due_updates: dueUpdates,
         close_ids: closeIds,
         window_from: windowFrom,
         window_to: windowTo,
@@ -314,10 +322,11 @@ export default function ImportScreen() {
           {sample.map((r) => (
             <View key={r.line} style={styles.missing}>
               <Text style={styles.number}>{r.number}</Text>
-              <Text style={styles.meta}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text>
+              <Text style={styles.meta}>{[r.service, titleOf(r)].filter(Boolean).join(' · ')}</Text>
               <Text style={styles.body}>{descOf(r).text || '—'}</Text>
               <Text style={styles.meta}>
                 {formatRegistered(r.registeredAt)} · {r.requester ?? 'заявитель не указан'} · магазин {r.storeCode} · {r.status ?? ''}
+                {r.dueAt ? ` · срок до ${formatRegistered(r.dueAt)}` : ''}
               </Text>
             </View>
           ))}

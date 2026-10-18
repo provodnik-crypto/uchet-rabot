@@ -28,6 +28,7 @@ import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font, radius, touch } from '../../../theme';
+import { DueLine } from '../../../components/DueLine';
 
 const PLAN_STEP = 30;
 
@@ -123,6 +124,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
             {formatRegistered(r.registered_at)} · {r.requester ?? 'заявитель не указан'}
             {r.itsm_status ? ` · ${r.itsm_status}` : ''}
           </Text>
+          <DueLine dueAt={r.due_at} status={r.status} isOpen={isOpen} />
           {!isOpen ? <Text style={styles.closed}>Закрыта</Text> : null}
         </Card>
       ) : null}
