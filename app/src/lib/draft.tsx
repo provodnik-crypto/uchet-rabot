@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './auth';
 import type { RequestStatus } from './requestTime';
-import type { MyEntry, OpenRequest } from './shift';
+import { myEntries, myShiftRequests, type MyEntry, type OpenRequest } from './shift';
+import { unsentPart } from './shiftRollover';
 import { remoteToDraft, type DraftPhoto, type RemotePhoto } from './workPhotos';
-import { uuid } from './today';
+import { storeToday, uuid } from './today';
 
 /** Работа в черновике смены. Хранится на телефоне до успешной отправки. */
 export type DraftEntry = {
@@ -47,6 +49,10 @@ export type Draft = {
   requests?: DraftRequest[];
   /** Заявка, к которой сейчас добавляются работы: строка, null — «без заявки», undefined — не выбрана. */
   currentRequest?: string | null;
+  /** День, когда черновик отправили («Проверить и отправить»); у старых черновиков поля нет. */
+  sentOn?: string;
+  /** Новые работы перенесены сюда из отправленной смены за эту дату. */
+  movedFrom?: string;
 };
 
 type DraftState = {
@@ -59,10 +65,18 @@ type DraftState = {
   setWorkDate: (workDate: string) => void;
   /** Черновик отправлен, но день продолжается: дальнейшие правки отправятся заменой той же смены. */
   markSent: () => void;
+  /**
+   * Отправленную смену больше нельзя менять (прошёл день или руководитель её обработал) — новое из черновика
+   * переносится в новую смену на сегодня, а если нового нет, черновик убирается. true — черновик изменён.
+   */
+  moveUnsent: () => Promise<boolean>;
   upsertEntry: (entry: DraftEntry) => void;
   removeEntry: (key: string) => void;
   clear: () => void;
 };
+
+export const MOVED_TEXT =
+  'Эта смена уже отправлена в другой день, менять её нельзя. Новые работы и время перенесены в смену за сегодня — проверьте и нажмите «Отправить» ещё раз.';
 
 const DraftContext = createContext<DraftState | null>(null);
 
@@ -180,13 +194,55 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const markSent = useCallback(() => setDraft((d) => (d ? { ...d, editing: true } : d)), []);
+  const markSent = useCallback(() => setDraft((d) => (d ? { ...d, editing: true, sentOn: storeToday() } : d)), []);
+
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const moving = useRef(false);
+  const moveUnsent = useCallback(async () => {
+    const d = draftRef.current;
+    if (!d?.editing || moving.current) return false;
+    moving.current = true;
+    try {
+      const today = storeToday();
+      const rows = (await myEntries(60)).filter((r) => r.client_uuid === d.clientUuid);
+      const times = await myShiftRequests(d.clientUuid);
+      // В смене есть работы — сервер сам говорит, можно ли её менять. Смена только со временем:
+      // нельзя, если отправлена не сегодня.
+      const locked = rows.length ? !rows[0].can_edit : times.length > 0 && (d.sentOn ?? d.workDate) < today;
+      if (!locked) return false;
+      const cur = draftRef.current; // мастер мог что-то добавить, пока шла проверка
+      if (!cur || cur.clientUuid !== d.clientUuid) return false;
+      const part = unsentPart(cur, rows, times);
+      setDraft(
+        part.entries.length || part.requests.length
+          ? { clientUuid: uuid(), workDate: today, editing: false, entries: part.entries, requests: part.requests, movedFrom: cur.workDate }
+          : null,
+      );
+      return true;
+    } catch {
+      return false; // нет связи — проверим при следующем открытии
+    } finally {
+      moving.current = false;
+    }
+  }, []);
+
+  // Проверка при загрузке черновика и каждый раз, когда приложение снова на экране.
+  useEffect(() => {
+    if (ready && draft?.editing) moveUnsent();
+  }, [ready, draft?.editing, draft?.clientUuid, moveUnsent]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') moveUnsent();
+    });
+    return () => sub.remove();
+  }, [moveUnsent]);
 
   const clear = useCallback(() => setDraft(null), []);
 
   const value = useMemo(
-    () => ({ ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, markSent, upsertEntry, removeEntry, clear }),
-    [ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, markSent, upsertEntry, removeEntry, clear],
+    () => ({ ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, markSent, moveUnsent, upsertEntry, removeEntry, clear }),
+    [ready, draft, start, startEdit, setRequestTime, setRequest, setWorkDate, markSent, moveUnsent, upsertEntry, removeEntry, clear],
   );
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }

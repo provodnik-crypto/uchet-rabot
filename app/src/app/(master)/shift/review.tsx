@@ -7,7 +7,7 @@ import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
 import { Segmented } from '../../../components/Segmented';
 import { formatDate } from '../../../lib/dates';
-import { groupIsSent, shiftGroups, useDraft } from '../../../lib/draft';
+import { groupIsSent, MOVED_TEXT, shiftGroups, useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import { formatMinutes, SHIFT_MINUTES } from '../../../lib/requestTime';
 import { sendDraft } from '../../../lib/sendShift';
@@ -16,7 +16,7 @@ import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 export default function ReviewScreen() {
-  const { draft, setWorkDate, clear, upsertEntry } = useDraft();
+  const { draft, setWorkDate, clear, upsertEntry, moveUnsent } = useDraft();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -49,8 +49,14 @@ export default function ReviewScreen() {
       router.dismissAll();
       router.push({ pathname: '/shift/done', params: { entries: String(res.entries), pending: String(res.pending), edited: draft.editing ? '1' : '0' } });
     } catch (e) {
+      const text = humanError(e);
+      // Отправленную смену уже нельзя менять — новое переносится в смену за сегодня.
+      if (/только в день отправки|уже обработал работы этой смены/.test(text) && (await moveUnsent())) {
+        setError(MOVED_TEXT);
+        return;
+      }
       // Черновик остаётся на телефоне — можно повторить, когда появится связь.
-      setError(humanError(e));
+      setError(text);
     } finally {
       setSending(false);
       setProgress(null);

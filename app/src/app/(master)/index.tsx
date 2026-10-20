@@ -129,6 +129,7 @@ export default function MasterHome() {
           </TourTarget>
           <Text style={styles.draftNote}>
             {draft.editing ? 'Правка отправленной смены' : 'Черновик не отправлен'} · {formatDate(draft.workDate)}
+            {draft.movedFrom ? `\nНовые работы перенесены из смены за ${formatDate(draft.movedFrom)} — она уже отправлена` : ''}
           </Text>
           <BigButton
             title="Удалить черновик"

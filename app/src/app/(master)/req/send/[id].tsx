@@ -7,7 +7,7 @@ import { Field } from '../../../../components/Field';
 import { Screen } from '../../../../components/Screen';
 import { StateView } from '../../../../components/StateView';
 import { formatDate } from '../../../../lib/dates';
-import { useDraft } from '../../../../lib/draft';
+import { MOVED_TEXT, useDraft } from '../../../../lib/draft';
 import { withDraft } from '../../../../lib/requestDraft';
 import { humanError } from '../../../../lib/errors';
 import { requestCard, sendRequestForReview, requestLabel } from '../../../../lib/requests';
@@ -22,7 +22,7 @@ export default function SendRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
   const { data: r, error, loading, reload } = query;
-  const { draft, upsertEntry, markSent } = useDraft();
+  const { draft, upsertEntry, markSent, moveUnsent } = useDraft();
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -48,7 +48,9 @@ export default function SendRequestScreen() {
       await sendRequestForReview(r.id, comment.trim() || null);
       router.back();
     } catch (e) {
-      setErr(humanError(e));
+      const text = humanError(e);
+      // Отправленную вчера смену уже нельзя менять — новое переносится в смену за сегодня, нажмите ещё раз.
+      setErr(/только в день отправки|уже обработал работы этой смены/.test(text) && (await moveUnsent()) ? MOVED_TEXT : text);
       reload();
     } finally {
       setBusy(false);

@@ -47,6 +47,7 @@ bash supabase/tests/run.sh                       # тесты базы (лока
 cd app && npx tsc --noEmit                       # проверка типов
 cd app && npm run test:itsm                      # разбор и обезличивание выгрузки ITSM
 cd app && npm run test:errors                    # распознавание ошибок и очистка текста для журнала
+cd app && npm run test:rollover                  # перенос нового из отправленной смены в смену за сегодня
 cd app && set -a && . ./.env && set +a
 npx eas-cli@latest update --branch preview --environment preview --message "…" --platform android --non-interactive
 npx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait   # новый APK
