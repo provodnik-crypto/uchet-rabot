@@ -24,7 +24,7 @@ export function RequestBadges({
   return (
     <View style={styles.row}>
       {unread ? <Text style={[styles.badge, styles.unread]}>💬 {unread} нов.</Text> : null}
-      {mine ? <Text style={[styles.badge, styles.mine]}>{status === 'in_work' || status === 'review' ? 'Ваша заявка' : 'Назначено вам'}</Text> : null}
+      {mine ? <Text style={[styles.badge, styles.mine]}>{status === 'in_work' || status === 'review' || status === 'paused' ? 'Ваша заявка' : 'Назначено вам'}</Text> : null}
       {priority !== 3 ? (
         <Text style={[styles.badge, { borderColor: priorityColor[priority], color: priorityColor[priority] }, priority === 1 && styles.urgent]}>
           {priority === 1 ? '● ' : ''}
@@ -33,8 +33,8 @@ export function RequestBadges({
       ) : null}
       {contractor || status === 'contractor' ? <Text style={[styles.badge, styles.contractor]}>Подрядчик</Text> : null}
       {showStatus ? (
-        <Text style={[styles.badge, styles.status, status === 'review' && styles.review, status === 'accepted' && styles.accepted]}>
-          {status === 'in_work' && responsibleName ? `🔒 В работе · ${responsibleName}` : lifecycleLabel[status]}
+        <Text style={[styles.badge, styles.status, status === 'review' && styles.review, status === 'accepted' && styles.accepted, status === 'paused' && styles.paused]}>
+          {status === 'in_work' && responsibleName ? `🔒 В работе · ${responsibleName}` : lifecycleLabel[status] ?? status}
         </Text>
       ) : null}
     </View>
@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
   unread: { backgroundColor: '#1565C0', borderColor: '#1565C0', color: '#FFFFFF' },
   urgent: { backgroundColor: '#FDECEA' },
   contractor: { borderColor: CONTRACTOR_COLOR, color: CONTRACTOR_COLOR },
+  paused: { borderColor: '#E65100', color: '#E65100', backgroundColor: '#FFF3E0' },
   status: { color: colors.secondary, backgroundColor: colors.bg },
   review: { color: '#1565C0', borderColor: '#1565C0' },
   accepted: { color: colors.success, borderColor: colors.success },

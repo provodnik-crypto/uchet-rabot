@@ -15,7 +15,7 @@ import { useDraft } from '../../lib/draft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
-import { myNotifications, myRequests, myRequestsBadge, requestLabel } from '../../lib/requests';
+import { holdText, myNotifications, myRequests, myRequestsBadge, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
 import { formatMinutes, formatPlan } from '../../lib/requestTime';
 import { RequestBadges } from '../../components/RequestBadges';
@@ -42,11 +42,18 @@ export default function MasterHome() {
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
   const { data: open } = openQ;
   const { data: badge } = badgeQ;
-  const { data: mineList } = mineQ;
+  const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
+  const mineList = mineQ.data?.filter((m) => m.id !== active?.id) ?? null;
   const { data: notes } = notesQ;
   const openCard = (id: number) => router.push({ pathname: '/req/[id]', params: { id: String(id) } });
   const notices: Notice[] = [
-    ...(notes?.returned ?? []).map((n) => ({ key: `r${n.id}`, tone: 'red' as const, title: `Вернули ${requestLabel(n.number)}`, text: n.comment, onPress: () => openCard(n.id) })),
+    ...(notes?.returned ?? []).map((n) => ({
+      key: `r${n.id}`,
+      tone: 'red' as const,
+      title: `Вернули ${requestLabel(n.number)}${n.queued ? ' — в очереди' : ''}`,
+      text: n.queued ? `Возьмётся сама, когда отправите текущую. Что исправить: ${n.comment}` : n.comment,
+      onPress: () => openCard(n.id),
+    })),
     ...(notes?.unread ?? []).map((n) => ({ key: `u${n.id}`, tone: 'blue' as const, title: `Новое по заявке ${requestLabel(n.number)}`, text: `Сообщений и событий: ${n.count}`, onPress: () => openCard(n.id) })),
     ...(notes?.urgent ?? []).map((n) => ({
       key: `s${n.id}`,
@@ -88,6 +95,35 @@ export default function MasterHome() {
         <Notices items={notices} />
       </TourTarget>
 
+      {active ? (
+        <TourTarget id="home.active">
+          <Card style={styles.active} onPress={() => openCard(active.id)}>
+            <Text style={styles.activeLabel}>Моя заявка сейчас</Text>
+            <RequestBadges status="in_work" priority={active.priority} unread={active.unread} />
+            <Text style={styles.mineNumber}>
+              {requestLabel(active.number)}
+              {active.operation ? <Text style={styles.mineOp}> · {active.operation}</Text> : null}
+            </Text>
+            {active.returned_comment ? <Text style={styles.returnedText}>Вернули: {active.returned_comment}</Text> : null}
+            {active.pause_request ? <Text style={styles.mineMeta}>Запрос на приостановку у руководителя</Text> : null}
+            <DueLine dueAt={active.due_at} status={active.status} />
+            <Text style={styles.mineMeta}>
+              {active.taken_at ? `В работе с ${formatDate(active.taken_at.slice(0, 10))} · ` : ''}
+              отмечено {formatMinutes(active.spent_minutes)}
+              {active.plan_minutes != null ? ` из ~${formatPlan(active.plan_minutes)}` : ''}
+            </Text>
+            <View style={styles.activeButtons}>
+              <View style={styles.flex}>
+                <BigButton title="Открыть" variant="secondary" onPress={() => openCard(active.id)} />
+              </View>
+              <View style={styles.flex}>
+                <BigButton title="Проверить и отправить" onPress={() => router.push({ pathname: '/req/send/[id]', params: { id: String(active.id) } })} />
+              </View>
+            </View>
+          </Card>
+        </TourTarget>
+      ) : null}
+
       {mineList?.length ? (
         <TourTarget id="home.mine" style={styles.mineBox}>
           <Text style={styles.section}>Мои заявки</Text>
@@ -104,7 +140,9 @@ export default function MasterHome() {
               </Text>
               <DueLine dueAt={r.due_at} status={r.status} />
               <Text style={styles.mineMeta}>
-                {r.returned_comment
+                {r.status === 'paused'
+                  ? `${holdText(r.hold_reason, r.hold_number)}${r.returned_comment ? `. Что исправить: ${r.returned_comment}` : ''}`
+                  : r.returned_comment
                   ? `Вернули: ${r.returned_comment}`
                   : r.status === 'review'
                     ? 'На проверке у руководителя'
@@ -191,6 +229,11 @@ const styles = StyleSheet.create({
   alert: { borderWidth: 1.5, borderColor: colors.danger, gap: 4 },
   alertTitle: { fontSize: font.body, fontWeight: '800', color: colors.danger },
   alertText: { fontSize: font.small, color: colors.muted },
+  active: { gap: 6, borderWidth: 2, borderColor: colors.brand },
+  activeLabel: { fontSize: font.small, fontWeight: '800', color: colors.secondary, textTransform: 'uppercase' },
+  activeButtons: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  returnedText: { fontSize: font.small, fontWeight: '700', color: colors.danger },
+  flex: { flex: 1 },
   draftNote: { textAlign: 'center', color: colors.muted, fontSize: font.small, marginTop: -8 },
   shiftBox: { gap: 4 },
   openNote: { textAlign: 'center', color: colors.muted, fontSize: font.small },

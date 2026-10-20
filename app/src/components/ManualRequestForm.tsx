@@ -15,7 +15,7 @@ import { Field } from './Field';
  * Новая заявка без номера ITSM: номер (1, 2, 3…) выдаёт сервер по порядку.
  * Мастер — заявка сразу «В работе» у него; руководитель — «Ожидает», можно сразу назначить мастеру.
  */
-export function ManualRequestForm({ manager, onCreated }: { manager: boolean; onCreated: (r: { id: number; number: string }) => void }) {
+export function ManualRequestForm({ manager, onCreated }: { manager: boolean; onCreated: (r: { id: number; number: string; queued?: boolean }) => void }) {
   const { data: masters } = useFocusQuery(() => (manager ? listMasters() : Promise.resolve([])));
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');

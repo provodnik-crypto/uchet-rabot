@@ -4,7 +4,18 @@ create or replace function pg_temp.emp(p_name text) returns bigint language sql 
 
 begin;
 select pg_temp.login_as('kolya');
-select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
+-- одна заявка в работе: сначала первая (сдана на проверку), потом в ту же смену — вторая
+create temp table _u on commit drop as select gen_random_uuid() u;
+grant select on _u to authenticated;
+select public.submit_shift(jsonb_build_object('client_uuid', (select u from _u), 'work_date', public.app_today(),
+  'entries', jsonb_build_array(
+    jsonb_build_object('request_number', 'RFS261011_0001', 'department_id', (select id from public.departments where is_default),
+      'price_item_id', (select id from public.price_items where full_name = 'Благоустройство: Малые архитектурные формы: Установка скамеек'),
+      'quantity', 2, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил'))),
+    jsonb_build_object('department_id', (select id from public.departments where is_default),
+      'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
+select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0001'));
+select public.submit_shift(jsonb_build_object('client_uuid', (select u from _u), 'work_date', public.app_today(),
   'entries', jsonb_build_array(
     jsonb_build_object('request_number', 'RFS261011_0001', 'department_id', (select id from public.departments where is_default),
       'price_item_id', (select id from public.price_items where full_name = 'Благоустройство: Малые архитектурные формы: Установка скамеек'),
@@ -16,7 +27,6 @@ select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 
       'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
 select pg_temp.assert((select total_kop from public.my_month_summary()) = 0, 'до приёмки заявок сумма 0');
 select pg_temp.assert((select awaiting from public.my_month_summary()) = 2, 'две работы ждут приёмки заявки');
-select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0001'));
 select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0002'));
 reset role;
 select pg_temp.login_as('boss');

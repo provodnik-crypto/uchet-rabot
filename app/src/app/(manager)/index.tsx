@@ -33,6 +33,9 @@ export default function ManagerHome() {
       text: `Сообщений и событий: ${n.count}`,
       onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
     })),
+    ...(notes?.pause_requests
+      ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, text: 'Мастер ждёт решения — подтвердите или отклоните', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
+      : []),
     ...(notes?.stale
       ? [{ key: 'stale', tone: 'orange' as const, title: `Без действий больше 3 рабочих дней: ${notes.stale}`, text: 'Заявки «В работе» — откройте и уточните у мастера', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'in_work' } }) }]
       : []),

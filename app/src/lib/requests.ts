@@ -91,13 +91,14 @@ export const importApply = (p: ImportPayload) =>
 // ---------- Список открытых заявок ----------
 export type RequestFilter = 'all' | 'mine' | 'contractor';
 // ---------- Статусы и приоритет ----------
-export type LifecycleStatus = 'waiting' | 'in_work' | 'review' | 'accepted' | 'contractor';
+export type LifecycleStatus = 'waiting' | 'in_work' | 'review' | 'accepted' | 'contractor' | 'paused';
 export const lifecycleLabel: Record<LifecycleStatus, string> = {
   waiting: 'Ожидает',
   in_work: 'В работе',
   review: 'На проверке',
   accepted: 'Принята',
   contractor: 'У подрядчика',
+  paused: 'Приостановлена',
 };
 /** 1 — срочно … 4 — низкий. */
 export type Priority = 1 | 2 | 3 | 4;
@@ -184,13 +185,24 @@ export type RequestCard = {
   taken_at: string | null;
   sent_at: string | null;
   returned_comment: string | null;
+  /** Почему приостановлена: срочная, вернули (ждёт очереди), подтверждённая приостановка. */
+  hold_reason?: HoldReason | null;
+  hold_number?: string | null;
+  paused_at?: string | null;
+  /** Мастер просит приостановить (ждёт решения руководителя). */
+  pause_request?: string | null;
+  pause_requested_at?: string | null;
+  /** Моя заявка «В работе» (если есть) — пока она есть, другую взять нельзя. */
+  my_active?: { id: number; number: string } | null;
   members: { id: number; name: string }[];
   spent_minutes: number;
   time_by_day: { work_date: string; minutes: number; author: string; shift_uuid?: string }[];
   events: RequestEvent[];
 };
 export type RequestEvent = {
-  kind: 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment' | 'create';
+  kind:
+    | 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment' | 'create'
+    | 'pause_request' | 'pause' | 'pause_reject' | 'resume';
   at: string;
   from: LifecycleStatus | null;
   to: LifecycleStatus | null;
@@ -213,6 +225,10 @@ export const eventLabel: Record<RequestEvent['kind'], string> = {
   migrate: 'Перенос в новую схему',
   comment: 'Сообщение',
   create: 'Создал заявку',
+  pause_request: 'Просит приостановить',
+  pause: 'Приостановлена',
+  pause_reject: 'Приостановку отклонил',
+  resume: 'Снова в работе',
 };
 
 /** Подпись события; незнакомое (из новой версии базы) не роняет экран. */
@@ -259,6 +275,9 @@ export type MyRequest = {
   responsible_name: string | null;
   unread: number;
   due_at: string | null;
+  hold_reason?: HoldReason | null;
+  hold_number?: string | null;
+  pause_request?: string | null;
 };
 export const myRequests = () => rpc<MyRequest[]>('my_requests');
 export const takeRequest = (id: number, planMinutes: number | null, memberIds: number[]) =>
@@ -273,15 +292,46 @@ export const setRequestResponsible = (id: number, employeeId: number | null) =>
   rpc<void>('set_request_responsible', { p_id: id, p_employee: employeeId });
 export const reviewCount = () => rpc<number>('review_count');
 
+// ---------- Одна заявка в работе ----------
+export type HoldReason = 'urgent' | 'returned' | 'pause';
+/** Подпись приостановки для мастера и руководителя. */
+export function holdText(reason: HoldReason | null | undefined, holdNumber?: string | null): string {
+  if (reason === 'urgent') return `Приостановлена из-за срочной${holdNumber ? ` ${requestLabel(holdNumber)}` : ''} — вернётся в работу сама, когда срочную отправят на проверку`;
+  if (reason === 'returned') return 'Вернули на доработку — в очереди: станет активной, как только вы отправите текущую';
+  if (reason === 'pause') return 'Приостановлена с согласия руководителя';
+  return 'Приостановлена';
+}
+export const requestPause = (id: number, reason: string) => rpc<void>('request_pause', { p_id: id, p_reason: reason });
+export const decidePause = (id: number, approve: boolean, comment: string | null) =>
+  rpc<void>('decide_pause', { p_id: id, p_approve: approve, p_comment: comment });
+export const resumeRequest = (id: number) => rpc<void>('resume_request', { p_id: id });
+export type MasterNow = {
+  employee_id: number;
+  display_name: string;
+  request_id: number | null;
+  number: string | null;
+  operation: string | null;
+  priority: Priority | null;
+  taken_at: string | null;
+  spent_minutes: number | null;
+  plan_minutes: number | null;
+  pause_request: string | null;
+  paused: number;
+  returned: boolean;
+};
+export const mastersNow = () => rpc<MasterNow[]>('masters_now');
+
 // ---------- Переписка и уведомления ----------
 export const addRequestComment = (id: number, text: string) => rpc<void>('add_request_comment', { p_id: id, p_text: text });
 export const markRequestRead = (id: number) => rpc<void>('mark_request_read', { p_id: id }).catch(() => {});
 export type Notifications = {
   unread: { id: number; number: string; count: number; refused?: boolean }[];
-  returned?: { id: number; number: string; comment: string }[];
+  returned?: { id: number; number: string; comment: string; queued?: boolean }[];
   urgent?: { id: number; number: string; operation: string | null; status: LifecycleStatus }[];
   /** Руководителю: заявок «В работе» без действий больше 3 рабочих дней. */
   stale?: number;
+  /** Руководителю: запросов мастеров на приостановку. */
+  pause_requests?: number;
 };
 export const myNotifications = () => rpc<Notifications>('my_notifications');
 
@@ -303,7 +353,7 @@ export function requestLabel(number: string | null | undefined): string {
 
 // ---------- Ручные заявки ----------
 export const createManualRequest = (title: string, details: string | null, assigneeId: number | null) =>
-  rpc<{ id: number; number: string }>('create_manual_request', { p_title: title, p_details: details, p_assignee: assigneeId });
+  rpc<{ id: number; number: string; queued?: boolean }>('create_manual_request', { p_title: title, p_details: details, p_assignee: assigneeId });
 
 /** «2026-10-09 14:05:00» → «09.10.2026 14:05». */
 export function formatRegistered(ts: string | null | undefined): string {

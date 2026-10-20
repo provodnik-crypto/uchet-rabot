@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatRegistered, openRequests, previewText, type OpenRequest, type RequestFilter, requestLabel } from '../lib/requests';
+import { formatRegistered, myRequests, openRequests, previewText, type OpenRequest, type RequestFilter, requestLabel } from '../lib/requests';
+import { router } from 'expo-router';
+import { BigButton } from './BigButton';
 import { TourTarget } from '../lib/tour';
 import { colors, font, radius } from '../theme';
 import { formatPlan } from '../lib/requestTime';
@@ -34,6 +36,10 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
   });
   const { data: rows, error, loading, reload } = query;
   useScreenRefresh(reload);
+  // моя заявка «В работе»: пока она есть, другие не взять
+  const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
+  useScreenRefresh(mineQ.reload);
+  const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
 
   return (
     <>
@@ -48,6 +54,13 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
         onChange={setFilter}
       />
 
+      {active ? (
+        <Card style={styles.active}>
+          <Text style={styles.activeTitle}>Сначала завершите {requestLabel(active.number)}</Text>
+          <Text style={styles.desc}>Внесите работы и отправьте её на проверку («Проверить и отправить») — после этого можно взять следующую.</Text>
+          <BigButton title={`Открыть ${requestLabel(active.number)}`} variant="secondary" onPress={() => router.push({ pathname: '/req/[id]', params: { id: String(active.id) } })} />
+        </Card>
+      ) : null}
       <LoadStatus status={query} />
       {!rows ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {rows && !rows.length ? (
@@ -59,7 +72,7 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
             style={[styles.card, r.mine && styles.mine, r.status === 'in_work' && !r.mine && !r.member && styles.locked]}
             onPress={() => {
               if (mode !== 'select' || !onChoose) return onOpen(r);
-              const why = blockedReason(r);
+              const why = blockedReason(r) ?? (active && active.id !== r.id && r.status === 'waiting' ? `Сначала завершите ${requestLabel(active.number)} — отправьте её на проверку.` : null);
               if (why) Alert.alert('Выбрать нельзя', why);
               else onChoose(r);
             }}
@@ -126,6 +139,8 @@ function blockedReason(r: OpenRequest): string | null {
 
 const styles = StyleSheet.create({
   card: { gap: 3 },
+  active: { gap: 8, borderWidth: 2, borderColor: '#E65100' },
+  activeTitle: { fontSize: font.body, fontWeight: '800', color: '#E65100' },
   mine: { borderWidth: 2, borderColor: colors.brand },
   locked: { opacity: 0.6 },
   memberText: { fontSize: font.small, fontWeight: '700', color: colors.secondary },

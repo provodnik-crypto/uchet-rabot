@@ -17,6 +17,9 @@ import { withDraft } from '../../../lib/requestDraft';
 import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import {
+  holdText,
+  requestPause,
+  resumeRequest,
   ESTIMATES,
   eventLabel,
   formatRegistered,
@@ -49,7 +52,7 @@ export default function RequestCardScreen() {
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
   const { data: r, error, loading, reload } = query;
   const { draft, start, setRequest, setRequestTime } = useDraft();
-  const [panel, setPanel] = useState<null | 'take' | 'refuse'>(null);
+  const [panel, setPanel] = useState<null | 'take' | 'refuse' | 'pause'>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -67,7 +70,11 @@ export default function RequestCardScreen() {
   }
 
   const today = storeToday();
-  const canTake = r.status === 'waiting' && r.is_open && !r.to_contractor && (!r.assignee_id || r.assignee_id === me?.id);
+  const free = r.status === 'waiting' && r.is_open && !r.to_contractor && (!r.assignee_id || r.assignee_id === me?.id);
+  // Правило: одна заявка в работе. Пока есть своя активная — другую не взять (смотреть и писать можно).
+  const busyWith = r.my_active && r.my_active.id !== r.id ? r.my_active : null;
+  const canTake = free && !busyWith;
+  const paused = r.status === 'paused' && r.is_responsible;
   const working = r.status === 'in_work' && r.is_responsible;
   const isMember = r.members.some((m) => m.id === me?.id);
   // Сервер плюс смена на телефоне: черновик заменяет уже отправленную версию своего дня.
@@ -123,7 +130,7 @@ export default function RequestCardScreen() {
         </View>
       </TourTarget>
 
-      {r.returned_comment && r.status === 'in_work' ? (
+      {r.returned_comment && (r.status === 'in_work' || r.status === 'paused') ? (
         <Card style={styles.returned}>
           <Text style={styles.returnedTitle}>Руководитель вернул заявку</Text>
           <Text style={styles.body}>{r.returned_comment}</Text>
@@ -152,6 +159,49 @@ export default function RequestCardScreen() {
         {!r.is_open ? <Text style={styles.closed}>Заявка закрыта</Text> : null}
         {isMember && !r.is_responsible ? <Text style={styles.hint}>Вы напарник: работы по заявке вносит {r.responsible_name}, сумма делится поровну.</Text> : null}
       </Card>
+
+      {/* ---------- Занят другой заявкой / приостановлена ---------- */}
+      {free && busyWith && !select ? (
+        <Card style={styles.busy}>
+          <Text style={styles.busyTitle}>Сначала завершите {requestLabel(busyWith.number)}</Text>
+          <Text style={styles.body}>Внесите работы и отправьте её на проверку — после этого можно взять эту.</Text>
+          <BigButton title={`Открыть ${requestLabel(busyWith.number)}`} variant="secondary" onPress={() => router.push({ pathname: '/req/[id]', params: { id: String(busyWith.id) } })} />
+        </Card>
+      ) : null}
+      {paused ? (
+        <Card style={styles.busy}>
+          <Text style={styles.busyTitle}>{holdText(r.hold_reason, r.hold_number)}</Text>
+          {r.hold_reason === 'pause' ? (
+            r.my_active ? (
+              <Text style={styles.hint}>Продолжить можно, когда отправите {requestLabel(r.my_active.number)} на проверку.</Text>
+            ) : (
+              <BigButton
+                title="Продолжить"
+                loading={busy}
+                onPress={async () => {
+                  setBusy(true);
+                  setMessage(null);
+                  try {
+                    await resumeRequest(r.id);
+                    reload();
+                  } catch (e) {
+                    setMessage(humanError(e));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+            )
+          ) : null}
+        </Card>
+      ) : null}
+      {working && r.pause_request ? (
+        <Card style={styles.busy}>
+          <Text style={styles.busyTitle}>Запрос на приостановку у руководителя</Text>
+          <Text style={styles.body}>{r.pause_request}</Text>
+          <Text style={styles.hint}>Пока руководитель не решил, заявка остаётся у вас в работе.</Text>
+        </Card>
+      ) : null}
 
       {/* ---------- Взять в работу ---------- */}
       {canTake && !select ? (
@@ -222,6 +272,18 @@ export default function RequestCardScreen() {
             <BigButton title="Проверить и отправить" size="big" onPress={() => router.push({ pathname: '/req/send/[id]', params: { id: String(r.id) } })} />
           </TourTarget>
           <Text style={styles.hint}>Отправляйте, когда заявка сделана. Не успели за день — ничего не делайте, завтра она будет в «Мои заявки».</Text>
+          {panel === 'pause' ? (
+            <PausePanel
+              requestId={r.id}
+              onDone={() => {
+                setPanel(null);
+                reload();
+              }}
+              onCancel={() => setPanel(null)}
+            />
+          ) : !r.pause_request && panel !== 'refuse' ? (
+            <BigButton title="Приостановить" variant="secondary" onPress={() => setPanel('pause')} />
+          ) : null}
           {panel === 'refuse' ? (
             <RefusePanel
               requestId={r.id}
@@ -242,7 +304,12 @@ export default function RequestCardScreen() {
           <BigButton title="Выбрать эту заявку" size="big" onPress={chooseForShift} />
         ) : (
           <Text style={styles.hint}>
-            {r.status === 'in_work' ? `Заявку взял ${r.responsible_name}.` : `Заявка: ${lifecycleLabel[r.status].toLowerCase()}.`} Выбрать её для своей смены нельзя.
+            {busyWith && free
+              ? `Сначала завершите ${requestLabel(busyWith.number)} — отправьте её на проверку.`
+              : r.status === 'in_work'
+                ? `Заявку взял ${r.responsible_name}.`
+                : `Заявка: ${(lifecycleLabel[r.status] ?? r.status).toLowerCase()}.`}{' '}
+            Выбрать её для своей смены нельзя.
           </Text>
         )
       ) : null}
@@ -329,6 +396,34 @@ function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; m
 }
 
 /** Отказ от заявки — с обязательным комментарием. */
+/** «Приостановить»: только запрос руководителю с причиной; до решения заявка остаётся в работе. */
+function PausePanel({ requestId, onDone, onCancel }: { requestId: number; onDone: () => void; onCancel: () => void }) {
+  const [text, setText] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  async function send() {
+    setSending(true);
+    setErr(null);
+    try {
+      await requestPause(requestId, text.trim());
+      onDone();
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setSending(false);
+    }
+  }
+  return (
+    <Card style={styles.card}>
+      <Field label="Почему заявка не может двигаться дальше?" value={text} onChangeText={setText} multiline placeholder="Например: ждём материалы, нет доступа, нужен подрядчик" />
+      <Text style={styles.hint}>Запрос уйдёт руководителю. Пока он не подтвердил, заявка остаётся у вас в работе.</Text>
+      {err ? <Text style={styles.err}>{err}</Text> : null}
+      <BigButton title="Отправить запрос" loading={sending} disabled={text.trim().length < 3} onPress={send} />
+      <BigButton title="Отмена" variant="secondary" onPress={onCancel} />
+    </Card>
+  );
+}
+
 function RefusePanel({ requestId, onDone, onCancel }: { requestId: number; onDone: () => void; onCancel: () => void }) {
   const [text, setText] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -358,6 +453,8 @@ function RefusePanel({ requestId, onDone, onCancel }: { requestId: number; onDon
 
 const styles = StyleSheet.create({
   head: { gap: 3 },
+  busy: { gap: 8, borderWidth: 2, borderColor: '#E65100' },
+  busyTitle: { fontSize: font.body, fontWeight: '800', color: '#E65100' },
   number: { fontSize: font.title, fontWeight: '800' },
   operation: { fontSize: font.body, fontWeight: '700' },
   meta: { fontSize: font.small, color: colors.secondary },

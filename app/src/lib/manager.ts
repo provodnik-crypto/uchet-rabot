@@ -175,6 +175,10 @@ export type RequestRow = {
   stale_days: number;
   /** Срок ITSM, местное время. */
   due_at: string | null;
+  hold_reason?: import('./requests').HoldReason | null;
+  hold_number?: string | null;
+  pause_request?: string | null;
+  pause_requested_at?: string | null;
 };
 
 export type RequestStatusFilter = 'open' | 'closed' | 'all';

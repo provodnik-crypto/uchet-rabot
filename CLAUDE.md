@@ -72,6 +72,13 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   `request_members`, `request_events`. Работы по заявке — статус `awaiting` до «Принята» (в суммы не идут).
   Ключевые функции: `take_request`, `send_request_for_review`, `accept_request`, `return_request`; `submit_shift` —
   обёртка над `submit_shift_core` с проверкой, чья заявка.
+* **Одна заявка в работе** (21.10.2026): у ответственного не больше одной открытой `in_work` — индекс `requests_one_active_uq`
+  и `assert_free` (блокировка строки сотрудника) во всех путях: `take_request`, `claim_request_for_work` (работы в смене),
+  `create_manual_request` (занятому — «Ожидает» с назначением на него), `set_request_responsible` (обычную занятому — отказ,
+  «Срочно» — текущая `paused/urgent`), `set_request_open`. Статус `paused` + `hold_reason`: `urgent`, `returned` (вернули,
+  пока занят), `pause` (подтверждённая приостановка). Освободился (`send_request_for_review`, `refuse_request`, снятие,
+  подрядчик, закрытие) → `resume_next`: сначала returned, потом urgent; `pause` — только `resume_request`. Запрос мастера
+  `request_pause` → `decide_pause` руководителем. Обзор — `masters_now()`. Тест — `supabase/tests/20_one_active_request.sql`.
 * Переписка и уведомления (только внутри приложения): `add_request_comment`, `mark_request_read`, `my_notifications`;
   непрочитанное — `request_unread` по `request_reads`. Пуш-уведомлений нет.
 * Время по заявкам: таблица `shift_requests` (минуты за смену; статус «Не закончено» больше не используется), `requests.plan_minutes/state`;

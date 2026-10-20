@@ -22,7 +22,7 @@ import {
   setRequestOpen,
   setRequestPriority,
   setRequestResponsible,
-  type Priority, requestLabel } from '../../../lib/requests';
+  type Priority, requestLabel, decidePause, holdText, resumeRequest } from '../../../lib/requests';
 import { formatMinutes, formatPlan, PLAN_TIMES } from '../../../lib/requestTime';
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -62,6 +62,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
   const itsm = r.source === 'itsm';
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [rejectText, setRejectText] = useState('');
   const spent = r.spent_minutes ?? 0;
   const over = plan != null && spent > plan;
 
@@ -184,6 +185,41 @@ function RequestDetail({ r }: { r: RequestRow }) {
           Статус: {card ? lifecycleLabel[card.status] : lifecycleLabel[r.status]}
           {card?.responsible_name ? ` · ${card.responsible_name}` : ''}
         </Text>
+        {card?.pause_request ? (
+          <View style={styles.pause}>
+            <Text style={styles.pauseTitle}>Мастер просит приостановить</Text>
+            <Text style={styles.body}>{card.pause_request}</Text>
+            <Text style={styles.hint}>Пока вы не решили, заявка у мастера в работе и другую он взять не может.</Text>
+            <BigButton
+              title="Подтвердить — мастер свободен"
+              loading={busy === 'pause-ok'}
+              disabled={!!busy}
+              onPress={() => run('pause-ok', async () => (await decidePause(r.id, true, null), reloadCard()))}
+            />
+            <Field label="Отклонить: почему нельзя" value={rejectText} onChangeText={setRejectText} multiline placeholder="Например: материалы привезут сегодня" />
+            <BigButton
+              title="Отклонить"
+              variant="secondary"
+              loading={busy === 'pause-no'}
+              disabled={!!busy || rejectText.trim().length < 3}
+              onPress={() => run('pause-no', async () => (await decidePause(r.id, false, rejectText.trim()), setRejectText(''), reloadCard()))}
+            />
+            <BigButton title="Передать подрядчику" variant="secondary" disabled={!!busy} onPress={() => assign(null, true)} />
+          </View>
+        ) : null}
+        {card?.status === 'paused' ? (
+          <View style={styles.pause}>
+            <Text style={styles.pauseTitle}>{holdText(card.hold_reason, card.hold_number)}</Text>
+            <BigButton
+              title="Вернуть в работу"
+              variant="secondary"
+              loading={busy === 'resume'}
+              disabled={!!busy}
+              onPress={() => run('resume', async () => (await resumeRequest(r.id), reloadCard()))}
+            />
+            <Text style={styles.hint}>Если у мастера сейчас другая заявка в работе, вернуть не получится — сначала он её отправит.</Text>
+          </View>
+        ) : null}
         {card?.status === 'review' ? (
           <BigButton title="Проверить заявку" onPress={() => router.push({ pathname: '/review/[id]', params: { id: String(r.id) } })} />
         ) : null}
@@ -198,11 +234,11 @@ function RequestDetail({ r }: { r: RequestRow }) {
             />
           ))}
         </View>
-        {card && (card.status === 'in_work' || card.status === 'waiting') && isOpen ? (
+        {card && (card.status === 'in_work' || card.status === 'waiting' || card.status === 'paused') && isOpen ? (
           <>
             <Text style={styles.label}>{card.status === 'in_work' ? 'Переназначить или снять с мастера' : 'Отдать в работу мастеру'}</Text>
             <View style={styles.chips}>
-              {card.status === 'in_work' ? (
+              {card.status !== 'waiting' ? (
                 <Chip label="Снять с мастера" onPress={() => run('resp', async () => (await setRequestResponsible(r.id, null), reloadCard()))} />
               ) : null}
               {(masters ?? []).map((m) => (
@@ -215,6 +251,11 @@ function RequestDetail({ r }: { r: RequestRow }) {
               ))}
             </View>
             <Text style={styles.hint}>«Снять» — заявка снова «Ожидает». Мастер, которому переназначили, увидит её в «Мои заявки».</Text>
+            <Text style={styles.hint}>
+              У мастера одна заявка в работе. Занятому можно отдать только «Срочно» — его текущая приостановится и вернётся сама, когда он отправит срочную.
+              Обычную назначьте ему выше («Кому назначена») — возьмёт следующей.
+            </Text>
+            {message ? <Text style={styles.err}>{message}</Text> : null}
           </>
         ) : null}
       </Card>
@@ -241,6 +282,8 @@ const styles = StyleSheet.create({
   body: { fontSize: font.body },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
   card: { gap: 12 },
+  pause: { gap: 8, padding: 12, borderRadius: radius.card, borderWidth: 2, borderColor: '#E65100', backgroundColor: '#FFF3E0' },
+  pauseTitle: { fontSize: font.body, fontWeight: '800', color: '#E65100' },
   overCard: { borderWidth: 3, borderColor: colors.danger },
   h: { fontSize: font.body, fontWeight: '700' },
   fact: { fontSize: font.body, fontWeight: '800' },
