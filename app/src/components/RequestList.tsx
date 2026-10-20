@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { formatRegistered, myRequests, openRequests, previewText, type OpenRequest, type RequestFilter, requestLabel } from '../lib/requests';
 import { router } from 'expo-router';
 import { BigButton } from './BigButton';
 import { TourTarget } from '../lib/tour';
-import { colors, font, radius } from '../theme';
+import { colors, font } from '../theme';
 import { Card } from './Card';
 import { RequestBadges } from './RequestBadges';
 import { SearchBox } from './SearchBox';
@@ -16,16 +16,14 @@ import { useFocusQuery } from '../lib/useQuery';
 import { DueLine } from './DueLine';
 
 type Props = {
-  /** view — нажатие открывает карточку; select — выбирает заявку для смены, «i» открывает карточку. */
-  mode: 'view' | 'select';
+  /** Нажатие на заявку открывает её карточку. */
   onOpen: (r: OpenRequest) => void;
-  onChoose?: (r: OpenRequest) => void;
   /** id для обучения у первой заявки списка. */
   tourId: string;
 };
 
 /** Открытые заявки магазина: поиск, фильтры «Все / Назначены мне / Подрядчик», назначенные мне — сверху. */
-export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
+export function RequestList({ onOpen, tourId }: Props) {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<RequestFilter>('all');
   const query = useFocusQuery(() => openRequests(q, filter), {
@@ -69,12 +67,7 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
         <TourTarget key={r.id} id={i === 0 ? tourId : `${tourId}.${r.id}`}>
           <Card
             style={[styles.card, r.mine && styles.mine, r.status === 'in_work' && !r.mine && !r.member && styles.locked]}
-            onPress={() => {
-              if (mode !== 'select' || !onChoose) return onOpen(r);
-              const why = blockedReason(r) ?? (active && active.id !== r.id && r.status === 'waiting' ? `Сначала завершите ${requestLabel(active.number)} — отправьте её на проверку.` : null);
-              if (why) Alert.alert('Выбрать нельзя', why);
-              else onChoose(r);
-            }}
+            onPress={() => onOpen(r)}
           >
             <View style={styles.row}>
               <View style={styles.flex}>
@@ -90,19 +83,6 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
                 <Text style={styles.number}>{requestLabel(r.number)}</Text>
                 {r.operation ? <Text style={styles.operation}>{r.operation}</Text> : null}
               </View>
-              {mode === 'select' ? (
-                <TourTarget id={i === 0 ? `${tourId}.info` : `${tourId}.info.${r.id}`}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Подробнее о заявке ${requestLabel(r.number)}`}
-                    hitSlop={10}
-                    onPress={() => onOpen(r)}
-                    style={({ pressed }) => [styles.info, pressed && { opacity: 0.6 }]}
-                  >
-                    <Text style={styles.infoText}>i</Text>
-                  </Pressable>
-                </TourTarget>
-              ) : null}
             </View>
             {r.description ? (
               <Text style={styles.desc} numberOfLines={3}>
@@ -126,14 +106,6 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
   );
 }
 
-/** Почему заявку нельзя выбрать для своей смены (null — можно). */
-function blockedReason(r: OpenRequest): string | null {
-  if (r.status === 'contractor') return 'Заявка у подрядчика.';
-  if (r.status === 'review') return 'Заявка уже на проверке у руководителя.';
-  if (r.status === 'in_work' && !r.mine) return `Заявку взял ${r.responsible_name ?? 'другой мастер'}.`;
-  if (r.status === 'waiting' && r.assignee_id && !r.mine) return `Заявка назначена: ${r.assignee_name}.`;
-  return null;
-}
 
 const styles = StyleSheet.create({
   card: { gap: 3 },
@@ -149,14 +121,4 @@ const styles = StyleSheet.create({
   operation: { fontSize: font.small, fontWeight: '700' },
   desc: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.secondary },
-  info: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoText: { fontSize: font.body, fontWeight: '800', fontStyle: 'italic' },
 });

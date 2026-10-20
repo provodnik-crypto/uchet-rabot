@@ -11,35 +11,32 @@ import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
 import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
-import { useDraft } from '../../lib/draft';
+import { useLegacyDraft } from '../../lib/legacyDraft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
 import { holdText, myNotifications, myRequests, myRequestsBadge, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
 import { RequestBadges } from '../../components/RequestBadges';
-import { myEntries, myMonthSummary, myOpenRequests } from '../../lib/shift';
+import { myEntries, myMonthSummary } from '../../lib/shift';
 import { storeToday } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
-import { openShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font } from '../../theme';
 import { DueLine } from '../../components/DueLine';
 
 export default function MasterHome() {
   const { me, signOut } = useAuth();
-  const { ready, draft, clear } = useDraft();
+  const legacy = useLegacyDraft();
   const icons = useEmployeeIcons();
   const entriesQ = useFocusQuery(() => myEntries(14), { key: 'home:entries' });
   const monthQ = useFocusQuery(myMonthSummary, { key: 'home:month' });
-  const openQ = useFocusQuery(myOpenRequests, { key: 'home:open' });
   const badgeQ = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
   const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
   const notesQ = useFocusQuery(myNotifications, { key: 'home:notes' });
   const { data: entries } = entriesQ;
   const { data: month } = monthQ;
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
-  const { data: open } = openQ;
   const { data: badge } = badgeQ;
   const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
   const mineList = mineQ.data?.filter((m) => m.id !== active?.id) ?? null;
@@ -53,6 +50,13 @@ export default function MasterHome() {
       text: n.queued ? `Возьмётся сама, когда отправите текущую. Что исправить: ${n.comment}` : n.comment,
       onPress: () => openCard(n.id),
     })),
+    ...(Array.isArray(notes?.reports) ? notes.reports : []).map((n) => ({
+      key: `m${n.id}`,
+      tone: n.status === 'rejected' ? ('red' as const) : ('blue' as const),
+      title: n.status === 'request' ? `По вашему сообщению создана заявка ${requestLabel(n.request_number)}` : 'Руководитель отклонил ваше сообщение',
+      text: n.status === 'rejected' ? `Причина: ${n.answer ?? '—'}` : n.text,
+      onPress: () => router.push('/req/report'),
+    })),
     ...(notes?.unread ?? []).map((n) => ({ key: `u${n.id}`, tone: 'blue' as const, title: `Новое по заявке ${requestLabel(n.number)}`, text: `Сообщений и событий: ${n.count}`, onPress: () => openCard(n.id) })),
     ...(notes?.urgent ?? []).map((n) => ({
       key: `s${n.id}`,
@@ -62,7 +66,6 @@ export default function MasterHome() {
       onPress: () => openCard(n.id),
     })),
   ];
-  const hasDraft = !!draft && draft.entries.length > 0;
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // Первый вход — обучение; уже работавшему мастеру после обновления — «Что нового».
@@ -71,7 +74,7 @@ export default function MasterHome() {
   }, [focused, entries, month, autoStart]);
 
   return (
-    <Screen status={[entriesQ, monthQ, openQ, badgeQ, mineQ, notesQ]} frame>
+    <Screen status={[entriesQ, monthQ, badgeQ, mineQ, notesQ]} frame>
       <View style={styles.helloRow}>
         {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={44} /> : null}
         <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>
@@ -159,35 +162,29 @@ export default function MasterHome() {
         </Card>
       ) : null}
 
-      {hasDraft ? (
-        <>
-          <TourTarget id="home.shift">
-            <BigButton title={`Продолжить смену · ${draft.entries.length}`} size="big" onPress={openShiftList} />
-          </TourTarget>
-          <Text style={styles.draftNote}>
-            {draft.editing ? 'Правка отправленной смены' : 'Черновик не отправлен'} · {formatDate(draft.workDate)}
-            {draft.movedFrom ? `\nНовые работы перенесены из смены за ${formatDate(draft.movedFrom)} — она уже отправлена` : ''}
+      {legacy.draft ? (
+        <Card style={styles.alert}>
+          <Text style={styles.alertTitle}>
+            Неотправленная смена за {formatDate(legacy.draft.workDate)} · работ: {legacy.draft.entries.length}
           </Text>
-          <BigButton
-            title="Удалить черновик"
-            variant="secondary"
-            onPress={async () => {
-              if (await confirm('Удалить черновик?', 'Внесённые, но не отправленные работы пропадут.', 'Удалить')) clear();
-            }}
-          />
-        </>
-      ) : (
-        <>
-          <TourTarget id="home.shift" style={styles.shiftBox}>
-            <BigButton title="Закрыть смену" size="big" disabled={!ready} onPress={() => router.push('/shift/date')} />
-            {open?.length ? (
-              <Text style={styles.openNote}>
-                Не закончено: {open.map((r) => `${r.number} (с ${formatDate(r.since).slice(0, 5)})`).join(', ')} — будет вверху смены
-              </Text>
-            ) : null}
-          </TourTarget>
-        </>
-      )}
+          <Text style={styles.alertText}>
+            {legacy.sending ? 'Отправляется…' : legacy.error ? `Не отправилась: ${legacy.error}` : 'Осталась от старой версии приложения — отправится сама.'}
+          </Text>
+          {legacy.error ? (
+            <>
+              <BigButton title="Повторить" size="small" onPress={legacy.retry} />
+              <BigButton
+                title="Удалить"
+                size="small"
+                variant="secondary"
+                onPress={async () => {
+                  if (await confirm('Удалить старую смену?', 'Работы из неё не попадут на сервер. Если они нужны — внесите их в заявке заново.', 'Удалить')) legacy.remove();
+                }}
+              />
+            </>
+          ) : null}
+        </Card>
+      ) : null}
 
       <TourTarget id="home.requests">
         <Card style={[styles.reqCard, badge?.assigned ? styles.reqMine : null]} onPress={() => router.push('/req')}>
@@ -233,9 +230,6 @@ const styles = StyleSheet.create({
   activeButtons: { flexDirection: 'row', gap: 8, marginTop: 4 },
   returnedText: { fontSize: font.small, fontWeight: '700', color: colors.danger },
   flex: { flex: 1 },
-  draftNote: { textAlign: 'center', color: colors.muted, fontSize: font.small, marginTop: -8 },
-  shiftBox: { gap: 4 },
-  openNote: { textAlign: 'center', color: colors.muted, fontSize: font.small },
   section: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
   mineBox: { gap: 6 },
   mineCard: { gap: 3, borderLeftWidth: 4, borderLeftColor: colors.brand },

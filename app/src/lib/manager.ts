@@ -195,6 +195,9 @@ export const listRequests = (q: string, status: RequestStatusFilter = 'all', f: 
     p_employee: f.employee ?? null,
   });
 
+/** Руководитель меняет дату работы (работа переезжает в день мастера на эту дату). */
+export const adminSetEntryDate = (entryId: number, date: string) => rpc<void>('admin_set_entry_date', { p_entry: entryId, p_date: date });
+
 export async function updateRequest(id: number, patch: Partial<Pick<RequestRow, 'subject'>>) {
   const { error } = await supabase.from('requests').update(patch).eq('id', id);
   if (error) throw error;

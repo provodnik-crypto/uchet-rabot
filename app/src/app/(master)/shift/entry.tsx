@@ -11,12 +11,13 @@ import { Screen } from '../../../components/Screen';
 import { SelectField } from '../../../components/SelectField';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
-import { useDraft, type DraftEntry } from '../../../lib/draft';
+import { addRequestWork, type RequestWork } from '../../../lib/requests';
 import { humanError } from '../../../lib/errors';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { listUnits, type Unit } from '../../../lib/price';
 import {
   listActiveDepartments,
+  formatQuantity,
   listMasters,
   parseQuantity,
   suggestCustomNames,
@@ -24,14 +25,16 @@ import {
   type Person,
   type Suggestion,
 } from '../../../lib/shift';
-import { goToShiftList } from '../../../lib/shiftNav';
-import { uuid } from '../../../lib/today';
-import type { DraftPhoto } from '../../../lib/workPhotos';
+import { fetchEntryPhotos, remoteToDraft, toPayload, uploadAll, type DraftPhoto } from '../../../lib/workPhotos';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 
 type Params = {
-  key?: string;
+  /** Заявка, в которую вносится работа (обязательно: работы — только внутри заявки). */
+  requestId?: string;
+  /** Исправление своей работы: id и данные работы из карточки (JSON). */
+  entryId?: string;
+  work?: string;
   custom?: string;
   itemId?: string;
   name?: string;
@@ -43,13 +46,19 @@ type Params = {
 
 type PriceChoice = { id: number; name: string; category: string; unitId: number; unitCode: string; integerOnly: boolean };
 
+/** Отдел и исполнители последней внесённой работы — подставляются в следующую (пока приложение открыто). */
+let lastChoice: { departmentId: number; performerIds: number[] } | null = null;
+
 export default function EntryScreen() {
   const params = useLocalSearchParams<Params>();
   const { me } = useAuth();
-  const { draft, upsertEntry } = useDraft();
   const icons = useEmployeeIcons();
-  const editing = params.key ? draft?.entries.find((e) => e.key === params.key) : undefined;
-  const last = draft?.entries[draft.entries.length - 1];
+  const requestId = Number(params.requestId);
+  const editing: RequestWork | undefined = params.work ? (JSON.parse(params.work) as RequestWork) : undefined;
+  const editId = params.entryId ? Number(params.entryId) : null;
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [refs, setRefs] = useState<{ masters: Person[]; departments: DepartmentOption[]; units: Unit[] } | null>(null);
   const [refsError, setRefsError] = useState<string | null>(null);
@@ -64,8 +73,8 @@ export default function EntryScreen() {
   // Работа из прайса или своя (вне прайса).
   const [priceChoice, setPriceChoice] = useState<PriceChoice | null>(() => {
     if (editing) {
-      return editing.priceItemId
-        ? { id: editing.priceItemId, name: editing.name, category: editing.category ?? '', unitId: editing.unitId, unitCode: editing.unitCode, integerOnly: editing.integerOnly }
+      return editing.price_item_id
+        ? { id: editing.price_item_id, name: editing.name, category: editing.category ?? '', unitId: editing.unit_id ?? 0, unitCode: editing.unit, integerOnly: !!editing.integer_only }
         : null;
     }
     if (params.itemId) {
@@ -80,13 +89,20 @@ export default function EntryScreen() {
     }
     return null;
   });
-  const [customName, setCustomName] = useState(editing?.customName ?? (params.custom ? (params.name ?? '') : ''));
-  const [unitId, setUnitId] = useState<number | null>(editing && !editing.priceItemId ? editing.unitId : null);
-  const [quantity, setQuantity] = useState(editing?.quantity ?? '');
-  const [departmentId, setDepartmentId] = useState<number | null>(editing?.departmentId ?? last?.departmentId ?? null);
-  const [performerIds, setPerformerIds] = useState<number[]>(editing?.performerIds ?? last?.performerIds ?? (me ? [me.id] : []));
+  const [customName, setCustomName] = useState(editing?.custom ? editing.name : params.custom ? (params.name ?? '') : '');
+  const [unitId, setUnitId] = useState<number | null>(editing && !editing.price_item_id ? (editing.unit_id ?? null) : null);
+  const [quantity, setQuantity] = useState(editing ? formatQuantity(editing.quantity) : '');
+  const [departmentId, setDepartmentId] = useState<number | null>(editing?.department_id ?? lastChoice?.departmentId ?? null);
+  const [performerIds, setPerformerIds] = useState<number[]>(editing?.performer_ids ?? lastChoice?.performerIds ?? (me ? [me.id] : []));
   const [note, setNote] = useState(editing?.note ?? '');
-  const [workPhotos, setWorkPhotos] = useState<DraftPhoto[]>(editing?.photos ?? []);
+  const [workPhotos, setWorkPhotos] = useState<DraftPhoto[]>([]);
+  // при исправлении — уже приложенные фото работы
+  useEffect(() => {
+    if (!editId) return;
+    fetchEntryPhotos([editId])
+      .then((m) => setWorkPhotos(remoteToDraft(m[editId])))
+      .catch(() => {});
+  }, [editId]);
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   const isCustom = !priceChoice;
@@ -127,10 +143,10 @@ export default function EntryScreen() {
     return [...list.filter((m) => m.id === me?.id), ...list.filter((m) => m.id !== me?.id)];
   }, [refs, me]);
 
-  if (!draft) {
+  if (!requestId) {
     return (
       <Screen>
-        <Text style={styles.err}>Смена не начата.</Text>
+        <Text style={styles.err}>Работу вносят из карточки заявки: «Заявки» → заявка → «+ Добавить работу».</Text>
         <BigButton title="На главную" onPress={() => router.dismissAll()} />
       </Screen>
     );
@@ -147,7 +163,7 @@ export default function EntryScreen() {
     setPerformerIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
   }
 
-  function save() {
+  async function save() {
     const qty = parseQuantity(quantity, integerOnly);
     const e: Record<string, string | null> = {
       name: isCustom && customName.trim().length < 3 ? 'Введите название работы (не короче 3 букв)' : null,
@@ -158,28 +174,35 @@ export default function EntryScreen() {
     };
     setErrors(e);
     if (Object.values(e).some(Boolean)) return;
-    const dep = refs!.departments.find((d) => d.id === departmentId)!;
-    const names = performerIds.map((id) => masters.find((m) => m.id === id)?.display_name ?? '?');
-    const entry: DraftEntry = {
-      key: editing?.key ?? uuid(),
-      requestNumber: editing ? editing.requestNumber : (draft!.currentRequest ?? null),
-      departmentId: dep.id,
-      departmentName: dep.name,
-      priceItemId: priceChoice?.id ?? null,
-      customName: isCustom ? customName.trim().replace(/\s+/g, ' ') : null,
-      name: priceChoice?.name ?? customName.trim().replace(/\s+/g, ' '),
-      category: priceChoice?.category || null,
-      unitId: priceChoice?.unitId ?? unit!.id,
-      unitCode,
-      integerOnly,
-      quantity: quantity.trim(),
-      note: note.trim(),
-      performerIds,
-      performerNames: names,
-      photos: workPhotos,
-    };
-    upsertEntry(entry);
-    goToShiftList();
+    setBusy(true);
+    setSaveError(null);
+    try {
+      // фото загружаются в хранилище до сохранения работы; уже загруженные не грузятся повторно
+      const photos = await uploadAll(workPhotos, setProgress);
+      setWorkPhotos(photos);
+      await addRequestWork(
+        requestId,
+        {
+          department_id: departmentId!,
+          ...(priceChoice ? { price_item_id: priceChoice.id } : { custom_name: customName.trim().replace(/\s+/g, ' '), unit_id: unit!.id }),
+          quantity: qty.value ?? Number(quantity.replace(',', '.')),
+          note: note.trim() || null,
+          performer_ids: performerIds,
+          photos: toPayload(photos),
+        },
+        editId,
+      );
+      lastChoice = { departmentId: departmentId!, performerIds };
+      // назад в карточку заявки (из выбора работы — через два экрана)
+      if (editId) router.back();
+      else router.dismissTo({ pathname: '/req/[id]', params: { id: String(requestId) } });
+    } catch (x) {
+      // всё введённое остаётся на экране — можно нажать ещё раз
+      setSaveError(humanError(x));
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
   }
 
   return (
@@ -304,7 +327,9 @@ export default function EntryScreen() {
       </Card>
 
       <TourTarget id="entry.add">
-        <BigButton title={editing ? 'Сохранить' : 'Добавить в смену'} size="big" onPress={save} />
+        {progress ? <Text style={styles.meta}>{progress}</Text> : null}
+        {saveError ? <Text style={styles.err}>Не сохранено: {saveError}</Text> : null}
+        <BigButton title={saveError ? 'Повторить' : editing ? 'Сохранить' : 'Добавить работу'} size="big" loading={busy} onPress={save} />
       </TourTarget>
     </Screen>
   );

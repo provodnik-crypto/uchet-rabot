@@ -3,7 +3,7 @@ begin;
 create temp table _c (id bigint, num text, u uuid);
 grant all on _c to authenticated;
 select pg_temp.login_as('kolya');
-insert into _c select (x ->> 'id')::bigint, x ->> 'number', gen_random_uuid() from public.create_manual_request('Прикрутить полку') x;
+insert into _c select (x ->> 'id')::bigint, x ->> 'number', gen_random_uuid() from public.start_planned_work('Прикрутить полку') x;
 select public.submit_shift(jsonb_build_object('client_uuid', (select u from _c), 'work_date', public.app_today(),
   'entries', jsonb_build_array(jsonb_build_object('request_number', (select num from _c),
     'department_id', (select id from public.departments where is_default), 'custom_name', 'Монтаж полки', 'unit_id', 1,

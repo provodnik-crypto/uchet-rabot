@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { requestLabel } from '../../../lib/requests';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -9,7 +9,6 @@ import { Screen } from '../../../components/Screen';
 import { SearchBox } from '../../../components/SearchBox';
 import { Segmented } from '../../../components/Segmented';
 import { StateView } from '../../../components/StateView';
-import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import { previewText, requestCard, type RequestCard } from '../../../lib/requests';
 import { myWorkItems, searchWork, workCategories, type CategoryRow, type WorkItem } from '../../../lib/shift';
@@ -22,7 +21,8 @@ const tabLabel: Record<Tab, string> = { frequent: 'Часто', recent: 'Нед�
 type Row = { type: 'item'; item: WorkItem } | { type: 'group'; label: string; count: number; category: string; subcategory?: string | null };
 
 export default function WorkPickerScreen() {
-  const { draft } = useDraft();
+  // работа вносится в эту заявку
+  const { requestId, number } = useLocalSearchParams<{ requestId?: string; number?: string }>();
   const [q, setQ] = useState('');
   const [tab, setTab] = useState<Tab>('frequent');
   const [category, setCategory] = useState<string | null>(null);
@@ -39,16 +39,15 @@ export default function WorkPickerScreen() {
   // Суть заявки над выбором работы: операция и описание.
   const [info, setInfo] = useState<RequestCard | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const currentRequest = draft?.currentRequest;
   useEffect(() => {
     let alive = true;
     setInfo(null);
     setExpanded(false);
-    if (currentRequest) requestCard({ number: currentRequest }).then((r) => alive && setInfo(r)).catch(() => {});
+    if (requestId) requestCard({ id: Number(requestId) }).then((r) => alive && setInfo(r)).catch(() => {});
     return () => {
       alive = false;
     };
-  }, [currentRequest]);
+  }, [requestId]);
 
   useEffect(() => {
     const my = ++reqId.current;
@@ -91,6 +90,7 @@ export default function WorkPickerScreen() {
     router.push({
       pathname: '/shift/entry',
       params: {
+        requestId: requestId ?? '',
         itemId: String(item.id),
         name: item.short_name,
         category: [item.category, item.subcategory].filter(Boolean).join(' · '),
@@ -100,7 +100,7 @@ export default function WorkPickerScreen() {
       },
     });
 
-  const notInPrice = () => router.push({ pathname: '/shift/entry', params: { custom: '1', name: q.trim() } });
+  const notInPrice = () => router.push({ pathname: '/shift/entry', params: { requestId: requestId ?? '', custom: '1', name: q.trim() } });
 
   const back = () => {
     if (subcategory !== undefined) setSubcategory(undefined);
@@ -125,7 +125,7 @@ export default function WorkPickerScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.request}>
-              Заявка: {draft?.currentRequest ? requestLabel(draft.currentRequest) : 'без заявки'}
+              Заявка: {number ? requestLabel(number) : '—'}
             </Text>
             {info && (info.operation || info.description) ? (
               <TourTarget id="work.request">

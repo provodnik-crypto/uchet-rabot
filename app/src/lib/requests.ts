@@ -139,6 +139,18 @@ export const openRequests = (q: string, filter: RequestFilter) =>
 
 // ---------- Карточка заявки ----------
 export type RequestWork = {
+  /** В новых версиях базы: для исправления и удаления своей работы. */
+  id?: number;
+  department_id?: number;
+  price_item_id?: number | null;
+  unit_id?: number;
+  integer_only?: boolean;
+  note?: string | null;
+  category?: string | null;
+  custom?: boolean;
+  performer_ids?: number[];
+  /** Мастер может исправить или удалить (его работа, заявка у него «В работе», руководитель ещё не трогал). */
+  can_edit?: boolean;
   work_date: string;
   name: string;
   quantity: number;
@@ -182,6 +194,10 @@ export type RequestCard = {
   /** Мастер просит приостановить (ждёт решения руководителя). */
   pause_request?: string | null;
   pause_requested_at?: string | null;
+  /** Плановая работа («Работа без заявки»). */
+  is_planned?: boolean;
+  /** Фото результата, приложенные при отправке на проверку. */
+  result_photos?: { path: string; thumb_path: string; at: string }[];
   /** Моя заявка «В работе» (если есть) — пока она есть, другую взять нельзя. */
   my_active?: { id: number; number: string } | null;
   members: { id: number; name: string }[];
@@ -286,6 +302,53 @@ export const setRequestResponsible = (id: number, employeeId: number | null) =>
   rpc<void>('set_request_responsible', { p_id: id, p_employee: employeeId });
 export const reviewCount = () => rpc<number>('review_count');
 
+// ---------- Один путь мастера: работы в заявке, отправка с фото, плановая работа, сообщения ----------
+/** Работа для сервера (как в смене): отдел, позиция прайса или своё название, объём, исполнители, фото. */
+export type WorkPayload = {
+  department_id: number;
+  price_item_id?: number;
+  custom_name?: string;
+  unit_id?: number;
+  quantity: number;
+  note: string | null;
+  performer_ids: number[];
+  photos: ReturnType<typeof import('./workPhotos').toPayload>;
+};
+export const addRequestWork = (requestId: number, entry: WorkPayload, replaceId: number | null = null) =>
+  rpc<number>('add_request_work', { p_request: requestId, p_entry: entry, p_replace: replaceId });
+export const deleteMyWork = (entryId: number) => rpc<void>('delete_my_work', { p_entry: entryId });
+export const sendRequestForReviewPhotos = (id: number, comment: string | null, photos: unknown[]) =>
+  rpc<void>('send_request_for_review_photos', { p_id: id, p_comment: comment, p_photos: photos });
+export const startPlannedWork = (title: string, details: string | null) =>
+  rpc<{ id: number; number: string }>('start_planned_work', { p_title: title, p_details: details });
+
+export type ReportStatus = 'new' | 'read' | 'request' | 'rejected';
+export type MasterReport = {
+  id: number;
+  text: string;
+  status: ReportStatus;
+  answer: string | null;
+  created_at: string;
+  decided_at?: string | null;
+  request_id: number | null;
+  request_number: string | null;
+  unseen?: boolean;
+  author?: string;
+  photos: { path: string; thumb_path: string }[];
+};
+export const reportStatusText: Record<ReportStatus, string> = {
+  new: 'Отправлено, руководитель ещё не открыл',
+  read: 'Руководитель прочитал',
+  request: 'Создана заявка',
+  rejected: 'Отклонено',
+};
+export const createMasterReport = (text: string, photos: unknown[]) => rpc<number>('create_master_report', { p_text: text, p_photos: photos });
+export const myMasterReports = () => rpc<MasterReport[]>('my_master_reports');
+export const markMyReportsSeen = () => rpc<void>('mark_my_reports_seen').catch(() => {});
+export const listMasterReports = (open = true) => rpc<MasterReport[]>('list_master_reports', { p_open: open });
+export const decideMasterReport = (id: number, action: 'read' | 'reject' | 'request', comment: string | null = null, title: string | null = null) =>
+  rpc<{ id: number; number: string } | null>('decide_master_report', { p_id: id, p_action: action, p_comment: comment, p_title: title });
+
 // ---------- Одна заявка в работе ----------
 export type HoldReason = 'urgent' | 'returned' | 'pause';
 /** Подпись приостановки для мастера и руководителя. */
@@ -337,6 +400,8 @@ export type Notifications = {
   stale_days?: number;
   /** Руководителю: запросов мастеров на приостановку. */
   pause_requests?: number;
+  /** Руководителю: новых сообщений мастеров; мастеру — ответы на его сообщения. */
+  reports?: number | { id: number; status: ReportStatus; text: string; answer: string | null; request_number: string | null }[];
 };
 export const myNotifications = () => rpc<Notifications>('my_notifications');
 

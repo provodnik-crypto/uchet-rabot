@@ -28,10 +28,8 @@ select pg_temp.assert(pg_temp.err(format('select public.take_request(%s, 60)', p
 select pg_temp.assert(pg_temp.err($q$select pg_temp.time_for('Заявка Б')$q$) like 'У вас уже есть заявка в работе%',
   'работы по свободной заявке в смене тоже не берут её');
 select pg_temp.assert(pg_temp.st('Заявка Б') = 'waiting', 'Б осталась свободной');
--- своя новая заявка занятого мастера — «Ожидает», назначена на него
-select pg_temp.assert((public.create_manual_request('Своя заявка') ->> 'queued')::boolean, 'своя заявка встала в очередь');
-select pg_temp.assert(pg_temp.st('Своя заявка') = 'waiting'
-  and (select assignee_id from public.requests where id = pg_temp.rid('Своя заявка')) = public.current_employee_id(), 'своя: ожидает, назначена мне');
+-- «Работа без заявки» (плановая) — тоже одна за раз
+select pg_temp.assert(pg_temp.err($q$select public.start_planned_work('Плановая')$q$) like 'У вас уже есть заявка в работе%', 'плановую работу занятому не начать');
 select pg_temp.assert((select request_card(pg_temp.rid('Заявка Б')) -> 'my_active' ->> 'id')::bigint = pg_temp.rid('Заявка А'), 'карточка знает мою активную');
 
 -- 2. «Приостановить» — только запрос, мастер не освобождается

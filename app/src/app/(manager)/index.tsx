@@ -33,6 +33,9 @@ export default function ManagerHome() {
       text: `Сообщений и событий: ${n.count}`,
       onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
     })),
+    ...(typeof notes?.reports === 'number' && notes.reports
+      ? [{ key: 'reports', tone: 'blue' as const, title: `Сообщения от мастеров: ${notes.reports}`, text: 'Работы нет в заявках — создайте заявку или отклоните', onPress: () => router.push('/reports') }]
+      : []),
     ...(notes?.pause_requests
       ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, text: 'Мастер ждёт решения — подтвердите или отклоните', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
       : []),
@@ -117,7 +120,8 @@ export default function ManagerHome() {
         <ActionTile tourId="mhome.export" title="В Excel" subtitle="отчёт за период" icon="download" href="/export" />
       </View>
       <Card style={styles.list}>
-        <ListRow tourId="mhome.import" title="Загрузить заявки" subtitle="выгрузка из ITSM (Excel), раз в день" icon="upload" href="/import" last />
+        <ListRow tourId="mhome.import" title="Загрузить заявки" subtitle="выгрузка из ITSM (Excel), раз в день" icon="upload" href="/import" />
+        <ListRow tourId="mhome.reports" title="Сообщения от мастеров" subtitle="работы нет в заявках — создать заявку или отклонить" icon="doc" href="/reports" last />
       </Card>
 
       <Text style={styles.section}>Справочники</Text>

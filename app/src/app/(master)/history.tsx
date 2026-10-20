@@ -7,11 +7,8 @@ import { EntryCard } from '../../components/EntryCard';
 import { PhotoBadge } from '../../components/PhotoStrip';
 import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
-import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
-import { useDraft } from '../../lib/draft';
 import { formatQuantity, myEntries, statusLabel, type MyEntry } from '../../lib/shift';
-import { goToShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../lib/workPhotos';
 import { colors, font } from '../../theme';
@@ -29,7 +26,6 @@ export default function HistoryScreen() {
     { key: 'history', persist: false },
   );
   const { data, error, loading, reload } = query;
-  const { draft, startEdit } = useDraft();
 
   const shifts: { id: number; rows: MyEntry[] }[] = [];
   for (const r of data?.rows ?? []) {
@@ -38,11 +34,6 @@ export default function HistoryScreen() {
     else shifts.push({ id: r.shift_id, rows: [r] });
   }
 
-  async function edit(rows: MyEntry[]) {
-    if (draft?.entries.length && !(await confirm('Заменить черновик?', 'Неотправленный черновик будет удалён.', 'Заменить'))) return;
-    startEdit(rows, data?.photos);
-    goToShiftList();
-  }
 
   return (
     <Screen status={query}>
@@ -71,7 +62,6 @@ export default function HistoryScreen() {
               ) : null}
             </Fragment>
           ))}
-          {s.rows[0].can_edit ? <BigButton title="Изменить смену" variant="secondary" onPress={() => edit(s.rows)} /> : null}
         </View>
       ))}
     </Screen>

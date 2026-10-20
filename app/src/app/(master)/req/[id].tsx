@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -12,24 +12,22 @@ import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
-import { withDraft } from '../../../lib/requestDraft';
-import { useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
 import {
-  holdText,
-  requestPause,
-  resumeRequest,
-  eventLabel,
+  deleteMyWork,
   formatRegistered,
+  holdText,
   lifecycleLabel,
   markRequestRead,
   refuseRequest,
   requestCard,
+  requestLabel,
+  requestPause,
+  resumeRequest,
   takeRequest,
-  type RequestWork, requestLabel } from '../../../lib/requests';
-import { formatQuantity, listMasters, myOpenRequests } from '../../../lib/shift';
-import { returnToCardAfterEntry } from '../../../lib/shiftNav';
-import { storeToday } from '../../../lib/today';
+  type RequestWork,
+} from '../../../lib/requests';
+import { formatQuantity, listMasters } from '../../../lib/shift';
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
@@ -42,19 +40,19 @@ const workStatus: Record<RequestWork['status'], string> = {
   awaiting: 'Ждёт приёмки',
 };
 
-/** Карточка заявки: полный текст, статус, работы; действия по статусу. */
+/**
+ * Карточка заявки — весь путь мастера: «Взять в работу» → «+ Добавить работу» (сразу сохраняется) →
+ * «Отправить на проверку». Редкие действия (приостановить, отказаться) — в меню «⋯».
+ */
 export default function RequestCardScreen() {
-  const { id, select } = useLocalSearchParams<{ id: string; select?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { me } = useAuth();
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
   const { data: r, error, loading, reload } = query;
-  const { draft, start, setRequest } = useDraft();
   const [panel, setPanel] = useState<null | 'take' | 'refuse' | 'pause'>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // Вернулись в карточку — «после добавления работы вернуться сюда» больше не нужно.
-  useFocusEffect(useCallback(() => returnToCardAfterEntry(null), []));
   // Открыли карточку — сообщения прочитаны.
   useFocusEffect(useCallback(() => void markRequestRead(Number(id)), [id]));
 
@@ -66,7 +64,6 @@ export default function RequestCardScreen() {
     );
   }
 
-  const today = storeToday();
   const free = r.status === 'waiting' && r.is_open && !r.to_contractor && (!r.assignee_id || r.assignee_id === me?.id);
   // Правило: одна заявка в работе. Пока есть своя активная — другую не взять (смотреть и писать можно).
   const busyWith = r.my_active && r.my_active.id !== r.id ? r.my_active : null;
@@ -74,45 +71,68 @@ export default function RequestCardScreen() {
   const paused = r.status === 'paused' && r.is_responsible;
   const working = r.status === 'in_work' && r.is_responsible;
   const isMember = r.members.some((m) => m.id === me?.id);
-  // Сервер плюс смена на телефоне: черновик заменяет уже отправленную версию своего дня.
-  const { works, draftEntries } = withDraft(r, draft);
+  const works = r.works;
 
-  /** Черновик сегодняшнего дня: есть — используем (за другой день — спросим), нет — начинаем. */
-  async function ensureDraft(): Promise<boolean> {
-    if (draft) {
-      if (draft.workDate === today) return true;
-      return confirm(
-        'Есть неотправленная смена',
-        `${draft.editing ? 'Открыта правка смены' : 'Черновик'} за ${formatDate(draft.workDate)}. Внести в неё?`,
-        'Внести',
-      );
+  const addWork = () => router.push({ pathname: '/shift/work', params: { requestId: String(r.id), number: r.number } });
+
+  /** Своя работа: исправить или удалить (пока заявка у мастера «В работе»). */
+  function workMenu(w: RequestWork) {
+    if (!w.can_edit || !w.id) return;
+    const edit = () =>
+      router.push({ pathname: '/shift/entry', params: { requestId: String(r!.id), entryId: String(w.id), work: JSON.stringify(w) } });
+    const remove = async () => {
+      if (!(await confirm('Удалить работу?', `${w.name}, ${formatQuantity(w.quantity)} ${w.unit}`, 'Удалить'))) return;
+      setMessage(null);
+      try {
+        await deleteMyWork(w.id!);
+        reload();
+      } catch (e) {
+        setMessage(humanError(e));
+      }
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm('Исправить работу? (Отмена — удалить)')) edit();
+      else remove();
+      return;
     }
-    setBusy(true);
-    // Мои заявки «В работе» встают в начало дня, как при обычном закрытии смены.
-    const carried = await myOpenRequests().catch(() => []);
-    setBusy(false);
-    start(today, carried);
-    return true;
+    Alert.alert(w.name, undefined, [
+      { text: 'Исправить', onPress: edit },
+      { text: 'Удалить', style: 'destructive', onPress: remove },
+      { text: 'Отмена', style: 'cancel' },
+    ]);
   }
 
-  async function addWork() {
-    if (!r || !(await ensureDraft())) return;
-    setRequest(r.number);
-    returnToCardAfterEntry(r.id);
-    router.push('/shift/work');
+  /** Меню «⋯»: редкие действия по заявке в работе. */
+  function moreMenu() {
+    const items: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [];
+    if (!r!.pause_request) items.push({ text: 'Приостановить', onPress: () => setPanel('pause') });
+    items.push({ text: 'Отказаться от заявки', style: 'destructive', onPress: () => setPanel('refuse') });
+    items.push({ text: 'Отмена', style: 'cancel' });
+    if (Platform.OS === 'web') {
+      setPanel(window.confirm('Приостановить? (Отмена — отказаться)') ? 'pause' : 'refuse');
+      return;
+    }
+    Alert.alert('Ещё', undefined, items);
   }
-
-  const chooseForShift = () => {
-    setRequest(r.number);
-    router.replace('/shift/work');
-  };
 
   return (
     <Screen status={query}>
       <TourTarget id="card.head">
         <View style={styles.head}>
-          <RequestBadges status={r.status} priority={r.priority} contractor={r.to_contractor} mine={r.mine || r.is_responsible} />
+          <View style={styles.headRow}>
+            <View style={styles.flex}>
+              <RequestBadges status={r.status} priority={r.priority} contractor={r.to_contractor} mine={r.mine || r.is_responsible} />
+            </View>
+            {working ? (
+              <TourTarget id="card.more">
+                <Pressable accessibilityRole="button" accessibilityLabel="Ещё действия" hitSlop={10} onPress={moreMenu} style={styles.more}>
+                  <Text style={styles.moreText}>⋯</Text>
+                </Pressable>
+              </TourTarget>
+            ) : null}
+          </View>
           <Text style={styles.number} selectable>
+            {r.is_planned ? 'Работа без заявки · ' : ''}
             {requestLabel(r.number)}
           </Text>
           {r.service || r.operation ? <Text style={styles.operation}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text> : null}
@@ -139,17 +159,16 @@ export default function RequestCardScreen() {
       </TourTarget>
 
       <Card style={styles.card}>
-        <Line label="Статус" value={lifecycleLabel[r.status] + (r.status === 'review' && r.sent_at ? ` с ${formatDate(r.sent_at.slice(0, 10))}` : '')} />
+        <Line label="Статус" value={(lifecycleLabel[r.status] ?? r.status) + (r.status === 'review' && r.sent_at ? ` с ${formatDate(r.sent_at.slice(0, 10))}` : '')} />
         {r.responsible_name ? <Line label="Взял" value={r.is_responsible ? 'Вы' : r.responsible_name} /> : null}
         {r.members.length ? <Line label="Напарники" value={r.members.map((m) => (m.id === me?.id ? 'вы' : m.name)).join(', ')} /> : null}
         {!r.responsible_name ? <Line label="Назначена" value={r.to_contractor ? 'Подрядчик' : r.assignee_id === me?.id ? 'Вам' : r.assignee_name ?? 'Не назначена'} /> : null}
-        <Line label="Исполнитель" value={r.to_contractor ? 'Подрядчик' : 'Техники'} />
         {!r.is_open ? <Text style={styles.closed}>Заявка закрыта</Text> : null}
         {isMember && !r.is_responsible ? <Text style={styles.hint}>Вы напарник: работы по заявке вносит {r.responsible_name}, сумма делится поровну.</Text> : null}
       </Card>
 
       {/* ---------- Занят другой заявкой / приостановлена ---------- */}
-      {free && busyWith && !select ? (
+      {free && busyWith ? (
         <Card style={styles.busy}>
           <Text style={styles.busyTitle}>Сначала завершите {requestLabel(busyWith.number)}</Text>
           <Text style={styles.body}>Внесите работы и отправьте её на проверку — после этого можно взять эту.</Text>
@@ -192,7 +211,7 @@ export default function RequestCardScreen() {
       ) : null}
 
       {/* ---------- Взять в работу ---------- */}
-      {canTake && !select ? (
+      {canTake ? (
         panel === 'take' ? (
           <TakePanel
             requestId={r.id}
@@ -210,49 +229,52 @@ export default function RequestCardScreen() {
         )
       ) : null}
 
-      {/* ---------- Работа над заявкой ---------- */}
-      {working && !select ? (
-        <>
-          <TourTarget id="card.add">
-            <BigButton title="+ Добавить работу" size="big" loading={busy} onPress={addWork} />
-          </TourTarget>
-        </>
+      {/* ---------- Работы ---------- */}
+      {working ? (
+        <TourTarget id="card.add">
+          <BigButton title="+ Добавить работу" size="big" onPress={addWork} />
+        </TourTarget>
       ) : null}
-
-      {works.length || draftEntries.length ? (
+      {works.length ? (
         <Card style={styles.card}>
-          <Text style={styles.label}>Работы по заявке: {works.length + draftEntries.length}</Text>
-          {draftEntries.map((e, i) => (
-            <View key={e.key} style={[styles.work, i > 0 && styles.workBorder]}>
-              <Text style={styles.workName}>{e.name}</Text>
-              <Text style={styles.meta}>
-                {formatDate(draft!.workDate)} · {e.quantity} {e.unitCode} · {e.performerNames.join(', ')}
-              </Text>
-              <Text style={[styles.status, styles.wait]}>{draft!.editing ? 'Правка дня — уйдёт при отправке' : 'Ещё не отправлено'}</Text>
-            </View>
-          ))}
+          <Text style={styles.label}>Работы по заявке: {works.length}</Text>
           {works.map((w, i) => (
-            <View key={i} style={[styles.work, (i > 0 || draftEntries.length > 0) && styles.workBorder]}>
+            <Pressable
+              key={w.id ?? i}
+              disabled={!w.can_edit}
+              onPress={() => workMenu(w)}
+              accessibilityRole={w.can_edit ? 'button' : undefined}
+              accessibilityHint={w.can_edit ? 'Исправить или удалить' : undefined}
+              style={({ pressed }) => [styles.work, i > 0 && styles.workBorder, pressed && { opacity: 0.6 }]}
+            >
               <Text style={styles.workName}>{w.name}</Text>
               <Text style={styles.meta}>
                 {formatDate(w.work_date)} · {formatQuantity(w.quantity)} {w.unit} · {w.performers ?? ''}
               </Text>
               <Text style={[styles.status, w.status === 'rejected' && styles.bad, (w.status === 'pending' || w.status === 'awaiting') && styles.wait]}>
                 {workStatus[w.status]}
+                {w.can_edit ? ' · нажмите, чтобы исправить или удалить' : ''}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </Card>
       ) : (
         <Text style={styles.meta}>Работ по заявке ещё не вносили.</Text>
       )}
 
-      {working && !select ? (
+      {working ? (
         <>
           <TourTarget id="card.send">
-            <BigButton title="Проверить и отправить" size="big" onPress={() => router.push({ pathname: '/req/send/[id]', params: { id: String(r.id) } })} />
+            <BigButton
+              title="Отправить на проверку"
+              size="big"
+              disabled={!works.length}
+              onPress={() => router.push({ pathname: '/req/send/[id]', params: { id: String(r.id) } })}
+            />
           </TourTarget>
-          <Text style={styles.hint}>Отправляйте, когда заявка сделана. Не успели за день — ничего не делайте, завтра она будет в «Мои заявки».</Text>
+          <Text style={styles.hint}>
+            {works.length ? 'Сделали — отправьте. Не успели за день — ничего не делайте, продолжите завтра.' : 'Сначала добавьте хотя бы одну работу.'}
+          </Text>
           {panel === 'pause' ? (
             <PausePanel
               requestId={r.id}
@@ -262,8 +284,6 @@ export default function RequestCardScreen() {
               }}
               onCancel={() => setPanel(null)}
             />
-          ) : !r.pause_request && panel !== 'refuse' ? (
-            <BigButton title="Приостановить" variant="secondary" onPress={() => setPanel('pause')} />
           ) : null}
           {panel === 'refuse' ? (
             <RefusePanel
@@ -274,34 +294,15 @@ export default function RequestCardScreen() {
               }}
               onCancel={() => setPanel(null)}
             />
-          ) : (
-            <BigButton title="Отказаться от заявки" variant="secondary" onPress={() => setPanel('refuse')} />
-          )}
+          ) : null}
         </>
       ) : null}
 
-      {select ? (
-        canTake || working ? (
-          <BigButton title="Выбрать эту заявку" size="big" onPress={chooseForShift} />
-        ) : (
-          <Text style={styles.hint}>
-            {busyWith && free
-              ? `Сначала завершите ${requestLabel(busyWith.number)} — отправьте её на проверку.`
-              : r.status === 'in_work'
-                ? `Заявку взял ${r.responsible_name}.`
-                : `Заявка: ${(lifecycleLabel[r.status] ?? r.status).toLowerCase()}.`}{' '}
-            Выбрать её для своей смены нельзя.
-          </Text>
-        )
-      ) : null}
-
-      {r ? <RequestFeed requestId={r.id} events={r.events} onSent={reload} /> : null}
+      <RequestFeed requestId={r.id} events={r.events} onSent={reload} />
 
       {message ? <Text style={styles.err}>{message}</Text> : null}
-      <BigButton title="Назад" variant="secondary" onPress={() => router.back()} />
     </Screen>
   );
-
 }
 
 function Line({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
@@ -411,6 +412,10 @@ function RefusePanel({ requestId, onDone, onCancel }: { requestId: number; onDon
 }
 
 const styles = StyleSheet.create({
+  headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  flex: { flex: 1 },
+  more: { width: 44, height: 36, borderRadius: 18, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.border },
+  moreText: { fontSize: 22, fontWeight: '800', lineHeight: 24 },
   head: { gap: 3 },
   busy: { gap: 8, borderWidth: 2, borderColor: '#E65100' },
   busyTitle: { fontSize: font.body, fontWeight: '800', color: '#E65100' },

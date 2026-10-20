@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState } from 'react-native';
 import { useAuth } from './auth';
 import type { RequestStatus } from './requestTime';
 import { myEntries, myShiftRequests, type MyEntry, type OpenRequest } from './shift';
@@ -8,6 +7,10 @@ import { unsentPart } from './shiftRollover';
 import { remoteToDraft, type DraftPhoto, type RemotePhoto } from './workPhotos';
 import { storeToday, uuid } from './today';
 
+/**
+ * Черновик смены — остался от старого пути «Закрыть смену» (до 23.10.2026). Новые работы вносятся сразу в заявке;
+ * здесь только дослать то, что могло остаться на телефоне (lib/legacyDraft.ts).
+ */
 /** Работа в черновике смены. Хранится на телефоне до успешной отправки. */
 export type DraftEntry = {
   key: string;
@@ -227,16 +230,6 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Проверка при загрузке черновика и каждый раз, когда приложение снова на экране.
-  useEffect(() => {
-    if (ready && draft?.editing) moveUnsent();
-  }, [ready, draft?.editing, draft?.clientUuid, moveUnsent]);
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (st) => {
-      if (st === 'active') moveUnsent();
-    });
-    return () => sub.remove();
-  }, [moveUnsent]);
 
   const clear = useCallback(() => setDraft(null), []);
 

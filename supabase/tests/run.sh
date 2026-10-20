@@ -19,6 +19,10 @@ for f in "$root"/migrations/*.sql; do "${psql_cmd[@]}" -f "$f"; done
 python3 "$root/scripts/price_2026_seed.py" 2>/dev/null | "${psql_cmd[@]}"
 for t in "$here"/[0-9]*.sql; do
   echo "== $(basename "$t")"
-  cat "$here/helpers.sql" "$t" | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
+  # Мастер не создаёт заявки (с 23.10.2026): номера, которые тест вносит в смену, заводим заранее — как руководитель.
+  nums=$(grep -oiE "'request_number', '(RFS|INC)[0-9]{6}_[0-9]{4}'" "$t" | grep -oiE "(RFS|INC)[0-9]{6}_[0-9]{4}" | tr a-z A-Z | sort -u | grep -vxF -f <(grep -oE '"number": "[A-Z0-9_]+"' "$t" | grep -oE "(RFS|INC)[0-9_]+" || true) | sed "s/.*/('&')/" | paste -sd, - || true)
+  pre=""
+  [ -n "$nums" ] && pre="insert into public.requests (number) values $nums on conflict (number) do nothing;"
+  { cat "$here/helpers.sql"; echo "$pre"; cat "$t"; } | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
 done
 echo "Все тесты пройдены"

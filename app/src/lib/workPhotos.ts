@@ -196,3 +196,17 @@ export async function fetchEntryPhotos(entryIds: number[]): Promise<Record<numbe
 export function remoteToDraft(photos: RemotePhoto[] | undefined): DraftPhoto[] {
   return (photos ?? []).map((p) => ({ key: p.path, path: p.path, thumbPath: p.thumb_path }));
 }
+
+/** Загрузить все ещё не загруженные фото и вернуть список с путями в хранилище. */
+export async function uploadAll(photos: DraftPhoto[], onProgress: (text: string | null) => void): Promise<DraftPhoto[]> {
+  const done = new Map<string, DraftPhoto>();
+  if (photos.some((p) => !p.path)) {
+    await uploadPhotos(
+      photos,
+      (p) => done.set(p.key, p),
+      (n, total) => onProgress(`Загружаем фото: ${n} из ${total}`),
+    );
+  }
+  onProgress(null);
+  return photos.map((p) => done.get(p.key) ?? p);
+}
