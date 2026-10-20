@@ -12,7 +12,8 @@ import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
 export default function DepartmentsScreen() {
-  const { data, error, loading, reload } = useFocusQuery(listDepartments);
+  const query = useFocusQuery(listDepartments, { key: 'departments' });
+  const { data, error, loading, reload } = query;
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function DepartmentsScreen() {
   }
 
   return (
-    <Screen>
+    <Screen status={query}>
       <Card style={styles.card}>
         <Field label="Новый отдел" value={name} onChangeText={setName} placeholder="Например, Склад" error={addError} />
         <BigButton title="Добавить" disabled={!name.trim()} loading={busy} onPress={add} />

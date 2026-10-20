@@ -1,9 +1,18 @@
-/** Переводит ошибки сети и сервера в понятный текст. */
+import { reportError } from './errorLog';
+
+import { errorKind, errorMessage, MSG_NETWORK, MSG_TIMEOUT, MSG_UPDATING } from './errorText';
+
+export { errorCode, errorKind, errorMessage, MSG_NETWORK, MSG_TIMEOUT, MSG_UPDATING, type ErrorKind } from './errorText';
+
+/** Переводит ошибки сети и сервера в понятный текст; сбои (не ошибки ввода) пишет в журнал. */
 export function humanError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e);
+  const msg = errorMessage(e);
+  const kind = errorKind(e);
+  if (kind !== 'user') reportError(e, kind);
+  if (kind === 'timeout') return MSG_TIMEOUT;
+  if (kind === 'network') return MSG_NETWORK;
+  if (kind === 'updating') return MSG_UPDATING;
   if (/invalid login credentials/i.test(msg)) return 'Неверный логин или пароль';
-  if (/network request failed|failed to fetch|fetch failed|load failed|timeout/i.test(msg))
-    return 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';
   if (/user already registered|already been registered|duplicate key.*login/i.test(msg)) return 'Такой логин уже занят';
   if (/departments_name_uq/i.test(msg)) return 'Такой отдел уже существует';
   if (/employees_display_name_active_uq/i.test(msg)) return 'Сотрудник с таким именем уже есть';

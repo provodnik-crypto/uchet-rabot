@@ -20,7 +20,8 @@ import { colors, font } from '../../../../theme';
 /** «Проверить и отправить»: итог по одной заявке за все дни → «На проверке» у руководителя. */
 export default function SendRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: r, error, loading, reload } = useFocusQuery(() => requestCard({ id: Number(id) }));
+  const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
+  const { data: r, error, loading, reload } = query;
   const { draft, upsertEntry, markSent } = useDraft();
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);

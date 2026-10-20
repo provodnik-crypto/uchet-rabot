@@ -19,11 +19,16 @@ import { colors, font } from '../../theme';
 const tone = { priced: 'ok', pending: 'wait', rejected: 'bad', awaiting: 'wait' } as const;
 
 export default function HistoryScreen() {
-  const { data, error, loading, reload } = useFocusQuery(async () => {
-    const rows = await myEntries(60);
-    const photos = await fetchEntryPhotos(rows.map((r) => r.entry_id)).catch((): Record<number, RemotePhoto[]> => ({}));
-    return { rows, photos };
-  });
+  // фото — временные ссылки, поэтому на телефоне между запусками не храним
+  const query = useFocusQuery(
+    async () => {
+      const rows = await myEntries(60);
+      const photos = await fetchEntryPhotos(rows.map((r) => r.entry_id)).catch((): Record<number, RemotePhoto[]> => ({}));
+      return { rows, photos };
+    },
+    { key: 'history', persist: false },
+  );
+  const { data, error, loading, reload } = query;
   const { draft, startEdit } = useDraft();
 
   const shifts: { id: number; rows: MyEntry[] }[] = [];
@@ -46,7 +51,7 @@ export default function HistoryScreen() {
   }
 
   return (
-    <Screen>
+    <Screen status={query}>
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data && !data.rows.length ? <Text style={styles.empty}>За последние 60 дней работ нет.</Text> : null}
       {shifts.map((s) => (

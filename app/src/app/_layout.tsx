@@ -1,15 +1,21 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BigButton } from '../components/BigButton';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { installCrashLog, setCurrentScreen } from '../lib/errorLog';
 import { TourProvider } from '../lib/tour';
 import { isConfigured } from '../lib/supabase';
 import { colors, font } from '../theme';
 
+installCrashLog();
+
 export default function RootLayout() {
+  const path = usePathname();
+  useEffect(() => setCurrentScreen(path), [path]);
   return (
     <SafeAreaProvider>
       <AuthProvider>

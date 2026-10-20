@@ -3,9 +3,12 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, font } from '../theme';
 import { BigButton } from './BigButton';
+import { reportError } from '../lib/errorLog';
+import { useEffect } from 'react';
 
 /** Ошибка на экране: вместо закрытия приложения — понятное сообщение и «Повторить». */
 export function ScreenError({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => reportError(error, 'crash'), [error]);
   return (
     <View style={styles.box}>
       <Text style={styles.title}>Что-то пошло не так</Text>

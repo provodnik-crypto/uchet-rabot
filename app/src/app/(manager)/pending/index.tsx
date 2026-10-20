@@ -15,14 +15,15 @@ import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 import { colors, font } from '../../../theme';
 
 export default function PendingScreen() {
-  const { data: q, error, loading, reload } = useFocusQuery(async () => {
+  const query = useFocusQuery(async () => {
     const rows = await pendingQueue();
     const photos = await fetchEntryPhotos(rows.map((r) => r.entry_id)).catch((): Record<number, RemotePhoto[]> => ({}));
     return { rows, photos };
-  });
+  }, { key: 'pending' });
+  const { data: q, error, loading, reload } = query;
   const data = q?.rows;
   return (
-    <Screen>
+    <Screen status={query}>
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data && !data.length ? <Text style={styles.empty}>Все работы оценены.</Text> : null}
       {data?.length ? <Text style={styles.count}>Ждут оценки: {data.length}</Text> : null}

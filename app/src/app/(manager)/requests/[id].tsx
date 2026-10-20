@@ -52,7 +52,8 @@ export default function RequestScreen() {
 function RequestDetail({ r }: { r: RequestRow }) {
   const [subject, setSubject] = useState(r.subject ?? '');
   const [plan, setPlan] = useState<number | null>(r.plan_minutes);
-  const { data: card, reload: reloadCard } = useFocusQuery(() => requestCard({ id: r.id }));
+  const cardQ = useFocusQuery(() => requestCard({ id: r.id }), { key: `card:${r.id}`, persist: false });
+  const { data: card, reload: reloadCard } = cardQ;
   useFocusEffect(useCallback(() => void markRequestRead(r.id), [r.id]));
   const { data: masters } = useFocusQuery(listMasters);
   const [assignee, setAssignee] = useState<number | null>(r.assignee_id);
@@ -108,7 +109,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
   const step = (d: number) => setPlan(Math.max(PLAN_STEP, (plan ?? 0) + d));
 
   return (
-    <Screen>
+    <Screen status={cardQ} frame>
       <Text style={styles.number}>{requestLabel(r.number)}</Text>
       <Text style={styles.meta}>
         Работ по заявке: {r.entries}

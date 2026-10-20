@@ -96,8 +96,8 @@ export default function CloseOldScreen() {
         <Text style={styles.meta}>Закрываются только заявки из ITSM. Работы и время по ним сохраняются.</Text>
       </Card>
 
-      {error ? <Text style={styles.err}>{error}</Text> : null}
-      {!dateError && !rows ? <StateView loading={loading} error={null} onRetry={() => setTick((t) => t + 1)} /> : null}
+      {error && (rows || dateError) ? <Text style={styles.err}>{error}</Text> : null}
+      {!dateError && !rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
       {rows ? (
         rows.length ? (
           <>

@@ -117,6 +117,8 @@ export default function WorkPickerScreen() {
     <Screen scroll={false}>
       <FlatList
         data={rows}
+        refreshing={false}
+        onRefresh={() => setAttempt((n) => n + 1)}
         keyExtractor={(r, i) => (r.type === 'item' ? `i${r.item.id}` : `g${i}${r.label}`)}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

@@ -12,9 +12,10 @@ import { colors, font } from '../../../theme';
 
 /** Заявки, которые мастера отправили на проверку. */
 export default function ReviewQueueScreen() {
-  const { data: rows, error, loading, reload } = useFocusQuery(() => listRequests('', 'all', { lifecycle: 'review' }));
+  const query = useFocusQuery(() => listRequests('', 'all', { lifecycle: 'review' }), { key: 'review' });
+  const { data: rows, error, loading, reload } = query;
   return (
-    <Screen>
+    <Screen status={query}>
       {!rows ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {rows && !rows.length ? <Text style={styles.meta}>Заявок на проверке нет.</Text> : null}
       {rows?.map((r) => {

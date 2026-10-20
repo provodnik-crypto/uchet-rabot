@@ -46,7 +46,8 @@ const workStatus: Record<RequestWork['status'], string> = {
 export default function RequestCardScreen() {
   const { id, select } = useLocalSearchParams<{ id: string; select?: string }>();
   const { me } = useAuth();
-  const { data: r, error, loading, reload } = useFocusQuery(() => requestCard({ id: Number(id) }));
+  const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
+  const { data: r, error, loading, reload } = query;
   const { draft, start, setRequest, setRequestTime } = useDraft();
   const [panel, setPanel] = useState<null | 'take' | 'refuse'>(null);
   const [busy, setBusy] = useState(false);
@@ -109,7 +110,7 @@ export default function RequestCardScreen() {
   };
 
   return (
-    <Screen>
+    <Screen status={query}>
       <TourTarget id="card.head">
         <View style={styles.head}>
           <RequestBadges status={r.status} priority={r.priority} contractor={r.to_contractor} mine={r.mine || r.is_responsible} />

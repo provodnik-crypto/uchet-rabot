@@ -46,12 +46,24 @@ SQL на рабочей базе — только через Management API (`PO
 bash supabase/tests/run.sh                       # тесты базы (локальный PostgreSQL)
 cd app && npx tsc --noEmit                       # проверка типов
 cd app && npm run test:itsm                      # разбор и обезличивание выгрузки ITSM
+cd app && npm run test:errors                    # распознавание ошибок и очистка текста для журнала
 cd app && set -a && . ./.env && set +a
 npx eas-cli@latest update --branch preview --environment preview --message "…" --platform android --non-interactive
 npx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait   # новый APK
 npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT_REF
 ```
 * Миграции — новые файлы в `supabase/migrations/`, применяются вручную через Management API.
+  **Сначала добавить, потом убрать:** миграция только добавляет (новые столбцы, функции, новые версии функций
+  рядом со старыми); старое удаляется отдельной миграцией после того, как обновление приложения разошлось.
+  Порядок: миграция «добавить» → обновление приложения → через день миграция «убрать». Так работающее
+  приложение не ломается в момент изменения базы.
+* Загрузка данных экранов — `useFocusQuery` (`lib/useQuery.ts`): ключ `key` с параметрами, последние данные
+  в памяти и на телефоне, автоповтор при обрыве; `<Screen status={…}>` даёт свайп вниз, плашку ошибки
+  с «Повторить» и «Обновлено в …». Запросы ждут ответа не дольше 20 с (`fetchWithTimeout` в `lib/supabase.ts`).
+* Журнал ошибок устройств — таблица `app_errors` (пишет `log_app_errors`, читать через Management API):
+  `select happened_at at time zone 'Asia/Yekaterinburg', screen, kind, message, app_version, role, device from app_errors order by id desc limit 50`.
+  Логи Supabase: `GET /v1/projects/$SUPABASE_PROJECT_REF/analytics/endpoints/logs?sql=…&iso_timestamp_start=…`
+  (одна таблица `logs`, поле `source`: edge_logs, postgres_logs, auth_logs, function_logs).
 * Новый нативный модуль → поднять `runtimeVersion` в `app/app.json` (сейчас `3`) и собрать APK,
   иначе обновление «по воздуху» уронит старые установки. После сборки обновить строку `app_release`
   (версия среды и ссылка на APK) — по ней старые телефоны видят полосу «Вышла новая сборка».

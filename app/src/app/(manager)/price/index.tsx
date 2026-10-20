@@ -67,6 +67,8 @@ export default function PriceScreen() {
     <Screen scroll={false}>
       <FlatList
         data={items}
+        refreshing={false}
+        onRefresh={() => load(0)}
         keyExtractor={(i) => String(i.id)}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

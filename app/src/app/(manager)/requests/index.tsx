@@ -1,5 +1,5 @@
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
@@ -8,7 +8,6 @@ import { Screen } from '../../../components/Screen';
 import { Segmented } from '../../../components/Segmented';
 import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
-import { humanError } from '../../../lib/errors';
 import { listRequests, type RequestRow, type RequestStatusFilter } from '../../../lib/manager';
 import { formatRegistered, lifecycleLabel, priorityLabel, type LifecycleStatus, type Priority, requestLabel } from '../../../lib/requests';
 import { listMasters } from '../../../lib/shift';
@@ -28,29 +27,15 @@ export default function RequestsScreen() {
   const [priority, setPriority] = useState<Priority | null>(null);
   const [employee, setEmployee] = useState<number | null>(null);
   const { data: masters } = useFocusQuery(listMasters);
-  const [rows, setRows] = useState<RequestRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [tick, setTick] = useState(0);
-
-  useFocusEffect(useCallback(() => setTick((t) => t + 1), []));
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    const t = setTimeout(() => {
-      listRequests(q, status, { lifecycle, priority, employee })
-        .then((r) => alive && (setRows(r), setError(null)))
-        .catch((e) => alive && setError(humanError(e)))
-        .finally(() => alive && setLoading(false));
-    }, 300);
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [q, status, lifecycle, priority, employee, tick]);
+  const query = useFocusQuery(() => listRequests(q, status, { lifecycle, priority, employee }), {
+    key: `requests:${status}:${lifecycle ?? ''}:${priority ?? ''}:${employee ?? ''}:${q}`,
+    persist: !q,
+    debounceMs: 300,
+  });
+  const { data: rows, error, loading, reload } = query;
 
   return (
-    <Screen>
+    <Screen status={query}>
       <Field label="Поиск" value={q} onChangeText={setQ} placeholder="номер, операция или текст" autoCorrect={false} />
       <Segmented<RequestStatusFilter>
         options={[
@@ -88,7 +73,7 @@ export default function RequestsScreen() {
       <BigButton title="Загрузить заявки из ITSM" variant="secondary" onPress={() => router.push('/import')} />
       <BigButton title="Закрыть старые заявки" variant="secondary" onPress={() => router.push('/requests/close-old')} />
       <Text style={styles.meta}>Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или открыть снова, задать плановое время. Красная рамка — потрачено больше плана.</Text>
-      {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
+      {!rows ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {rows && !rows.length ? <Text style={styles.meta}>{status === 'closed' ? 'Закрытых заявок нет' : 'Заявок не найдено'}</Text> : null}
       {rows?.map((r, i) => (
         <TourTarget key={r.id} id={i === 0 ? 'requests.first' : `requests.${r.id}`}>

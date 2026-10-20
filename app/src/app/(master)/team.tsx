@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
@@ -20,27 +20,23 @@ export default function TeamScreen() {
   const icons = useEmployeeIcons();
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [period, setPeriod] = useState(presetPeriod('month'));
-  const { data, error, loading, reload } = useFocusQuery(async () => {
-    const [rating, months] = await Promise.all([teamRating(period.from, period.to), teamByMonth(period.from, period.to)]);
-    return { rating, months };
-  });
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    reload();
-  }, [period.from, period.to, reload]);
+  const query = useFocusQuery(
+    async () => {
+      const [rating, months] = await Promise.all([teamRating(period.from, period.to), teamByMonth(period.from, period.to)]);
+      return { rating, months };
+    },
+    { key: `team:${period.from}:${period.to}` },
+  );
+  const { data, error, loading, reload } = query;
 
   const max = Math.max(1, ...(data?.rating.map((r) => r.total_kop) ?? [1]));
   const monthKeys = [...new Set(data?.months.map((m) => m.month) ?? [])];
 
   return (
-    <Screen>
+    <Screen status={query}>
       <PeriodPicker preset={preset} period={period} onChange={(p, per) => { setPreset(p); setPeriod(per); }} />
-      {!data || loading ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
-      {data && !loading ? (
+      {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
+      {data ? (
         <>
           <Text style={styles.section}>Рейтинг команды</Text>
           {data.rating.map((r, i) => {

@@ -16,6 +16,7 @@ import { listDepartments, type Department } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { adminDeleteEntry, adminUpdateEntry, listPerformers, type AdminEntry } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
+import { useFocusQuery } from '../../../lib/useQuery';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, parseQuantity, statusLabel } from '../../../lib/shift';
 import { colors, font } from '../../../theme';
@@ -25,8 +26,10 @@ export default function AdminEntryScreen() {
   const { data } = useLocalSearchParams<{ id: string; data: string }>();
   const e = JSON.parse(data) as AdminEntry;
   const icons = useEmployeeIcons();
-  const [people, setPeople] = useState<{ id: number; display_name: string; is_active: boolean }[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const peopleQ = useFocusQuery(listPerformers, { key: 'performers' });
+  const departmentsQ = useFocusQuery(listDepartments, { key: 'departments' });
+  const people = peopleQ.data ?? [];
+  const departments: Department[] = departmentsQ.data ?? [];
   const [qty, setQty] = useState(formatQuantity(e.quantity));
   const [departmentId, setDepartmentId] = useState(e.department_id);
   const [performers, setPerformers] = useState<number[]>(e.performer_ids ?? []);
@@ -36,8 +39,6 @@ export default function AdminEntryScreen() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    listPerformers().then(setPeople).catch(() => {});
-    listDepartments().then(setDepartments).catch(() => {});
     fetchEntryPhotos([e.entry_id])
       .then((m) => setWorkPhotos(m[e.entry_id] ?? []))
       .catch(() => {});
@@ -75,7 +76,7 @@ export default function AdminEntryScreen() {
   }
 
   return (
-    <Screen>
+    <Screen status={[peopleQ, departmentsQ]} frame>
       <Card style={styles.card}>
         <Text style={styles.meta}>
           {formatDate(e.work_date)} · {e.request_number ? requestLabel(e.request_number) : 'без заявки'} · {statusLabel[e.status]} · внёс {e.author_name}

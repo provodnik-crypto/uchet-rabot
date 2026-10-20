@@ -1,12 +1,56 @@
-import { useCallback, useRef, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TourScrollProvider } from '../lib/tour';
 import { colors } from '../theme';
+import { LoadStatus, toList, type StatusLike } from './LoadStatus';
+
+/** Вложенные списки со своей загрузкой (например, список заявок) подключаются к свайпу вниз экрана. */
+type Refreshers = { fns: Set<() => unknown>; changed: () => void };
+const RefreshContext = createContext<Refreshers | null>(null);
+
+export function useScreenRefresh(reload: () => unknown) {
+  const set = useContext(RefreshContext);
+  const ref = useRef(reload);
+  ref.current = reload;
+  useEffect(() => {
+    if (!set) return;
+    const fn = () => ref.current();
+    set.fns.add(fn);
+    set.changed();
+    return () => {
+      set.fns.delete(fn);
+      set.changed();
+    };
+  }, [set]);
+}
+
+type Props = {
+  children: ReactNode;
+  scroll?: boolean;
+  /** Загрузки экрана: включают обновление свайпом вниз, плашку ошибки и «Обновлено в …». */
+  status?: StatusLike | StatusLike[];
+  /** Экран показывает каркас и без данных (главная) — плашка ошибки видна, даже если данных нет. */
+  frame?: boolean;
+};
 
 /** Общая обёртка экрана: серый фон, отступы, прокрутка, клавиатура не перекрывает поля. */
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+export function Screen({ children, scroll = true, status, frame }: Props) {
   const ref = useRef<ScrollView>(null);
+  const [pulled, setPulled] = useState(false);
+  const [count, setCount] = useState(0);
+  const [refreshers] = useState<Refreshers>(() => ({ fns: new Set(), changed: () => setCount((n) => n + 1) }));
+  const list = toList(status);
+  // count меняется при подключении вложенных списков — экран перерисуется и включит свайп
+  const canRefresh = list.length > 0 || (count >= 0 && refreshers.fns.size > 0);
+  const onRefresh = async () => {
+    setPulled(true);
+    try {
+      await Promise.all([...list.map((s) => s.reload()), ...[...refreshers.fns].map((fn) => fn())]);
+    } finally {
+      setPulled(false);
+    }
+  };
   const offset = useRef(0);
   // обучение прокручивает экран к подсвеченному элементу
   const scrollBy = useCallback((dy: number) => {
@@ -17,19 +61,23 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
+          <RefreshContext.Provider value={refreshers}>
           <TourScrollProvider value={scrollBy}>
             <ScrollView
               ref={ref}
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
+              refreshControl={canRefresh ? <RefreshControl refreshing={pulled} onRefresh={onRefresh} colors={[colors.black]} /> : undefined}
               scrollEventThrottle={32}
               onScroll={(e) => {
                 offset.current = e.nativeEvent.contentOffset.y;
               }}
             >
+              <LoadStatus status={status} frame={frame} />
               {children}
             </ScrollView>
           </TourScrollProvider>
+          </RefreshContext.Provider>
         ) : (
           children
         )}

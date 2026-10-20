@@ -19,9 +19,12 @@ type Href = Parameters<typeof router.push>[0];
 
 export default function ManagerHome() {
   const { me, signOut } = useAuth();
-  const { data } = useFocusQuery(managerDashboard);
-  const { data: review } = useFocusQuery(reviewCount);
-  const { data: notes } = useFocusQuery(myNotifications);
+  const dashQ = useFocusQuery(managerDashboard, { key: 'mhome:dashboard' });
+  const reviewQ = useFocusQuery(reviewCount, { key: 'mhome:review' });
+  const notesQ = useFocusQuery(myNotifications, { key: 'mhome:notes' });
+  const { data } = dashQ;
+  const { data: review } = reviewQ;
+  const { data: notes } = notesQ;
   const notices: Notice[] = [
     ...(notes?.unread ?? []).map((n) => ({
       key: `u${n.id}`,
@@ -35,11 +38,15 @@ export default function ManagerHome() {
       : []),
   ];
   // Счётчики открытых заявок по статусам — для главной плашки «Заявки».
-  const { data: counts } = useFocusQuery(async () => {
-    const rows = await listRequests('', 'open');
-    const n = (st: string) => rows.filter((r) => r.status === st).length;
-    return { waiting: n('waiting'), in_work: n('in_work'), review: n('review') };
-  });
+  const countsQ = useFocusQuery(
+    async () => {
+      const rows = await listRequests('', 'open');
+      const n = (st: string) => rows.filter((r) => r.status === st).length;
+      return { waiting: n('waiting'), in_work: n('in_work'), review: n('review') };
+    },
+    { key: 'mhome:counts' },
+  );
+  const { data: counts } = countsQ;
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // первый вход на этом телефоне — обучение, после обновлений — «Что нового»
@@ -47,7 +54,7 @@ export default function ManagerHome() {
     if (focused && data) autoStart('manager', false);
   }, [focused, data, autoStart]);
   return (
-    <Screen>
+    <Screen status={[dashQ, reviewQ, notesQ, countsQ]} frame>
       <View style={styles.top}>
         <View style={styles.flex}>
           <Text style={styles.hello}>{me?.displayName}</Text>

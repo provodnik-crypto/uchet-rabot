@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { requestLabel } from '../../lib/requests';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
@@ -18,21 +18,14 @@ export default function TimeScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [period, setPeriod] = useState(presetPeriod('month'));
   const icons = useEmployeeIcons();
-  const { data, error, loading, reload } = useFocusQuery(() => timeStats(period));
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    reload();
-  }, [period.from, period.to, reload]);
+  const query = useFocusQuery(() => timeStats(period), { key: `time:${period.from}:${period.to}` });
+  const { data, error, loading, reload } = query;
 
   const maxAvg = Math.max(1, ...(data?.kinds.map((k) => k.avg_minutes) ?? [1]));
   const carriedShare = data && data.requests ? Math.round((data.carried / data.requests) * 100) : 0;
 
   return (
-    <Screen>
+    <Screen status={query}>
       <PeriodPicker
         preset={preset}
         period={period}
@@ -41,8 +34,8 @@ export default function TimeScreen() {
           setPeriod(per);
         }}
       />
-      {!data || loading ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
-      {data && !loading ? (
+      {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
+      {data ? (
         <>
           <TourTarget id="time.total">
           <Card style={styles.total}>

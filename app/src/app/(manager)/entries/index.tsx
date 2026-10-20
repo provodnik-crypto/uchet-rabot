@@ -98,6 +98,8 @@ export default function EntriesScreen() {
     <Screen scroll={false}>
       <FlatList
         data={rows}
+        refreshing={false}
+        onRefresh={() => load(0)}
         keyExtractor={(r) => String(r.entry_id)}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

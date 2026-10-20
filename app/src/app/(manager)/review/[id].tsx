@@ -22,7 +22,8 @@ const workStatus = { priced: 'Цена есть', pending: 'Ждёт цены (�
 /** Проверка заявки: работы, время против примерного, комментарий мастера; «Принять» или «Вернуть». */
 export default function ReviewRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: r, error, loading, reload } = useFocusQuery(() => requestCard({ id: Number(id) }));
+  const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
+  const { data: r, error, loading, reload } = query;
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export default function ReviewRequestScreen() {
   }
 
   return (
-    <Screen>
+    <Screen status={query}>
       <RequestBadges status={r.status} priority={r.priority} />
       <Text style={styles.number}>{requestLabel(r.number)}</Text>
       {r.operation ? <Text style={styles.op}>{r.operation}</Text> : null}

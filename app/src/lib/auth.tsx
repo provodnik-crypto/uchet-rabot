@@ -1,8 +1,10 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { humanError } from './errors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { errorKind, humanError } from './errors';
 import { loginToEmail } from './login';
 import { isConfigured, supabase } from './supabase';
+import { clearQueryCache, setQueryCacheUser } from './useQuery';
 
 export type Role = 'master' | 'manager';
 
@@ -31,6 +33,20 @@ async function loadMe(): Promise<Me | null> {
   return { id: row.id, displayName: row.display_name, role: row.role, login: row.login };
 }
 
+/** Последний «кто я» на этом телефоне: без связи приложение открывается с запомненными данными. */
+const ME_KEY = 'auth:me';
+type SavedMe = Me & { userId: string };
+
+async function savedMe(userId: string): Promise<Me | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ME_KEY);
+    const m = raw ? (JSON.parse(raw) as SavedMe) : null;
+    return m && m.userId === userId ? { id: m.id, displayName: m.displayName, role: m.role, login: m.login } : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<Me | null>(null);
@@ -49,11 +65,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoadError(null);
     try {
       const m = await loadMe();
+      setQueryCacheUser(m?.id ?? null);
       setMe(m);
       setAccessError(m ? null : 'Учётная запись отключена или не привязана к сотруднику. Обратитесь к руководителю.');
+      if (m) AsyncStorage.setItem(ME_KEY, JSON.stringify({ ...m, userId: s.user.id })).catch(() => {});
+      else AsyncStorage.removeItem(ME_KEY).catch(() => {});
     } catch (e) {
-      // Сеть недоступна: вход не сбрасываем, показываем «Повторить».
-      setLoadError(humanError(e));
+      // Нет связи или идёт обновление: открываем приложение с запомненными данными —
+      // экраны покажут их с плашкой «Повторить». Если запомненного нет — экран «Нет связи».
+      const kind = errorKind(e);
+      const cached = kind === 'network' || kind === 'timeout' || kind === 'updating' ? await savedMe(s.user.id) : null;
+      if (cached) {
+        humanError(e); // в журнал
+        setQueryCacheUser(cached.id);
+        setMe(cached);
+        setAccessError(null);
+      } else setLoadError(humanError(e));
     } finally {
       setLoading(false);
     }
@@ -82,6 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    AsyncStorage.removeItem(ME_KEY).catch(() => {});
+    setQueryCacheUser(null);
+    await clearQueryCache();
   }, []);
 
   const value = useMemo(

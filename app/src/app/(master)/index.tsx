@@ -31,13 +31,19 @@ export default function MasterHome() {
   const { me, signOut } = useAuth();
   const { ready, draft, clear } = useDraft();
   const icons = useEmployeeIcons();
-  const { data: entries } = useFocusQuery(() => myEntries(14));
-  const { data: month } = useFocusQuery(myMonthSummary);
+  const entriesQ = useFocusQuery(() => myEntries(14), { key: 'home:entries' });
+  const monthQ = useFocusQuery(myMonthSummary, { key: 'home:month' });
+  const openQ = useFocusQuery(myOpenRequests, { key: 'home:open' });
+  const badgeQ = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
+  const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
+  const notesQ = useFocusQuery(myNotifications, { key: 'home:notes' });
+  const { data: entries } = entriesQ;
+  const { data: month } = monthQ;
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
-  const { data: open } = useFocusQuery(myOpenRequests);
-  const { data: badge } = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
-  const { data: mineList } = useFocusQuery(myRequests);
-  const { data: notes } = useFocusQuery(myNotifications);
+  const { data: open } = openQ;
+  const { data: badge } = badgeQ;
+  const { data: mineList } = mineQ;
+  const { data: notes } = notesQ;
   const openCard = (id: number) => router.push({ pathname: '/req/[id]', params: { id: String(id) } });
   const notices: Notice[] = [
     ...(notes?.returned ?? []).map((n) => ({ key: `r${n.id}`, tone: 'red' as const, title: `Вернули ${requestLabel(n.number)}`, text: n.comment, onPress: () => openCard(n.id) })),
@@ -59,7 +65,7 @@ export default function MasterHome() {
   }, [focused, entries, month, autoStart]);
 
   return (
-    <Screen>
+    <Screen status={[entriesQ, monthQ, openQ, badgeQ, mineQ, notesQ]} frame>
       <View style={styles.helloRow}>
         {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={44} /> : null}
         <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>

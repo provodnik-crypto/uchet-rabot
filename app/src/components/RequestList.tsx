@@ -1,7 +1,5 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { humanError } from '../lib/errors';
 import { formatRegistered, openRequests, previewText, type OpenRequest, type RequestFilter, requestLabel } from '../lib/requests';
 import { TourTarget } from '../lib/tour';
 import { colors, font, radius } from '../theme';
@@ -11,6 +9,9 @@ import { RequestBadges } from './RequestBadges';
 import { SearchBox } from './SearchBox';
 import { Segmented } from './Segmented';
 import { StateView } from './StateView';
+import { LoadStatus } from './LoadStatus';
+import { useScreenRefresh } from './Screen';
+import { useFocusQuery } from '../lib/useQuery';
 import { DueLine } from './DueLine';
 
 type Props = {
@@ -26,29 +27,13 @@ type Props = {
 export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<RequestFilter>('all');
-  const [rows, setRows] = useState<OpenRequest[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [tick, setTick] = useState(0);
-
-  useFocusEffect(useCallback(() => setTick((t) => t + 1), []));
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    const t = setTimeout(
-      () => {
-        openRequests(q, filter)
-          .then((r) => alive && (setRows(r), setError(null)))
-          .catch((e) => alive && setError(humanError(e)))
-          .finally(() => alive && setLoading(false));
-      },
-      q ? 300 : 0,
-    );
-    return () => {
-      alive = false;
-      clearTimeout(t);
-    };
-  }, [q, filter, tick]);
+  const query = useFocusQuery(() => openRequests(q, filter), {
+    key: `open:${filter}:${q}`,
+    persist: !q,
+    debounceMs: q ? 300 : 0,
+  });
+  const { data: rows, error, loading, reload } = query;
+  useScreenRefresh(reload);
 
   return (
     <>
@@ -63,7 +48,8 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
         onChange={setFilter}
       />
 
-      {!rows ? <StateView loading={loading} error={error} onRetry={() => setTick((t) => t + 1)} /> : null}
+      <LoadStatus status={query} />
+      {!rows ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {rows && !rows.length ? (
         <Text style={styles.meta}>{q || filter !== 'all' ? 'Ничего не найдено' : 'Открытых заявок нет'}</Text>
       ) : null}

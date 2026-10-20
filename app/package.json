@@ -36,7 +36,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test:itsm": "node --test --experimental-strip-types --no-warnings src/lib/itsm.test.ts"
+    "test:itsm": "node --test --experimental-strip-types --no-warnings src/lib/itsm.test.ts",
+    "test:errors": "node --test --experimental-strip-types --no-warnings src/lib/errorText.test.ts"
   },
   "private": true
 }

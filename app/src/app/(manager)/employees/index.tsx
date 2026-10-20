@@ -11,10 +11,11 @@ import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
 export default function EmployeesScreen() {
-  const { data, error, loading, reload } = useFocusQuery(listEmployees);
+  const query = useFocusQuery(listEmployees, { key: 'employees' });
+  const { data, error, loading, reload } = query;
   const icons = useEmployeeIcons();
   return (
-    <Screen>
+    <Screen status={query}>
       <BigButton title="+ Добавить сотрудника" onPress={() => router.push('/employees/new')} />
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data?.map((e) => (
