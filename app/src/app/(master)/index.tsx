@@ -192,7 +192,7 @@ export default function MasterHome() {
             <View style={styles.reqText}>
               <Text style={styles.reqTitle}>Заявки</Text>
               <Text style={styles.reqSub}>
-                {badge ? `Назначено вам: ${badge.assigned} · Новые: ${badge.fresh}` : 'Открытые заявки магазина'}
+                {badge ? `Взять, внести работы, отправить · назначено вам: ${badge.assigned}` : 'Взять, внести работы, отправить на проверку'}
               </Text>
             </View>
             <Icon name="chevronRight" size={18} color={colors.secondary} strokeWidth={2.4} />
@@ -237,11 +237,11 @@ const styles = StyleSheet.create({
   mineNumber: { fontSize: font.body, fontWeight: '800' },
   mineOp: { fontWeight: '600' },
   mineMeta: { fontSize: font.small, color: colors.secondary },
-  reqCard: { minHeight: 56, justifyContent: 'center' },
-  reqMine: { borderWidth: 2, borderColor: colors.brand },
+  reqCard: { minHeight: 72, justifyContent: 'center', backgroundColor: colors.brand },
+  reqMine: { borderWidth: 2, borderColor: colors.black },
   reqRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   reqText: { flex: 1, gap: 2 },
-  reqTitle: { fontSize: font.body, fontWeight: '700' },
-  reqSub: { fontSize: font.small, color: colors.secondary },
+  reqTitle: { fontSize: font.title, fontWeight: '800' },
+  reqSub: { fontSize: font.small, color: colors.black, fontWeight: '600' },
   role: { textAlign: 'center', color: colors.muted, fontSize: font.small },
 });

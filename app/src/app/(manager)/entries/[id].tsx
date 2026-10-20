@@ -11,10 +11,11 @@ import { PhotoStrip } from '../../../components/PhotoStrip';
 import { SelectField } from '../../../components/SelectField';
 import { Screen } from '../../../components/Screen';
 import { confirm } from '../../../lib/confirm';
-import { formatDate } from '../../../lib/dates';
+import { formatDate, parseDate } from '../../../lib/dates';
+import { DateField } from '../../../components/DateField';
 import { listDepartments, type Department } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
-import { adminDeleteEntry, adminUpdateEntry, listPerformers, type AdminEntry } from '../../../lib/manager';
+import { adminDeleteEntry, adminSetEntryDate, adminUpdateEntry, listPerformers, type AdminEntry } from '../../../lib/manager';
 import { formatKop } from '../../../lib/money';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
@@ -37,6 +38,7 @@ export default function AdminEntryScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [workPhotos, setWorkPhotos] = useState<RemotePhoto[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [dateText, setDateText] = useState(formatDate(e.work_date));
 
   useEffect(() => {
     fetchEntryPhotos([e.entry_id])
@@ -87,6 +89,31 @@ export default function AdminEntryScreen() {
         </Text>
         {e.reject_comment ? <Text style={styles.err}>Комментарий: {e.reject_comment}</Text> : null}
         {workPhotos.length ? <PhotoStrip photos={workPhotos} /> : null}
+      </Card>
+      <Card style={styles.card}>
+        <DateField label="Дата работы" value={dateText} onChange={setDateText} hint="Мастер дату не выбирает — работа датируется днём внесения. Исправить может только руководитель." />
+        {dateText !== formatDate(e.work_date) ? (
+          <BigButton
+            title="Сменить дату"
+            variant="secondary"
+            loading={busy === 'date'}
+            disabled={!!busy}
+            onPress={async () => {
+              const d = parseDate(dateText);
+              if (!d) return setMessage('Дата в виде ДД.ММ.ГГГГ');
+              setBusy('date');
+              setMessage(null);
+              try {
+                await adminSetEntryDate(e.entry_id, d);
+                router.back();
+              } catch (err) {
+                setMessage(humanError(err));
+              } finally {
+                setBusy(null);
+              }
+            }}
+          />
+        ) : null}
       </Card>
       <Card style={styles.card}>
         <Field label={`Объём, ${e.unit_code}`} value={qty} onChangeText={setQty} keyboardType={e.integer_only ? 'number-pad' : 'decimal-pad'} error={qty ? parsed.error : null} />

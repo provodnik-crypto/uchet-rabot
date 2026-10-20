@@ -1,14 +1,13 @@
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useApkRelease, useAppUpdate } from '../lib/appUpdate';
+import { useApkRelease } from '../lib/appUpdate';
 import { colors, font } from '../theme';
 
 /**
- * Полоса сверху: либо вышла новая сборка APK (её надо установить, обновления на старую не придут),
- * либо новая версия уже скачана — одно касание, и приложение перезапускается.
+ * Полоса сверху — только когда вышла новая сборка APK (новая иконка, разрешения или нативные модули):
+ * её надо установить, обновления на старую не придут. Обычные обновления ставятся сами (lib/appUpdate.ts).
  */
 export function UpdateBanner() {
-  const { ready, apply } = useAppUpdate();
   const apkUrl = useApkRelease();
   const insets = useSafeAreaInsets();
   if (apkUrl) {
@@ -19,13 +18,7 @@ export function UpdateBanner() {
       </Pressable>
     );
   }
-  if (!ready) return null;
-  return (
-    <Pressable onPress={apply} style={[styles.bar, { paddingTop: insets.top + 8 }]} accessibilityRole="button">
-      <Text style={styles.text}>Есть новая версия приложения</Text>
-      <Text style={styles.btn}>Обновить</Text>
-    </Pressable>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({

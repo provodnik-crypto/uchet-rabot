@@ -10,10 +10,12 @@ type Props = {
   onChange: (photos: DraftPhoto[]) => void;
   /** Показать подсказку «С фото руководитель оценит быстрее», когда фото нет. */
   hint?: boolean;
+  /** Хотя бы одно фото обязательно (фото результата при отправке на проверку). */
+  required?: boolean;
 };
 
 /** «Добавить фото»: камера или галерея, до 3 фото, миниатюры с удалением. */
-export function PhotoPicker({ photos, onChange, hint }: Props) {
+export function PhotoPicker({ photos, onChange, hint, required }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
@@ -71,7 +73,7 @@ export function PhotoPicker({ photos, onChange, hint }: Props) {
         ) : null}
       </View>
       <Text style={styles.meta}>
-        {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}. Нажмите на фото, чтобы посмотреть.` : hint ? 'С фото руководитель оценит быстрее' : `До ${MAX_PHOTOS} фото, необязательно`}
+        {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}. Нажмите на фото, чтобы посмотреть.` : required ? `Нужно хотя бы одно фото, всего до ${MAX_PHOTOS}` : hint ? 'С фото руководитель оценит быстрее' : `До ${MAX_PHOTOS} фото, необязательно`}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PhotoViewer

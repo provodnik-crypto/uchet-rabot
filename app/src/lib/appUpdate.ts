@@ -3,44 +3,70 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { isConfigured, supabase } from './supabase';
 
+/** Сколько ждать новое обновление при запуске, прежде чем открыть приложение как есть. */
+const STARTUP_WAIT_MS = 5000;
+/** После такого перерыва (приложение было свёрнуто) обновление ставится сразу при возвращении. */
+const RESUME_AFTER_MS = 10 * 60 * 1000;
+
+async function fetchNew(): Promise<boolean> {
+  const res = await Updates.checkForUpdateAsync();
+  if (!res.isAvailable) return false;
+  const fetched = await Updates.fetchUpdateAsync();
+  return fetched.isNew;
+}
+
 /**
- * Обновления приложения. По умолчанию Expo применяет скачанное обновление только при полном
- * перезапуске, а Android часто держит приложение в памяти — и старая версия живёт днями.
- * Поэтому проверяем сами при каждом открытии и предлагаем кнопку «Обновить».
+ * Обновления «по воздуху» ставятся сами, без кнопок:
+ * * при запуске ждём новое обновление до 5 секунд — успело скачаться, приложение сразу перезапускается новым;
+ *   не успело — докачается и включится при следующем открытии;
+ * * Android держит приложение в памяти днями — если оно было свёрнуто дольше 10 минут, при возвращении
+ *   проверяем ещё раз и ставим новое сразу.
+ * Новая сборка APK нужна только при смене иконки, разрешений или нативных модулей (полоса «Вышла новая сборка»).
  */
 export function useAppUpdate() {
-  const [ready, setReady] = useState(false);
-  const checking = useRef(false);
-
-  const check = useCallback(async () => {
-    if (!Updates.isEnabled || checking.current) return;
-    checking.current = true;
-    try {
-      const res = await Updates.checkForUpdateAsync();
-      if (res.isAvailable) {
-        const fetched = await Updates.fetchUpdateAsync();
-        if (fetched.isNew) setReady(true);
-      }
-    } catch {
-      // нет связи — проверим при следующем открытии
-    } finally {
-      checking.current = false;
-    }
-  }, []);
+  const [starting, setStarting] = useState(Updates.isEnabled);
+  const busy = useRef(false);
+  const hiddenAt = useRef<number | null>(null);
 
   useEffect(() => {
-    check();
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') check();
+    if (!Updates.isEnabled) return;
+    let alive = true;
+    const timer = setTimeout(() => alive && setStarting(false), STARTUP_WAIT_MS);
+    busy.current = true;
+    fetchNew()
+      .then((isNew) => {
+        if (isNew && alive) return Updates.reloadAsync();
+      })
+      .catch(() => {})
+      .finally(() => {
+        busy.current = false;
+        if (alive) setStarting(false);
+        clearTimeout(timer);
+      });
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active') {
+        hiddenAt.current ??= Date.now();
+        return;
+      }
+      const away = hiddenAt.current ? Date.now() - hiddenAt.current : 0;
+      hiddenAt.current = null;
+      if (away < RESUME_AFTER_MS || busy.current) return;
+      busy.current = true;
+      fetchNew()
+        .then((isNew) => (isNew ? Updates.reloadAsync() : undefined))
+        .catch(() => {})
+        .finally(() => {
+          busy.current = false;
+        });
     });
-    return () => sub.remove();
-  }, [check]);
-
-  const apply = useCallback(() => {
-    Updates.reloadAsync().catch(() => {});
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      sub.remove();
+    };
   }, []);
 
-  return { ready, apply };
+  return { starting };
 }
 
 /** Дата текущей версии для подписи «Версия от …». */

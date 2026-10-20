@@ -7,6 +7,7 @@ import { BigButton } from '../components/BigButton';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { installCrashLog, setCurrentScreen } from '../lib/errorLog';
+import { useAppUpdate } from '../lib/appUpdate';
 import { TourProvider } from '../lib/tour';
 import { isConfigured } from '../lib/supabase';
 import { colors, font } from '../theme';
@@ -31,6 +32,8 @@ export default function RootLayout() {
 
 function RootStack() {
   const { loading, session, me, accessError, loadError, retry, signOut } = useAuth();
+  // при запуске — до 5 секунд ждём новое обновление, чтобы сразу открыть свежую версию
+  const { starting } = useAppUpdate();
 
   if (!isConfigured) {
     return (
@@ -40,7 +43,7 @@ function RootStack() {
       </Centered>
     );
   }
-  if (loading) {
+  if (loading || starting) {
     return (
       <Centered>
         <ActivityIndicator size="large" color={colors.black} />

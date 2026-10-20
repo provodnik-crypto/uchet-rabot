@@ -5,6 +5,8 @@ import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
 import { RequestBadges } from '../../../components/RequestBadges';
+import { PhotoStrip } from '../../../components/PhotoStrip';
+import type { RemotePhoto } from '../../../lib/workPhotos';
 import { RequestFeed } from '../../../components/RequestFeed';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
@@ -78,6 +80,12 @@ export default function ReviewRequestScreen() {
         {pending ? <Text style={styles.warn}>Работ вне прайса без цены: {pending}. Цену назначьте в «На оценке» — до или после приёмки.</Text> : null}
       </Card>
 
+      {r.result_photos?.length ? (
+        <Card style={styles.card}>
+          <Text style={styles.label}>Фото результата</Text>
+          <PhotoStrip photos={r.result_photos as unknown as RemotePhoto[]} />
+        </Card>
+      ) : null}
       {sendNote ? (
         <Card style={styles.card}>
           <Text style={styles.label}>Комментарий мастера</Text>

@@ -73,7 +73,7 @@ export default function SendRequestScreen() {
       <TourTarget id="send.photo">
         <Card style={styles.card}>
           <Text style={styles.label}>Фото результата — хотя бы одно (до 3)</Text>
-          <PhotoPicker photos={photos} onChange={setPhotos} />
+          <PhotoPicker photos={photos} onChange={setPhotos} required />
         </Card>
       </TourTarget>
 
