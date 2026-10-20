@@ -51,10 +51,14 @@ exception when insufficient_privilege then raise notice 'ok: чужие отме
 end $$;
 reset role;
 
--- без действий 3+ рабочих дня
-update public.requests set last_activity_at = now() - interval '10 days' where number = 'RFS261015_0001';
+-- в работе дольше порога (3 рабочих дня от «Взять в работу»)
+update public.requests set last_activity_at = now() - interval '10 days', taken_at = now() - interval '10 days' where number = 'RFS261015_0001';
 select pg_temp.login_as('boss');
 select pg_temp.assert((select stale_days from public.list_requests('RFS261015_0001')) >= 4, 'дни без действий считаются по рабочим дням');
 select pg_temp.assert((public.my_notifications() ->> 'stale')::int >= 1, 'руководитель видит зависшие заявки');
+select pg_temp.assert((select work_days from public.list_requests('RFS261015_0001')) >= 4, 'в работе N рабочих дней от «Взять в работу»');
+select pg_temp.assert((public.my_notifications() ->> 'stale_days')::int = 3, 'порог по умолчанию — 3 рабочих дня');
+select public.set_stale_work_days(30::smallint);
+select pg_temp.assert((public.my_notifications() ->> 'stale')::int = 0, 'порог 30 дней — заявка уже не долгая');
 reset role;
 rollback;

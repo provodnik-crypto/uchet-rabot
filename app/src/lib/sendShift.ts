@@ -1,6 +1,6 @@
 // Отправка черновика смены на сервер — общая для «Закрыть смену» и «Проверить и отправить» по заявке.
 import { groupIsSent, shiftGroups, type Draft, type DraftEntry } from './draft';
-import { parseQuantity, submitShift, type SubmitEntry, type SubmitRequest } from './shift';
+import { parseQuantity, submitShift, type SubmitEntry } from './shift';
 import { toPayload, uploadPhotos, type DraftPhoto } from './workPhotos';
 
 /**
@@ -40,9 +40,9 @@ export async function sendDraft(
       photos: toPayload(withPhotos(e)),
     })),
   );
-  const requests: SubmitRequest[] = groups.map((g) => ({ request_number: g.request, minutes: g.time.minutes ?? 0 }));
+  // Время по заявкам больше не учитываем (22.10.2026): не отправляем — старое время смены в базе не трогается.
   try {
-    return await submitShift({ client_uuid: draft.clientUuid, work_date: draft.workDate, entries, requests });
+    return await submitShift({ client_uuid: draft.clientUuid, work_date: draft.workDate, entries });
   } finally {
     onProgress(null);
   }

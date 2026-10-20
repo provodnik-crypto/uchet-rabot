@@ -11,7 +11,6 @@ import { MOVED_TEXT, useDraft } from '../../../../lib/draft';
 import { withDraft } from '../../../../lib/requestDraft';
 import { humanError } from '../../../../lib/errors';
 import { requestCard, sendRequestForReview, requestLabel } from '../../../../lib/requests';
-import { formatMinutes, formatPlan } from '../../../../lib/requestTime';
 import { draftHasContent, sendDraft } from '../../../../lib/sendShift';
 import { formatQuantity } from '../../../../lib/shift';
 import { useFocusQuery } from '../../../../lib/useQuery';
@@ -30,17 +29,16 @@ export default function SendRequestScreen() {
 
   if (!r) return <Screen><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
 
-  // Работы и время с сервера плюс смена на телефоне (она заменяет уже отправленную версию того же дня).
-  const { works, timeByDay, draftEntries, todayMinutes, spent: total } = withDraft(r, draft);
-  const over = r.plan_minutes != null && total > r.plan_minutes;
-  const nothing = !works.length && !draftEntries.length && total === 0;
+  // Работы с сервера плюс смена на телефоне (она заменяет уже отправленную версию того же дня).
+  const { works, draftEntries } = withDraft(r, draft);
+  const nothing = !works.length && !draftEntries.length;
 
   async function send() {
     if (!r) return;
     setBusy(true);
     setErr(null);
     try {
-      // Сначала сохраняем день (работы и время по всем заявкам смены), потом отправляем эту заявку.
+      // Сначала сохраняем день (работы по всем заявкам смены), потом отправляем эту заявку.
       if (draft && draftHasContent(draft)) {
         await sendDraft(draft, upsertEntry, setProgress);
         markSent();
@@ -63,21 +61,6 @@ export default function SendRequestScreen() {
       {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
 
       <Card style={styles.card}>
-        <Text style={styles.label}>Время</Text>
-        <Text style={[styles.big, over && styles.over]}>
-          Факт: {formatMinutes(total)}
-          {r.plan_minutes != null ? ` · примерно было ${formatPlan(r.plan_minutes)}` : ''}
-        </Text>
-        {over ? <Text style={styles.overText}>Дольше, чем планировали. Можно пояснить в комментарии.</Text> : null}
-        {timeByDay.map((t, i) => (
-          <Text key={i} style={styles.meta}>
-            {formatDate(t.work_date)} · {formatMinutes(t.minutes)} · {t.author}
-          </Text>
-        ))}
-        {todayMinutes ? <Text style={styles.meta}>{formatDate(draft!.workDate)} · {formatMinutes(todayMinutes)} · {draft!.editing ? 'сегодня' : 'сегодня, ещё не отправлено'}</Text> : null}
-      </Card>
-
-      <Card style={styles.card}>
         <Text style={styles.label}>Работы: {works.length + draftEntries.length}</Text>
         {draftEntries.map((e) => (
           <View key={e.key} style={styles.row}>
@@ -95,12 +78,12 @@ export default function SendRequestScreen() {
             </Text>
           </View>
         ))}
-        {!works.length && !draftEntries.length ? <Text style={styles.meta}>Работ нет — только время.</Text> : null}
+        {!works.length && !draftEntries.length ? <Text style={styles.meta}>Работ пока нет.</Text> : null}
       </Card>
 
       <Field label="Комментарий руководителю (необязательно)" value={comment} onChangeText={setComment} multiline placeholder="Что сделано, что осталось" />
 
-      {nothing ? <Text style={styles.err}>Добавьте работу или время — иначе отправлять нечего.</Text> : null}
+      {nothing ? <Text style={styles.err}>Добавьте хотя бы одну работу по заявке — без неё отправить нельзя.</Text> : null}
       {err ? <Text style={styles.err}>{err}</Text> : null}
       {progress ? <Text style={styles.meta}>{progress}</Text> : null}
       <BigButton title="Отправить на проверку" size="big" loading={busy} disabled={nothing} onPress={send} />
@@ -117,9 +100,6 @@ const styles = StyleSheet.create({
   meta: { fontSize: font.small, color: colors.secondary },
   card: { gap: 6 },
   label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  big: { fontSize: font.body, fontWeight: '800' },
-  over: { color: colors.danger },
-  overText: { fontSize: font.small, color: colors.danger },
   row: { gap: 2, paddingTop: 4 },
   name: { fontSize: font.body, fontWeight: '600' },
   err: { color: colors.danger, fontSize: font.body },

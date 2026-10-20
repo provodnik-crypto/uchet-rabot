@@ -10,7 +10,7 @@ import { StateView } from '../../components/StateView';
 import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
 import { useDraft } from '../../lib/draft';
-import { formatQuantity, myEntries, myShiftRequests, statusLabel, type MyEntry } from '../../lib/shift';
+import { formatQuantity, myEntries, statusLabel, type MyEntry } from '../../lib/shift';
 import { goToShiftList } from '../../lib/shiftNav';
 import { useFocusQuery } from '../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../lib/workPhotos';
@@ -40,13 +40,7 @@ export default function HistoryScreen() {
 
   async function edit(rows: MyEntry[]) {
     if (draft?.entries.length && !(await confirm('Заменить черновик?', 'Неотправленный черновик будет удалён.', 'Заменить'))) return;
-    // время и статусы заявок этой смены; без связи — правка без них (время придётся указать заново)
-    const times = rows[0]?.client_uuid ? await myShiftRequests(rows[0].client_uuid).catch(() => []) : [];
-    startEdit(
-      rows,
-      data?.photos,
-      times.map((t) => ({ number: t.request_number, minutes: t.minutes, status: t.status ?? 'done' })),
-    );
+    startEdit(rows, data?.photos);
     goToShiftList();
   }
 

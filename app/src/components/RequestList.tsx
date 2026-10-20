@@ -5,7 +5,6 @@ import { router } from 'expo-router';
 import { BigButton } from './BigButton';
 import { TourTarget } from '../lib/tour';
 import { colors, font, radius } from '../theme';
-import { formatPlan } from '../lib/requestTime';
 import { Card } from './Card';
 import { RequestBadges } from './RequestBadges';
 import { SearchBox } from './SearchBox';
@@ -116,7 +115,6 @@ export function RequestList({ mode, onOpen, onChoose, tourId }: Props) {
                 formatRegistered(r.registered_at),
                 r.requester_name,
                 !r.mine && r.assignee_name && r.status === 'waiting' ? `назначена: ${r.assignee_name}` : null,
-                r.status === 'in_work' && r.plan_minutes ? `~${formatPlan(r.plan_minutes)}` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}

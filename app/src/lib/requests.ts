@@ -107,16 +107,6 @@ export const priorityLabel: Record<Priority, string> = { 1: 'Срочно', 2: '
 export const priorityColor: Record<Priority, string> = { 1: '#C62828', 2: '#E65100', 3: '#595959', 4: '#757575' };
 export const CONTRACTOR_COLOR = '#5E35B1';
 
-/** Примерное время при взятии заявки. */
-export const ESTIMATES: { label: string; minutes: number }[] = [
-  { label: '30 мин', minutes: 30 },
-  { label: '1 ч', minutes: 60 },
-  { label: '2 ч', minutes: 120 },
-  { label: '4 ч', minutes: 240 },
-  { label: '1 день', minutes: 480 },
-  { label: '2–3 дня', minutes: 1200 },
-];
-
 export type OpenRequest = {
   id: number;
   number: string;
@@ -322,8 +312,15 @@ export type MasterNow = {
   pause_request: string | null;
   paused: number;
   returned: boolean;
+  /** Рабочих дней «В работе» (0 — взята сегодня). */
+  work_days?: number | null;
 };
 export const mastersNow = () => rpc<MasterNow[]>('masters_now');
+/** Порог «долго в работе», рабочих дней (настройка магазина). */
+export const staleWorkDays = () => rpc<number>('stale_work_days');
+export const setStaleWorkDays = (days: number) => rpc<void>('set_stale_work_days', { p_days: days });
+/** «В работе 4 раб. дн.» / «взята сегодня». */
+export const workDaysText = (d: number | null | undefined) => (d == null ? '' : d === 0 ? 'взята сегодня' : `в работе ${d} раб. дн.`);
 
 // ---------- Переписка и уведомления ----------
 export const addRequestComment = (id: number, text: string) => rpc<void>('add_request_comment', { p_id: id, p_text: text });
@@ -336,6 +333,8 @@ export type Notifications = {
   urgent?: { id: number; number: string; operation: string | null; status: LifecycleStatus }[];
   /** Руководителю: заявок «В работе» без действий больше 3 рабочих дней. */
   stale?: number;
+  /** Порог «долго в работе», рабочих дней. */
+  stale_days?: number;
   /** Руководителю: запросов мастеров на приостановку. */
   pause_requests?: number;
 };

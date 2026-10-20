@@ -9,7 +9,6 @@ import { Segmented } from '../../../components/Segmented';
 import { formatDate } from '../../../lib/dates';
 import { groupIsSent, MOVED_TEXT, shiftGroups, useDraft } from '../../../lib/draft';
 import { humanError } from '../../../lib/errors';
-import { formatMinutes, SHIFT_MINUTES } from '../../../lib/requestTime';
 import { sendDraft } from '../../../lib/sendShift';
 import { storeToday, storeYesterday } from '../../../lib/today';
 import { TourTarget } from '../../../lib/tour';
@@ -29,18 +28,12 @@ export default function ReviewScreen() {
     );
   }
   const groups = shiftGroups(draft).filter(groupIsSent);
-  const total = groups.reduce((a, g) => a + (g.time.minutes ?? 0), 0);
-  const noTime = groups.filter((g) => !g.time.minutes);
   const today = storeToday();
   const yesterday = storeYesterday();
   const pending = draft.entries.filter((e) => !e.priceItemId).length;
 
   async function send() {
     if (!draft) return;
-    if (noTime.length) {
-      setError(`Укажите время: ${noTime.map((g) => g.request ?? 'без заявки').join(', ')}`);
-      return;
-    }
     setSending(true);
     setError(null);
     try {
@@ -80,10 +73,6 @@ export default function ReviewScreen() {
       {groups.map((g) => (
         <Card key={g.request ?? '—'} style={styles.card}>
           <Text style={styles.request}>{g.request ? `Заявка ${requestLabel(g.request)}` : 'Без заявки'}</Text>
-          <Text style={[styles.time, !g.time.minutes && styles.missing]}>
-            {g.time.minutes ? `Время: ${formatMinutes(g.time.minutes)}` : 'Время не указано — вернитесь к списку'}
-          </Text>
-          {!g.entries.length ? <Text style={styles.meta}>Новых работ нет — только время</Text> : null}
           {g.entries.map((e) => (
             <View key={e.key} style={styles.row}>
               <Text style={styles.name}>
@@ -103,12 +92,6 @@ export default function ReviewScreen() {
         </Card>
       ))}
 
-      <Text style={[styles.summary, total > SHIFT_MINUTES && styles.over]}>
-        Время за смену: {formatMinutes(total)} из {formatMinutes(SHIFT_MINUTES)}
-      </Text>
-      {total > SHIFT_MINUTES ? (
-        <Text style={styles.warnBox}>Время по заявкам больше длины смены. Проверьте, нет ли ошибки. Если всё верно — отправляйте.</Text>
-      ) : null}
       <Text style={styles.summary}>
         Работ: {draft.entries.length}
         {pending ? ` · вне прайса (на оценку руководителю): ${pending}` : ''}
@@ -133,10 +116,6 @@ const styles = StyleSheet.create({
   custom: { fontSize: font.small, color: colors.muted, fontWeight: '400' },
   qty: { fontSize: font.body, fontWeight: '700' },
   meta: { fontSize: font.small, color: colors.secondary },
-  time: { fontSize: font.body, fontWeight: '800' },
-  missing: { color: colors.danger },
-  over: { color: colors.danger },
-  warnBox: { fontSize: font.body, backgroundColor: '#FFF3C4', borderRadius: 12, padding: 12, fontWeight: '600' },
   summary: { fontSize: font.body, fontWeight: '600', textAlign: 'center' },
   error: { color: colors.danger, fontSize: font.body },
   progress: { fontSize: font.body, fontWeight: '700', textAlign: 'center' },

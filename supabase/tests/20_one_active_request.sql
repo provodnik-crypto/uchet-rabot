@@ -5,10 +5,13 @@ create or replace function pg_temp.st(p_title text) returns text language sql as
   select status || coalesce('/' || hold_reason, '') from public.requests where operation = p_title order by id desc limit 1 $$;
 create or replace function pg_temp.err(p_sql text) returns text language plpgsql as $$
 begin execute p_sql; return null; exception when others then return sqlerrm; end $$;
--- время по заявке за смену (без него нельзя отправить на проверку)
+-- работа по заявке за смену (без неё нельзя отправить на проверку)
 create or replace function pg_temp.time_for(p_title text) returns void language sql as $$
-  select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(), 'entries', '[]'::jsonb,
-    'requests', jsonb_build_array(jsonb_build_object('request_number', (select number from public.requests where id = pg_temp.rid(p_title)), 'minutes', 30)))) $$;
+  select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
+    'entries', jsonb_build_array(jsonb_build_object(
+      'request_number', (select number from public.requests where id = pg_temp.rid(p_title)),
+      'department_id', (select id from public.departments where is_default), 'custom_name', 'Осмотр', 'unit_id', 1, 'quantity', 1,
+      'performer_ids', jsonb_build_array(public.current_employee_id()))))) $$;
 
 begin;
 select pg_temp.login_as('boss');
@@ -23,7 +26,7 @@ select public.take_request(pg_temp.rid('Заявка А'), 60);
 select pg_temp.assert(pg_temp.err(format('select public.take_request(%s, 60)', pg_temp.rid('Заявка Б'))) like 'У вас уже есть заявка в работе: № %',
   'вторую заявку взять нельзя: «У вас уже есть заявка в работе: № …»');
 select pg_temp.assert(pg_temp.err($q$select pg_temp.time_for('Заявка Б')$q$) like 'У вас уже есть заявка в работе%',
-  'работы/время по свободной заявке в смене тоже не берут её');
+  'работы по свободной заявке в смене тоже не берут её');
 select pg_temp.assert(pg_temp.st('Заявка Б') = 'waiting', 'Б осталась свободной');
 -- своя новая заявка занятого мастера — «Ожидает», назначена на него
 select pg_temp.assert((public.create_manual_request('Своя заявка') ->> 'queued')::boolean, 'своя заявка встала в очередь');

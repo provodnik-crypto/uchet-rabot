@@ -1,13 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { RequestBadges } from '../../../components/RequestBadges';
 import { RequestFeed } from '../../../components/RequestFeed';
-import { RequestTimeCard } from '../../../components/RequestTimeCard';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
@@ -20,7 +19,6 @@ import {
   holdText,
   requestPause,
   resumeRequest,
-  ESTIMATES,
   eventLabel,
   formatRegistered,
   lifecycleLabel,
@@ -29,13 +27,12 @@ import {
   requestCard,
   takeRequest,
   type RequestWork, requestLabel } from '../../../lib/requests';
-import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { formatQuantity, listMasters, myOpenRequests } from '../../../lib/shift';
 import { returnToCardAfterEntry } from '../../../lib/shiftNav';
 import { storeToday } from '../../../lib/today';
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font, radius, touch } from '../../../theme';
+import { colors, font } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
 
 const workStatus: Record<RequestWork['status'], string> = {
@@ -45,13 +42,13 @@ const workStatus: Record<RequestWork['status'], string> = {
   awaiting: 'Ждёт приёмки',
 };
 
-/** Карточка заявки: полный текст, статус, работы и время; действия по статусу. */
+/** Карточка заявки: полный текст, статус, работы; действия по статусу. */
 export default function RequestCardScreen() {
   const { id, select } = useLocalSearchParams<{ id: string; select?: string }>();
   const { me } = useAuth();
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
   const { data: r, error, loading, reload } = query;
-  const { draft, start, setRequest, setRequestTime } = useDraft();
+  const { draft, start, setRequest } = useDraft();
   const [panel, setPanel] = useState<null | 'take' | 'refuse' | 'pause'>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -78,8 +75,7 @@ export default function RequestCardScreen() {
   const working = r.status === 'in_work' && r.is_responsible;
   const isMember = r.members.some((m) => m.id === me?.id);
   // Сервер плюс смена на телефоне: черновик заменяет уже отправленную версию своего дня.
-  const { works, draftEntries, draftTime, spent } = withDraft(r, draft);
-  const over = r.plan_minutes != null && spent > r.plan_minutes;
+  const { works, draftEntries } = withDraft(r, draft);
 
   /** Черновик сегодняшнего дня: есть — используем (за другой день — спросим), нет — начинаем. */
   async function ensureDraft(): Promise<boolean> {
@@ -104,11 +100,6 @@ export default function RequestCardScreen() {
     setRequest(r.number);
     returnToCardAfterEntry(r.id);
     router.push('/shift/work');
-  }
-
-  async function changeTime(minutes: number | null) {
-    if (!r || !(await ensureDraft())) return;
-    setRequestTime(r.number, { minutes });
   }
 
   const chooseForShift = () => {
@@ -153,9 +144,6 @@ export default function RequestCardScreen() {
         {r.members.length ? <Line label="Напарники" value={r.members.map((m) => (m.id === me?.id ? 'вы' : m.name)).join(', ')} /> : null}
         {!r.responsible_name ? <Line label="Назначена" value={r.to_contractor ? 'Подрядчик' : r.assignee_id === me?.id ? 'Вам' : r.assignee_name ?? 'Не назначена'} /> : null}
         <Line label="Исполнитель" value={r.to_contractor ? 'Подрядчик' : 'Техники'} />
-        {r.plan_minutes != null || spent > 0 ? (
-          <Line label="Время" value={`${formatMinutes(spent)}${r.plan_minutes != null ? ` из ~${formatPlan(r.plan_minutes)}` : ''}`} warn={over} />
-        ) : null}
         {!r.is_open ? <Text style={styles.closed}>Заявка закрыта</Text> : null}
         {isMember && !r.is_responsible ? <Text style={styles.hint}>Вы напарник: работы по заявке вносит {r.responsible_name}, сумма делится поровну.</Text> : null}
       </Card>
@@ -227,13 +215,6 @@ export default function RequestCardScreen() {
         <>
           <TourTarget id="card.add">
             <BigButton title="+ Добавить работу" size="big" loading={busy} onPress={addWork} />
-          </TourTarget>
-          <TourTarget id="card.time">
-            <RequestTimeCard
-              label="Время за сегодня"
-              time={draftTime ?? { number: r.number, minutes: null, status: 'done' }}
-              onChange={(p) => changeTime(p.minutes ?? null)}
-            />
           </TourTarget>
         </>
       ) : null}
@@ -332,20 +313,17 @@ function Line({ label, value, warn }: { label: string; value: string; warn?: boo
   );
 }
 
-/** «Взять в работу»: примерное время и напарники. */
+/** «Взять в работу»: напарники (время не спрашиваем — с 22.10.2026 его не учитываем). */
 function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; meId: number; onDone: () => void; onCancel: () => void }) {
   const { data: masters } = useFocusQuery(listMasters);
-  const [plan, setPlan] = useState<number | null>(null);
-  const [custom, setCustom] = useState(false);
   const [members, setMembers] = useState<number[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const step = (d: number) => setPlan((p) => Math.max(30, (p ?? 60) + d));
   async function take() {
     setSending(true);
     setErr(null);
     try {
-      await takeRequest(requestId, plan, members);
+      await takeRequest(requestId, null, members);
       onDone();
     } catch (e) {
       setErr(humanError(e));
@@ -355,24 +333,6 @@ function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; m
   }
   return (
     <Card style={styles.card}>
-      <Text style={styles.h}>Сколько примерно займёт?</Text>
-      <View style={styles.chips}>
-        {ESTIMATES.map((e) => (
-          <Chip key={e.label} label={e.label} selected={!custom && plan === e.minutes} onPress={() => (setCustom(false), setPlan(e.minutes))} />
-        ))}
-        <Chip label="Свой вариант" selected={custom} onPress={() => (setCustom(true), setPlan((p) => p ?? 60))} />
-      </View>
-      {custom ? (
-        <View style={styles.stepper}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Меньше на 30 минут" style={styles.stepBtn} onPress={() => step(-30)}>
-            <Text style={styles.stepText}>−30</Text>
-          </Pressable>
-          <Text style={styles.stepValue}>{plan != null ? formatPlan(plan) : '—'}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Больше на 30 минут" style={styles.stepBtn} onPress={() => step(30)}>
-            <Text style={styles.stepText}>+30</Text>
-          </Pressable>
-        </View>
-      ) : null}
       <Text style={styles.h}>Напарники (если работаете вместе)</Text>
       <View style={styles.chips}>
         {(masters ?? [])
@@ -388,8 +348,7 @@ function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; m
       </View>
       <Text style={styles.hint}>Напарники числятся в заявке, сумма по её работам делится поровну. Работы вносите вы.</Text>
       {err ? <Text style={styles.err}>{err}</Text> : null}
-      <BigButton title="Взять" size="big" loading={sending} disabled={plan == null} onPress={take} />
-      {plan == null ? <Text style={styles.hint}>Выберите примерное время.</Text> : null}
+      <BigButton title="Взять" size="big" loading={sending} onPress={take} />
       <BigButton title="Отмена" variant="secondary" onPress={onCancel} />
     </Card>
   );
@@ -477,17 +436,5 @@ const styles = StyleSheet.create({
   wait: { color: colors.secondary },
   event: { fontSize: font.small, color: colors.muted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  stepBtn: {
-    width: touch.min + 8,
-    height: touch.min,
-    borderRadius: radius.control,
-    borderWidth: 2,
-    borderColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepText: { fontSize: font.body, fontWeight: '800' },
-  stepValue: { flex: 1, textAlign: 'center', fontSize: font.title, fontWeight: '800' },
   err: { color: colors.danger, fontSize: font.body },
 });

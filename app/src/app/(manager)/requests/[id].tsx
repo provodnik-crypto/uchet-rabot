@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -23,14 +23,12 @@ import {
   setRequestPriority,
   setRequestResponsible,
   type Priority, requestLabel, decidePause, holdText, resumeRequest } from '../../../lib/requests';
-import { formatMinutes, formatPlan, PLAN_TIMES } from '../../../lib/requestTime';
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { TourTarget } from '../../../lib/tour';
-import { colors, font, radius, touch } from '../../../theme';
+import { colors, font, radius } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
 
-const PLAN_STEP = 30;
 
 /** Открывается из списка (данные строки в параметрах) или по номеру — из уведомлений на главной. */
 export default function RequestScreen() {
@@ -51,7 +49,6 @@ export default function RequestScreen() {
 
 function RequestDetail({ r }: { r: RequestRow }) {
   const [subject, setSubject] = useState(r.subject ?? '');
-  const [plan, setPlan] = useState<number | null>(r.plan_minutes);
   const cardQ = useFocusQuery(() => requestCard({ id: r.id }), { key: `card:${r.id}`, persist: false });
   const { data: card, reload: reloadCard } = cardQ;
   useFocusEffect(useCallback(() => void markRequestRead(r.id), [r.id]));
@@ -63,14 +60,12 @@ function RequestDetail({ r }: { r: RequestRow }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [rejectText, setRejectText] = useState('');
-  const spent = r.spent_minutes ?? 0;
-  const over = plan != null && spent > plan;
 
   async function save() {
     setBusy('save');
     setMessage(null);
     try {
-      await updateRequest(r.id, { subject: subject.trim() || null, plan_minutes: plan });
+      await updateRequest(r.id, { subject: subject.trim() || null });
       router.back();
     } catch (e) {
       setMessage(humanError(e));
@@ -106,8 +101,6 @@ function RequestDetail({ r }: { r: RequestRow }) {
       setIsOpen(!isOpen);
     });
   }
-
-  const step = (d: number) => setPlan(Math.max(PLAN_STEP, (plan ?? 0) + d));
 
   return (
     <Screen status={cardQ} frame>
@@ -145,33 +138,12 @@ function RequestDetail({ r }: { r: RequestRow }) {
         </Card>
       ) : null}
 
-      <TourTarget id="rdetail.plan">
-      <Card style={[styles.card, over && styles.overCard]}>
-        <Text style={styles.h}>Время</Text>
-        <Text style={[styles.fact, over && styles.overText]}>
-          Факт: {formatMinutes(spent)}
-          {plan != null ? ` из плана ${formatPlan(plan)}` : ''}
-          {over ? ' — больше плана' : ''}
-        </Text>
-        <Text style={styles.label}>План</Text>
-        <View style={styles.chips}>
-          <Chip label="Без плана" selected={plan == null} onPress={() => setPlan(null)} />
-          {PLAN_TIMES.map((p) => (
-            <Chip key={p.label} label={p.label} selected={plan === p.minutes} onPress={() => setPlan(p.minutes)} />
-          ))}
-        </View>
-        <View style={styles.stepper}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Меньше на 30 минут" style={styles.stepBtn} onPress={() => step(-PLAN_STEP)}>
-            <Text style={styles.stepText}>−30</Text>
-          </Pressable>
-          <Text style={styles.value}>{plan == null ? 'без плана' : formatPlan(plan)}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Больше на 30 минут" style={styles.stepBtn} onPress={() => step(PLAN_STEP)}>
-            <Text style={styles.stepText}>+30</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.hint}>1 день = смена 8 ч.</Text>
-      </Card>
-      </TourTarget>
+      {r.status === 'in_work' && r.work_days != null ? (
+        <Card style={styles.card}>
+          <Text style={styles.h}>{r.work_days === 0 ? 'Взята в работу сегодня' : `В работе ${r.work_days} раб. дн.`}</Text>
+          {r.taken_at ? <Text style={styles.hint}>с {formatDate(r.taken_at.slice(0, 10))}, без выходных и праздников</Text> : null}
+        </Card>
+      ) : null}
 
       <Card style={styles.card}>
         <Field label="Тема" value={subject} onChangeText={setSubject} multiline hint="Что нужно сделать. Без имён, фамилий и телефонов." />
@@ -284,24 +256,9 @@ const styles = StyleSheet.create({
   card: { gap: 12 },
   pause: { gap: 8, padding: 12, borderRadius: radius.card, borderWidth: 2, borderColor: '#E65100', backgroundColor: '#FFF3E0' },
   pauseTitle: { fontSize: font.body, fontWeight: '800', color: '#E65100' },
-  overCard: { borderWidth: 3, borderColor: colors.danger },
   h: { fontSize: font.body, fontWeight: '700' },
-  fact: { fontSize: font.body, fontWeight: '800' },
-  overText: { color: colors.danger },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  stepBtn: {
-    width: touch.min + 8,
-    height: touch.min,
-    borderRadius: radius.control,
-    borderWidth: 2,
-    borderColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepText: { fontSize: font.body, fontWeight: '800' },
-  value: { flex: 1, textAlign: 'center', fontSize: font.body, fontWeight: '800' },
   hint: { fontSize: font.small, color: colors.muted },
   err: { color: colors.danger, fontSize: font.body },
 });

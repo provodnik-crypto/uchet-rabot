@@ -83,8 +83,9 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   `request_pause` → `decide_pause` руководителем. Обзор — `masters_now()`. Тест — `supabase/tests/20_one_active_request.sql`.
 * Переписка и уведомления (только внутри приложения): `add_request_comment`, `edit_request_comment`, `delete_request_comment` (своё; руководитель — любое), `mark_request_read`, `my_notifications`;
   непрочитанное — `request_unread` по `request_reads`. Пуш-уведомлений нет.
-* Время по заявкам: таблица `shift_requests` (минуты за смену; статус «Не закончено» больше не используется), `requests.plan_minutes/state`;
-  длина смены — `public.shift_minutes()` = 480 и `SHIFT_MINUTES` в `app/src/lib/requestTime.ts`.
+* **Время выполнения не учитываем** (22.10.2026): ввода, плана и статистики нет. Архив (не показывать):
+  `shift_requests.minutes`, `requests.plan_minutes`. Давность заявки — `request_work_days(taken_at)` (рабочие дни),
+  порог `stores.stale_work_days` (`set_stale_work_days`). На проверку — только с работой.
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
 * Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).
   После каждого обновления добавить запись в начало `WHATS_NEW` (тексты пишет Claude, заказчик проверяет).

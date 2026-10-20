@@ -93,7 +93,7 @@ export default function CloseOldScreen() {
           maxLength={10}
           error={text.length === 10 ? dateError : null}
         />
-        <Text style={styles.meta}>Закрываются только заявки из ITSM. Работы и время по ним сохраняются.</Text>
+        <Text style={styles.meta}>Закрываются только заявки из ITSM. Работы по ним сохраняются.</Text>
       </Card>
 
       {error && (rows || dateError) ? <Text style={styles.err}>{error}</Text> : null}

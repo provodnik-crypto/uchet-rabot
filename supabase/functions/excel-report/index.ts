@@ -43,16 +43,15 @@ Deno.serve(async (req) => {
       return data as T;
     };
 
-    const [totals, employees, months, monthEmployees, rows, works, time] = await Promise.all([
+    const [totals, employees, months, monthEmployees, rows, works] = await Promise.all([
       call<ReportData['totals'][]>('report_totals'),
       call<ReportData['employees']>('report_by_employee'),
       call<ReportData['months']>('report_by_month'),
       call<ReportData['monthEmployees']>('report_month_employee'),
       call<ReportData['rows']>('report_rows'),
       call<ReportData['works']>('report_by_work'),
-      call<ReportData['time']>('time_stats'),
     ]);
-    const sheets = buildReport({ from, to, totals: totals[0], employees, months, monthEmployees, rows, works, time });
+    const sheets = buildReport({ from, to, totals: totals[0], employees, months, monthEmployees, rows, works });
     const files = buildXlsx(sheets);
     const zip = zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)])), { level: 6 });
 

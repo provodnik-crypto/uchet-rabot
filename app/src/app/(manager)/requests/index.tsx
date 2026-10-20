@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { humanError } from '../../../lib/errors';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -8,13 +9,12 @@ import { Screen } from '../../../components/Screen';
 import { Segmented } from '../../../components/Segmented';
 import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
-import { listRequests, type RequestRow, type RequestStatusFilter } from '../../../lib/manager';
-import { formatRegistered, holdText, lifecycleLabel, mastersNow, priorityLabel, type LifecycleStatus, type Priority, requestLabel } from '../../../lib/requests';
+import { listRequests, type RequestStatusFilter } from '../../../lib/manager';
+import { formatRegistered, holdText, lifecycleLabel, mastersNow, setStaleWorkDays, staleWorkDays, workDaysText, priorityLabel, type LifecycleStatus, type Priority, requestLabel } from '../../../lib/requests';
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { FilterSelect } from '../../../components/FilterSelect';
 import { RequestBadges } from '../../../components/RequestBadges';
-import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
@@ -26,6 +26,22 @@ export default function RequestsScreen() {
   const [lifecycle, setLifecycle] = useState<LifecycleStatus | 'pause_request' | null>(params.lifecycle ?? null);
   // кто над какой заявкой работает сейчас
   const nowQ = useFocusQuery(mastersNow, { key: 'masters-now' });
+  // порог подсветки «долго в работе» (рабочих дней), настройка магазина
+  const limitQ = useFocusQuery(staleWorkDays, { key: 'stale-work-days' });
+  const limit = limitQ.data ?? 3;
+  const [limitErr, setLimitErr] = useState<string | null>(null);
+  const changeLimit = async (d: number) => {
+    const next = Math.max(1, Math.min(60, limit + d));
+    if (next === limit) return;
+    setLimitErr(null);
+    try {
+      await setStaleWorkDays(next);
+      await Promise.all([limitQ.reload(), query.reload()]);
+    } catch (e) {
+      setLimitErr(humanError(e));
+    }
+  };
+  const long = (days: number | null | undefined) => days != null && days > limit;
   const [priority, setPriority] = useState<Priority | null>(null);
   const [employee, setEmployee] = useState<number | null>(null);
   const { data: masters } = useFocusQuery(listMasters);
@@ -43,7 +59,7 @@ export default function RequestsScreen() {
           <Card style={styles.now}>
             <Text style={styles.nowTitle}>Сейчас в работе</Text>
             {nowQ.data.map((m) => {
-              const over = m.plan_minutes != null && (m.spent_minutes ?? 0) > m.plan_minutes;
+              const over = long(m.work_days);
               return (
                 <Pressable
                   key={m.employee_id}
@@ -62,9 +78,8 @@ export default function RequestsScreen() {
                       </Text>
                       <Text style={[styles.meta, over && styles.overText]}>
                         {m.taken_at ? `с ${formatDate(m.taken_at.slice(0, 10))} · ` : ''}
-                        отмечено {formatMinutes(m.spent_minutes ?? 0)}
-                        {m.plan_minutes != null ? ` из ~${formatPlan(m.plan_minutes)}` : ''}
-                        {over ? ' — дольше примерного' : ''}
+                        {workDaysText(m.work_days)}
+                        {over ? ` — дольше ${limit} раб. дн.` : ''}
                       </Text>
                       {m.pause_request ? <Text style={styles.nowWarn}>Просит приостановить: {m.pause_request}</Text> : null}
                       {m.returned ? <Text style={styles.meta}>Вернули на доработку</Text> : null}
@@ -118,20 +133,34 @@ export default function RequestsScreen() {
       <BigButton title="+ Новая заявка" onPress={() => router.push('/requests/new')} />
       <BigButton title="Загрузить заявки из ITSM" variant="secondary" onPress={() => router.push('/import')} />
       <BigButton title="Закрыть старые заявки" variant="secondary" onPress={() => router.push('/requests/close-old')} />
-      <Text style={styles.meta}>Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или открыть снова, задать плановое время. Красная рамка — потрачено больше плана.</Text>
+      <Text style={styles.meta}>Нажмите на заявку, чтобы назначить её мастеру или подрядчику, закрыть или открыть снова. Оранжевая рамка — заявка в работе дольше порога.</Text>
+      <Card style={styles.limit}>
+        <Text style={styles.limitText}>Подсвечивать, если в работе дольше</Text>
+        <View style={styles.limitRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Меньше на день" hitSlop={8} style={styles.limitBtn} onPress={() => changeLimit(-1)}>
+            <Text style={styles.limitBtnText}>−</Text>
+          </Pressable>
+          <Text style={styles.limitValue}>{limit} раб. дн.</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Больше на день" hitSlop={8} style={styles.limitBtn} onPress={() => changeLimit(1)}>
+            <Text style={styles.limitBtnText}>+</Text>
+          </Pressable>
+        </View>
+        {limitErr ? <Text style={styles.overText}>{limitErr}</Text> : null}
+      </Card>
       {!rows ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {rows && !rows.length ? <Text style={styles.meta}>{status === 'closed' ? 'Закрытых заявок нет' : 'Заявок не найдено'}</Text> : null}
       {rows?.map((r, i) => (
         <TourTarget key={r.id} id={i === 0 ? 'requests.first' : `requests.${r.id}`}>
         <Card
           key={r.id}
-          style={[styles.card, overPlan(r) && styles.over, r.stale_days > 3 && styles.stale]}
+          style={[styles.card, r.status === 'in_work' && long(r.work_days) && styles.stale]}
           onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(r.id), data: JSON.stringify(r) } })}
         >
           <RequestBadges status={r.status} priority={r.priority} responsibleName={r.responsible_name} unread={r.unread} />
-          {r.status === 'in_work' && r.taken_at ? (
-            <Text style={[styles.meta, r.stale_days > 3 && styles.overText]}>
-              в работе {daysSince(r.taken_at)} дн.{r.stale_days > 3 ? ` · без действий ${r.stale_days} раб. дн.` : ''}
+          {r.status === 'in_work' && r.work_days != null ? (
+            <Text style={[styles.meta, long(r.work_days) && styles.staleText]}>
+              {workDaysText(r.work_days).replace(/^в/, 'В')}
+              {long(r.work_days) ? ` — дольше ${limit}` : ''}
               {r.returned_comment ? ' · возвращена' : ''}
             </Text>
           ) : null}
@@ -146,11 +175,6 @@ export default function RequestsScreen() {
           {r.description || r.subject ? (
             <Text style={styles.subject} numberOfLines={2}>
               {r.description ?? r.subject}
-            </Text>
-          ) : null}
-          {r.spent_minutes != null || r.plan_minutes != null ? (
-            <Text style={[styles.meta, overPlan(r) && styles.overText]}>
-              {r.plan_minutes != null ? `План ${formatPlan(r.plan_minutes)} · ` : ''}факт {formatMinutes(r.spent_minutes ?? 0)}
             </Text>
           ) : null}
           <Text style={styles.meta}>
@@ -170,11 +194,6 @@ export default function RequestsScreen() {
   );
 }
 
-const DAY = 24 * 60 * 60 * 1000;
-const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY));
-
-const overPlan = (r: RequestRow) => r.plan_minutes != null && (r.spent_minutes ?? 0) > r.plan_minutes;
-
 const styles = StyleSheet.create({
   over: { borderWidth: 3, borderColor: colors.danger },
   overText: { color: colors.danger, fontWeight: '800' },
@@ -185,7 +204,14 @@ const styles = StyleSheet.create({
   subject: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.muted },
   filters: { gap: 8, paddingVertical: 2 },
-  stale: { borderWidth: 2, borderColor: '#E65100' },
+  stale: { borderWidth: 3, borderColor: '#E65100' },
+  staleText: { color: '#E65100', fontWeight: '800' },
+  limit: { gap: 6 },
+  limitText: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
+  limitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  limitBtn: { width: 48, height: 40, borderRadius: 10, borderWidth: 2, borderColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  limitBtnText: { fontSize: 20, fontWeight: '800' },
+  limitValue: { flex: 1, textAlign: 'center', fontSize: font.body, fontWeight: '800' },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
   now: { gap: 6 },
   nowTitle: { fontSize: font.body, fontWeight: '800' },

@@ -293,4 +293,4 @@ export function shiftGroups(d: Draft): ShiftGroup[] {
 }
 
 /** Группа уходит на сервер, если в ней есть работы или указано время. */
-export const groupIsSent = (g: ShiftGroup) => g.entries.length > 0 || (g.time.minutes ?? 0) > 0;
+export const groupIsSent = (g: ShiftGroup) => g.entries.length > 0;

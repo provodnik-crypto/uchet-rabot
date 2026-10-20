@@ -12,14 +12,13 @@ import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { acceptRequest, markRequestRead, requestCard, returnRequest, requestLabel } from '../../../lib/requests';
-import { formatMinutes, formatPlan } from '../../../lib/requestTime';
 import { formatQuantity } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font } from '../../../theme';
 
 const workStatus = { priced: 'Цена есть', pending: 'Ждёт цены (На оценке)', rejected: 'Отклонена', awaiting: 'Цена есть' } as const;
 
-/** Проверка заявки: работы, время против примерного, комментарий мастера; «Принять» или «Вернуть». */
+/** Проверка заявки: работы, комментарий мастера; «Принять» или «Вернуть». */
 export default function ReviewRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
@@ -30,7 +29,6 @@ export default function ReviewRequestScreen() {
   useFocusEffect(useCallback(() => void markRequestRead(Number(id)), [id]));
 
   if (!r) return <Screen><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
-  const over = r.plan_minutes != null && r.spent_minutes > r.plan_minutes;
   const sendNote = r.events.find((e) => e.kind === 'send')?.comment;
   const pending = r.works.filter((w) => w.status === 'pending').length;
 
@@ -65,19 +63,6 @@ export default function ReviewRequestScreen() {
         {r.members.length ? ` · напарники: ${r.members.map((m) => m.name).join(', ')}` : ''}
         {r.taken_at ? ` · с ${formatDate(r.taken_at.slice(0, 10))}` : ''}
       </Text>
-
-      <Card style={styles.card}>
-        <Text style={styles.label}>Время</Text>
-        <Text style={[styles.big, over && styles.over]}>
-          Факт {formatMinutes(r.spent_minutes)}
-          {r.plan_minutes != null ? ` · примерно было ${formatPlan(r.plan_minutes)}` : ' · примерное время не указано'}
-        </Text>
-        {r.time_by_day.map((t, i) => (
-          <Text key={i} style={styles.meta}>
-            {formatDate(t.work_date)} · {formatMinutes(t.minutes)} · {t.author}
-          </Text>
-        ))}
-      </Card>
 
       <Card style={styles.card}>
         <Text style={styles.label}>Работы: {r.works.length}</Text>
@@ -123,8 +108,6 @@ const styles = StyleSheet.create({
   meta: { fontSize: font.small, color: colors.secondary },
   card: { gap: 6 },
   label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  big: { fontSize: font.body, fontWeight: '800' },
-  over: { color: colors.danger },
   row: { gap: 2, paddingTop: 4 },
   name: { fontSize: font.body, fontWeight: '600' },
   warn: { color: '#BE9200', fontWeight: '700', fontSize: font.small },

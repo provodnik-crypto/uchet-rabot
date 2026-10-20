@@ -17,7 +17,6 @@ import { formatKop } from '../../lib/money';
 import { monthName } from '../../lib/manager';
 import { holdText, myNotifications, myRequests, myRequestsBadge, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
-import { formatMinutes, formatPlan } from '../../lib/requestTime';
 import { RequestBadges } from '../../components/RequestBadges';
 import { myEntries, myMonthSummary, myOpenRequests } from '../../lib/shift';
 import { storeToday } from '../../lib/today';
@@ -63,7 +62,7 @@ export default function MasterHome() {
       onPress: () => openCard(n.id),
     })),
   ];
-  const hasDraft = !!draft && (draft.entries.length > 0 || !!draft.requests?.some((r) => r.minutes));
+  const hasDraft = !!draft && draft.entries.length > 0;
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // Первый вход — обучение; уже работавшему мастеру после обновления — «Что нового».
@@ -108,9 +107,7 @@ export default function MasterHome() {
             {active.pause_request ? <Text style={styles.mineMeta}>Запрос на приостановку у руководителя</Text> : null}
             <DueLine dueAt={active.due_at} status={active.status} />
             <Text style={styles.mineMeta}>
-              {active.taken_at ? `В работе с ${formatDate(active.taken_at.slice(0, 10))} · ` : ''}
-              отмечено {formatMinutes(active.spent_minutes)}
-              {active.plan_minutes != null ? ` из ~${formatPlan(active.plan_minutes)}` : ''}
+              {active.taken_at ? `В работе с ${formatDate(active.taken_at.slice(0, 10))}` : 'В работе'}
             </Text>
             <View style={styles.activeButtons}>
               <View style={styles.flex}>
@@ -146,7 +143,9 @@ export default function MasterHome() {
                   ? `Вернули: ${r.returned_comment}`
                   : r.status === 'review'
                     ? 'На проверке у руководителя'
-                    : `${r.responsible ? '' : `Взял ${r.responsible_name} · вы напарник · `}${formatMinutes(r.spent_minutes)}${r.plan_minutes != null ? ` из ~${formatPlan(r.plan_minutes)}` : ''}`}
+                    : r.responsible
+                    ? r.taken_at ? `В работе с ${formatDate(r.taken_at.slice(0, 10))}` : 'В работе'
+                    : `Взял ${r.responsible_name} · вы напарник`}
               </Text>
             </Card>
           ))}

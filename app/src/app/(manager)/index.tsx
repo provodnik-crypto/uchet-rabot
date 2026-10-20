@@ -37,7 +37,7 @@ export default function ManagerHome() {
       ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, text: 'Мастер ждёт решения — подтвердите или отклоните', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
       : []),
     ...(notes?.stale
-      ? [{ key: 'stale', tone: 'orange' as const, title: `Без действий больше 3 рабочих дней: ${notes.stale}`, text: 'Заявки «В работе» — откройте и уточните у мастера', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'in_work' } }) }]
+      ? [{ key: 'stale', tone: 'orange' as const, title: `В работе дольше ${notes.stale_days ?? 3} раб. дн.: ${notes.stale}`, text: 'Откройте и уточните у мастера, что мешает', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'in_work' } }) }]
       : []),
   ];
   // Счётчики открытых заявок по статусам — для главной плашки «Заявки».
@@ -117,8 +117,7 @@ export default function ManagerHome() {
         <ActionTile tourId="mhome.export" title="В Excel" subtitle="отчёт за период" icon="download" href="/export" />
       </View>
       <Card style={styles.list}>
-        <ListRow tourId="mhome.import" title="Загрузить заявки" subtitle="выгрузка из ITSM (Excel), раз в день" icon="upload" href="/import" />
-        <ListRow tourId="mhome.time" title="Время" subtitle="по видам работ и мастерам, перенос, план" icon="clock" href="/time" last />
+        <ListRow tourId="mhome.import" title="Загрузить заявки" subtitle="выгрузка из ITSM (Excel), раз в день" icon="upload" href="/import" last />
       </Card>
 
       <Text style={styles.section}>Справочники</Text>
