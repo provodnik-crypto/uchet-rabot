@@ -34,6 +34,8 @@ const ScrollCtx = createContext<((dy: number) => void) | undefined>(undefined);
 
 /** Прокрутка экрана для подсветки элементов ниже края (даёт Screen). */
 export const TourScrollProvider = ScrollCtx.Provider;
+/** Прокрутить экран на dy (даёт Screen); нужен и полю сообщения, чтобы держать его над клавиатурой. */
+export const useScrollBy = () => useContext(ScrollCtx);
 
 const key = (userId: number, what: string) => `tour-v1:${userId}:${what}`;
 const FIRST: Record<'master' | 'manager', TourId> = {

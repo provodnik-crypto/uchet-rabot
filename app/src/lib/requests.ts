@@ -200,6 +200,10 @@ export type RequestCard = {
   events: RequestEvent[];
 };
 export type RequestEvent = {
+  /** Есть в новых версиях базы (нужно, чтобы исправить или удалить сообщение). */
+  id?: number;
+  edited?: boolean;
+  deleted?: boolean;
   kind:
     | 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment' | 'create'
     | 'pause_request' | 'pause' | 'pause_reject' | 'resume';
@@ -323,6 +327,8 @@ export const mastersNow = () => rpc<MasterNow[]>('masters_now');
 
 // ---------- Переписка и уведомления ----------
 export const addRequestComment = (id: number, text: string) => rpc<void>('add_request_comment', { p_id: id, p_text: text });
+export const editRequestComment = (eventId: number, text: string) => rpc<void>('edit_request_comment', { p_event: eventId, p_text: text });
+export const deleteRequestComment = (eventId: number) => rpc<void>('delete_request_comment', { p_event: eventId });
 export const markRequestRead = (id: number) => rpc<void>('mark_request_read', { p_id: id }).catch(() => {});
 export type Notifications = {
   unread: { id: number; number: string; count: number; refused?: boolean }[];

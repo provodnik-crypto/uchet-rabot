@@ -58,6 +58,8 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   рядом со старыми); старое удаляется отдельной миграцией после того, как обновление приложения разошлось.
   Порядок: миграция «добавить» → обновление приложения → через день миграция «убрать». Так работающее
   приложение не ломается в момент изменения базы.
+* Клавиатура на Android: окно не сжимается — отступ считает `Screen` (`useKeyboardInset`), поле держит над клавиатурой
+  `keepAboveKeyboard(view, useScrollBy())`.
 * Загрузка данных экранов — `useFocusQuery` (`lib/useQuery.ts`): ключ `key` с параметрами, последние данные
   в памяти и на телефоне, автоповтор при обрыве; `<Screen status={…}>` даёт свайп вниз, плашку ошибки
   с «Повторить» и «Обновлено в …». Запросы ждут ответа не дольше 20 с (`fetchWithTimeout` в `lib/supabase.ts`).
@@ -79,7 +81,7 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   пока занят), `pause` (подтверждённая приостановка). Освободился (`send_request_for_review`, `refuse_request`, снятие,
   подрядчик, закрытие) → `resume_next`: сначала returned, потом urgent; `pause` — только `resume_request`. Запрос мастера
   `request_pause` → `decide_pause` руководителем. Обзор — `masters_now()`. Тест — `supabase/tests/20_one_active_request.sql`.
-* Переписка и уведомления (только внутри приложения): `add_request_comment`, `mark_request_read`, `my_notifications`;
+* Переписка и уведомления (только внутри приложения): `add_request_comment`, `edit_request_comment`, `delete_request_comment` (своё; руководитель — любое), `mark_request_read`, `my_notifications`;
   непрочитанное — `request_unread` по `request_reads`. Пуш-уведомлений нет.
 * Время по заявкам: таблица `shift_requests` (минуты за смену; статус «Не закончено» больше не используется), `requests.plan_minutes/state`;
   длина смены — `public.shift_minutes()` = 480 и `SHIFT_MINUTES` в `app/src/lib/requestTime.ts`.

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TourScrollProvider } from '../lib/tour';
 import { colors } from '../theme';
@@ -25,6 +25,37 @@ export function useScreenRefresh(reload: () => unknown) {
   }, [set]);
 }
 
+/**
+ * Android: окно приложения при клавиатуре не сжимается (экран «от края до края»), а встроенный
+ * KeyboardAvoidingView под шапкой недооценивает отступ. Считаем сами: низ экрана минус верх клавиатуры.
+ */
+function useKeyboardInset(ref: React.RefObject<View | null>) {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const show = Keyboard.addListener('keyboardDidShow', (e) => {
+      ref.current?.measureInWindow((_x, y, _w, h) => setInset(Math.max(0, Math.round(y + h - e.endCoordinates.screenY))));
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setInset(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [ref]);
+  return inset;
+}
+
+/** Держать элемент над клавиатурой: если он ушёл под неё — прокрутить экран вверх. */
+export function keepAboveKeyboard(target: View | null, scrollBy: ((dy: number) => void) | undefined) {
+  // в веб-версии metrics нет — там клавиатура экранная у браузера
+  const kb = typeof Keyboard.metrics === 'function' ? Keyboard.metrics() : undefined;
+  if (!target || !scrollBy || !kb) return;
+  target.measureInWindow((_x, y, _w, h) => {
+    const gap = y + h + 12 - kb.screenY;
+    if (gap > 0) scrollBy(gap);
+  });
+}
+
 type Props = {
   children: ReactNode;
   scroll?: boolean;
@@ -37,6 +68,8 @@ type Props = {
 /** Общая обёртка экрана: серый фон, отступы, прокрутка, клавиатура не перекрывает поля. */
 export function Screen({ children, scroll = true, status, frame }: Props) {
   const ref = useRef<ScrollView>(null);
+  const outer = useRef<View>(null);
+  const kbInset = useKeyboardInset(outer);
   const [pulled, setPulled] = useState(false);
   const [count, setCount] = useState(0);
   const [refreshers] = useState<Refreshers>(() => ({ fns: new Set(), changed: () => setCount((n) => n + 1) }));
@@ -59,6 +92,7 @@ export function Screen({ children, scroll = true, status, frame }: Props) {
   }, []);
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <View ref={outer} style={[styles.flex, kbInset ? { paddingBottom: kbInset } : null]} collapsable={false}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
           <RefreshContext.Provider value={refreshers}>
@@ -82,6 +116,7 @@ export function Screen({ children, scroll = true, status, frame }: Props) {
           children
         )}
       </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
