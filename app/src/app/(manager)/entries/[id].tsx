@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { requestLabel } from '../../../lib/requests';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
@@ -20,7 +21,7 @@ import { formatKop } from '../../../lib/money';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, parseQuantity, statusLabel } from '../../../lib/shift';
-import { colors, font } from '../../../theme';
+import { colors, font, size, space } from '../../../theme';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 
 export default function AdminEntryScreen() {
@@ -133,7 +134,7 @@ export default function AdminEntryScreen() {
                 key={p.id}
                 label={p.display_name}
                 selected={performers.includes(p.id)}
-                left={<Avatar name={p.display_name} icon={icons[p.id]} size={28} />}
+                left={<Avatar name={p.display_name} icon={icons[p.id]} size={size.check} />}
                 onPress={() => setPerformers((ids) => (ids.includes(p.id) ? ids.filter((x) => x !== p.id) : [...ids, p.id]))}
               />
             ))}
@@ -148,11 +149,11 @@ export default function AdminEntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: space.s10 },
   name: { fontSize: font.title, fontWeight: '800' },
   meta: { fontSize: font.small, color: colors.muted },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   total: { fontSize: font.body, fontWeight: '700' },
   err: { color: colors.danger, fontSize: font.body },
 });

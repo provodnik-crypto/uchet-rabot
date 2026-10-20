@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Chip } from '../../components/Chip';
@@ -13,7 +14,7 @@ import { listUnits, type Unit } from '../../lib/price';
 import { formatQuantity, myEntries, parseQuantity, resubmitEntry } from '../../lib/shift';
 import { useFocusQuery } from '../../lib/useQuery';
 import { fetchEntryPhotos, remoteToDraft, toPayload, uploadPhotos, type DraftPhoto, type RemotePhoto } from '../../lib/workPhotos';
-import { colors, font } from '../../theme';
+import { colors, font, space, stroke } from '../../theme';
 
 export default function FixEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -111,12 +112,12 @@ export default function FixEntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  alert: { borderWidth: 2, borderColor: colors.danger, gap: 4 },
+  alert: { borderWidth: stroke.outline, borderColor: colors.danger, gap: space.s4 },
   alertTitle: { fontSize: font.body, fontWeight: '800', color: colors.danger },
   alertText: { fontSize: font.body },
-  card: { gap: 12 },
+  card: { gap: space.s12 },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   meta: { fontSize: font.body, color: colors.muted },
   err: { color: colors.danger, fontSize: font.body },
 });

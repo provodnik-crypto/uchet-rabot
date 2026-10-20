@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { useTour } from '../lib/tour';
 import { TOURS, WHATS_NEW, type TourId } from '../lib/tours';
-import { colors, font } from '../theme';
+import { colors, font, space } from '../theme';
 import { Card } from './Card';
 import { Screen } from './Screen';
 
@@ -42,9 +43,9 @@ export function HelpScreen({ role }: { role: 'master' | 'manager' }) {
 }
 
 const styles = StyleSheet.create({
-  section: { fontSize: font.body + 2, fontWeight: '700', marginTop: 4 },
-  card: { gap: 4 },
+  section: { fontSize: font.text, fontWeight: '700', marginTop: space.s4 },
+  card: { gap: space.s4 },
   title: { fontSize: font.body, fontWeight: '700' },
   meta: { fontSize: font.small, color: colors.muted },
-  list: { gap: 2 },
+  list: { gap: space.s2 },
 });

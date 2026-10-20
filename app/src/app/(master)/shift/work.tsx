@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { requestLabel } from '../../../lib/requests';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Icon } from '../../../components/Icon';
@@ -13,7 +14,7 @@ import { humanError } from '../../../lib/errors';
 import { previewText, requestCard, type RequestCard } from '../../../lib/requests';
 import { myWorkItems, searchWork, workCategories, type CategoryRow, type WorkItem } from '../../../lib/shift';
 import { TourTarget } from '../../../lib/tour';
-import { colors, font, radius, touch } from '../../../theme';
+import { colors, font, iconSize, radius, space, stroke, touch } from '../../../theme';
 
 type Tab = 'frequent' | 'recent' | 'categories';
 const tabLabel: Record<Tab, string> = { frequent: 'Часто', recent: 'Недавние', categories: 'Категории' };
@@ -188,12 +189,12 @@ export default function WorkPickerScreen() {
             >
               <Text style={styles.groupName}>{r.label}</Text>
               <Text style={styles.count}>{r.count}</Text>
-              <Icon name="chevronRight" size={16} color={colors.muted} strokeWidth={2.4} />
+              <Icon name="chevronRight" size={iconSize.small} color={colors.muted} />
             </Card>
           )
         }
         ListEmptyComponent={loading ? null : <Text style={styles.empty}>{emptyText}</Text>}
-        ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: 16 }} /> : null}
+        ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: space.s16 }} /> : null}
       />
       <View style={styles.bottom}>
         <TourTarget id="work.custom">
@@ -205,21 +206,21 @@ export default function WorkPickerScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, paddingTop: 12, gap: 6, paddingBottom: 16 },
-  header: { gap: 8, marginBottom: 2 },
+  content: { padding: space.s16, paddingTop: space.s12, gap: space.s6, paddingBottom: space.s16 },
+  header: { gap: space.s8, marginBottom: space.s2 },
   request: { fontSize: font.small, color: colors.secondary, fontWeight: '600' },
-  reqBox: { backgroundColor: colors.card, borderRadius: radius.card, padding: 10, gap: 2, borderLeftWidth: 3, borderLeftColor: colors.brand },
+  reqBox: { backgroundColor: colors.card, borderRadius: radius.card, padding: space.s10, gap: space.s2, borderLeftWidth: stroke.outline, borderLeftColor: colors.brand },
   reqOp: { fontSize: font.small, fontWeight: '700' },
   reqDesc: { fontSize: font.body },
-  reqMore: { fontSize: font.small, color: colors.secondary, fontWeight: '600', marginTop: 2 },
-  crumb: { minHeight: 40, justifyContent: 'center' },
+  reqMore: { fontSize: font.small, color: colors.secondary, fontWeight: '600', marginTop: space.s2 },
+  crumb: { minHeight: touch.small, justifyContent: 'center' },
   crumbText: { fontSize: font.body, fontWeight: '700' },
-  item: { gap: 2, minHeight: touch.min, justifyContent: 'center', paddingVertical: 10 },
+  item: { gap: space.s2, minHeight: touch.min, justifyContent: 'center', paddingVertical: space.s10 },
   name: { fontSize: font.body, fontWeight: '600' },
   cat: { fontSize: font.small, color: colors.secondary },
-  group: { flexDirection: 'row', alignItems: 'center', minHeight: touch.min, gap: 8, paddingVertical: 10 },
+  group: { flexDirection: 'row', alignItems: 'center', minHeight: touch.min, gap: space.s8, paddingVertical: space.s10 },
   groupName: { fontSize: font.body, fontWeight: '600', flex: 1 },
-  count: { fontSize: font.small - 1, color: colors.secondary, backgroundColor: colors.bg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.chip, overflow: 'hidden' },
-  empty: { color: colors.secondary, fontSize: font.body, textAlign: 'center', marginTop: 24 },
-  bottom: { padding: 12, paddingHorizontal: 16, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border },
+  count: { fontSize: font.caption, color: colors.secondary, backgroundColor: colors.bg, paddingHorizontal: space.s8, paddingVertical: space.s2, borderRadius: radius.chip, overflow: 'hidden' },
+  empty: { color: colors.secondary, fontSize: font.body, textAlign: 'center', marginTop: space.s24 },
+  bottom: { padding: space.s12, paddingHorizontal: space.s16, backgroundColor: colors.bg, borderTopWidth: stroke.hair, borderTopColor: colors.border },
 });

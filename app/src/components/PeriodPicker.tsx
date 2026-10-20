@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { formatDate, parseDate } from '../lib/dates';
 import { periodLabel, presetPeriod, type Period, type PeriodPreset } from '../lib/manager';
-import { colors, font } from '../theme';
+import { colors, font, space } from '../theme';
 import { BigButton } from './BigButton';
 import { DateField } from './DateField';
 import { Segmented } from './Segmented';
@@ -63,10 +64,10 @@ export function PeriodPicker({ preset, period, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  custom: { gap: 8 },
-  row: { flexDirection: 'row', gap: 8 },
+  wrap: { gap: space.s8 },
+  custom: { gap: space.s8 },
+  row: { flexDirection: 'row', gap: space.s8 },
   flex: { flex: 1 },
-  range: { fontSize: font.small - 1, color: colors.secondary, paddingHorizontal: 2 },
+  range: { fontSize: font.caption, color: colors.secondary, paddingHorizontal: space.s2 },
   err: { color: colors.danger, fontSize: font.small },
 });

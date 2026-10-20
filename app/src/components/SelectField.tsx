@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, touch } from '../theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
+import { colors, font, iconSize, opacity, radius, space, stroke, touch } from '../theme';
 import { Icon } from './Icon';
 import { PickerSheet, type PickerOption } from './PickerSheet';
 
@@ -24,12 +25,12 @@ export function SelectField<T>({ label, value, options, onChange, placeholder = 
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${current?.label ?? placeholder}`}
         onPress={() => setOpen(true)}
-        style={({ pressed }) => [styles.box, error ? styles.boxError : null, pressed && { opacity: 0.7 }]}
+        style={({ pressed }) => [styles.box, error ? styles.boxError : null, pressed && { opacity: opacity.pressed }]}
       >
         <Text style={[styles.value, !current && styles.placeholder]} numberOfLines={1}>
           {current?.label ?? placeholder}
         </Text>
-        <Icon name="chevronDown" size={18} color={colors.secondary} strokeWidth={2.4} />
+        <Icon name="chevronDown" size={iconSize.medium} color={colors.secondary} />
       </Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PickerSheet
@@ -48,17 +49,17 @@ export function SelectField<T>({ label, value, options, onChange, placeholder = 
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 4 },
+  wrap: { gap: space.s4 },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
   box: {
     minHeight: touch.min,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: space.s8,
+    paddingHorizontal: space.s12,
     backgroundColor: colors.card,
     borderRadius: radius.control,
-    borderWidth: 1,
+    borderWidth: stroke.hair,
     borderColor: colors.border,
   },
   boxError: { borderColor: colors.danger },

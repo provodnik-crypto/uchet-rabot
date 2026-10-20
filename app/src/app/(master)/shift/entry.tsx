@@ -1,6 +1,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
@@ -27,7 +28,7 @@ import {
 } from '../../../lib/shift';
 import { fetchEntryPhotos, remoteToDraft, toPayload, uploadAll, type DraftPhoto } from '../../../lib/workPhotos';
 import { TourTarget } from '../../../lib/tour';
-import { colors, font } from '../../../theme';
+import { colors, font, size, space } from '../../../theme';
 
 type Params = {
   /** Заявка, в которую вносится работа (обязательно: работы — только внутри заявки). */
@@ -307,7 +308,7 @@ export default function EntryScreen() {
               label={m.id === me?.id ? `${m.display_name} (я)` : m.display_name}
               selected={performerIds.includes(m.id)}
               onPress={() => togglePerformer(m.id)}
-              left={<Avatar name={m.display_name} icon={icons[m.id]} size={28} />}
+              left={<Avatar name={m.display_name} icon={icons[m.id]} size={size.check} />}
             />
           ))}
         </View>
@@ -336,16 +337,16 @@ export default function EntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: space.s10 },
   cat: { fontSize: font.small, color: colors.muted },
   workName: { fontSize: font.title, fontWeight: '700' },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
   meta: { fontSize: font.small, color: colors.muted },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   err: { color: colors.danger, fontSize: font.small },
-  sug: { gap: 8 },
+  sug: { gap: space.s8 },
   sugTitle: { fontSize: font.small, fontWeight: '700' },
-  sugItem: { backgroundColor: colors.bg, padding: 10, gap: 2 },
+  sugItem: { backgroundColor: colors.bg, padding: space.s10, gap: space.s2 },
   sugName: { fontSize: font.body, fontWeight: '600' },
   sugMeta: { fontSize: font.small, color: colors.muted },
 });

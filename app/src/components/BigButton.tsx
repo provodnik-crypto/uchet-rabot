@@ -1,38 +1,40 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { colors, font, radius, touch } from '../theme';
+import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { colors, font, opacity, radius, space, stroke, touch } from '../theme';
+import { Text } from './Text';
 
 type Props = {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
-  size?: 'small' | 'normal' | 'big';
+  /** primary — жёлтая, dark — чёрная, secondary — белая с чёрной обводкой, danger — красная. */
+  variant?: 'primary' | 'dark' | 'secondary' | 'danger';
+  /** small 40 · normal 48 · mid 52 · big 56 (главная кнопка экрана). */
+  size?: 'small' | 'normal' | 'mid' | 'big';
   disabled?: boolean;
   loading?: boolean;
 };
 
 export function BigButton({ title, onPress, variant = 'primary', size = 'normal', disabled, loading }: Props) {
   const inactive = disabled || loading;
+  const light = variant === 'dark' || variant === 'danger';
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!inactive }}
       onPress={onPress}
       disabled={inactive}
-      hitSlop={size === 'small' ? 4 : undefined}
+      hitSlop={size === 'small' ? space.s4 : undefined}
       style={({ pressed }) => [
         styles.base,
-        size === 'big' && styles.big,
-        size === 'small' && styles.small,
-        variant === 'primary' && styles.primary,
-        variant === 'secondary' && styles.secondary,
-        variant === 'danger' && styles.danger,
+        styles[size],
+        styles[variant],
         inactive && styles.disabled,
         pressed && styles.pressed,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'danger' ? '#fff' : colors.black} />
+        <ActivityIndicator color={light ? colors.white : colors.black} />
       ) : (
-        <Text style={[styles.text, size === 'big' && styles.bigText, size === 'small' && styles.smallText, variant === 'danger' && styles.dangerText]}>
+        <Text style={[styles.text, (size === 'big' || size === 'mid') && styles.bigText, size === 'small' && styles.smallText, light && styles.lightText]}>
           {title}
         </Text>
       )}
@@ -41,22 +43,19 @@ export function BigButton({ title, onPress, variant = 'primary', size = 'normal'
 }
 
 const styles = StyleSheet.create({
-  base: {
-    minHeight: touch.min,
-    borderRadius: radius.control,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
+  base: { borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.s16 },
+  small: { minHeight: touch.small },
+  normal: { minHeight: touch.min },
+  mid: { minHeight: touch.mid },
   big: { minHeight: touch.big },
-  small: { minHeight: 40 },
   primary: { backgroundColor: colors.brand },
-  secondary: { backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.black },
+  dark: { backgroundColor: colors.black },
+  secondary: { backgroundColor: colors.card, borderWidth: stroke.outline, borderColor: colors.black },
   danger: { backgroundColor: colors.danger },
-  disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.75 },
+  disabled: { opacity: opacity.disabled },
+  pressed: { opacity: opacity.pressed },
   text: { fontSize: font.body, fontWeight: '700', color: colors.black },
-  bigText: { fontSize: font.title },
-  smallText: { fontSize: font.small + 1, fontWeight: '600' },
-  dangerText: { color: '#fff' },
+  bigText: { fontSize: font.text },
+  smallText: { fontSize: font.small, fontWeight: '600' },
+  lightText: { color: colors.white },
 });

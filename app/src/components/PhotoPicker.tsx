@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { humanError } from '../lib/errors';
 import { MAX_PHOTOS, pickPhoto, signedUrls, type DraftPhoto } from '../lib/workPhotos';
-import { colors, font, radius } from '../theme';
+import { colors, font, iconSize, opacity, radius, space, stroke, touch } from '../theme';
+import { ActionSheet } from './ActionSheet';
+import { Icon } from './Icon';
 import { PhotoViewer } from './PhotoViewer';
 
 type Props = {
@@ -14,11 +17,15 @@ type Props = {
   required?: boolean;
 };
 
-/** «Добавить фото»: камера или галерея, до 3 фото, миниатюры с удалением. */
+/** Фото сеткой по 3 в ряд: «Снять» (камера или галерея), до 3 фото, миниатюры с удалением. */
 export function PhotoPicker({ photos, onChange, hint, required }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
+  const [sheet, setSheet] = useState(false);
+  // ширина клетки: три в ряд с промежутком
+  const [width, setWidth] = useState(0);
+  const cell = width ? Math.floor((width - space.s8 * 2) / 3) : 0;
   const remoteThumbs = useSignedThumbs(photos);
 
   async function add(source: 'camera' | 'library') {
@@ -36,44 +43,56 @@ export function PhotoPicker({ photos, onChange, hint, required }: Props) {
 
   function choose() {
     if (Platform.OS === 'web') return add('library');
-    Alert.alert('Добавить фото', undefined, [
-      { text: 'Снять камерой', onPress: () => add('camera') },
-      { text: 'Выбрать из галереи', onPress: () => add('library') },
-      { text: 'Отмена', style: 'cancel' },
-    ]);
+    setSheet(true);
   }
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.row}>
+      <ActionSheet
+        visible={sheet}
+        title="Фото: без людей и документов"
+        actions={[
+          { label: 'Снять камерой', onPress: () => add('camera') },
+          { label: 'Выбрать из галереи', onPress: () => add('library') },
+        ]}
+        onClose={() => setSheet(false)}
+      />
+      <View style={styles.row} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         {photos.map((p, i) => {
           const uri = p.thumbUri ?? (p.thumbPath ? remoteThumbs[p.thumbPath] : undefined);
           return (
-            <View key={p.key} style={styles.thumbBox}>
+            <View key={p.key} style={[styles.thumbBox, { width: cell, height: cell }]}>
               <Pressable onPress={() => setViewer(i)} accessibilityRole="imagebutton" accessibilityLabel={`Фото ${i + 1}`}>
-                {uri ? <Image source={{ uri }} style={styles.thumb} /> : <View style={[styles.thumb, styles.thumbEmpty]} />}
+                {uri ? <Image source={{ uri }} style={[styles.thumb, { width: cell, height: cell }]} /> : <View style={[styles.thumb, { width: cell, height: cell }]} />}
               </Pressable>
               <Pressable
                 onPress={() => onChange(photos.filter((x) => x.key !== p.key))}
                 style={styles.remove}
-                hitSlop={10}
+                hitSlop={space.s10}
                 accessibilityRole="button"
                 accessibilityLabel="Удалить фото"
               >
-                <Text style={styles.removeText}>✕</Text>
+                <Icon name="close" size={iconSize.small} color={colors.white} />
               </Pressable>
             </View>
           );
         })}
         {photos.length < MAX_PHOTOS ? (
-          <Pressable onPress={choose} disabled={busy} style={({ pressed }) => [styles.add, pressed && { opacity: 0.7 }]} accessibilityRole="button">
-            {busy ? <ActivityIndicator color={colors.black} /> : <Text style={styles.addPlus}>＋</Text>}
-            <Text style={styles.addText}>{busy ? 'Сжимаем…' : 'Добавить фото'}</Text>
+          <Pressable
+            onPress={choose}
+            disabled={busy}
+            style={({ pressed }) => [styles.add, { width: cell, height: cell }, pressed && { opacity: opacity.pressed }]}
+            accessibilityRole="button"
+            accessibilityLabel="Снять фото"
+          >
+            {busy ? <ActivityIndicator color={colors.black} /> : <Icon name="camera" size={iconSize.big} />}
+            <Text style={styles.addText}>{busy ? 'Сжимаем…' : 'Снять'}</Text>
           </Pressable>
         ) : null}
       </View>
       <Text style={styles.meta}>
-        {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}. Нажмите на фото, чтобы посмотреть.` : required ? `Нужно хотя бы одно фото, всего до ${MAX_PHOTOS}` : hint ? 'С фото руководитель оценит быстрее' : `До ${MAX_PHOTOS} фото, необязательно`}
+        Не снимайте людей и документы.{' '}
+        {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}.` : required ? `Нужно хотя бы одно фото, всего до ${MAX_PHOTOS}.` : hint ? 'С фото руководитель оценит быстрее.' : `До ${MAX_PHOTOS} фото, необязательно.`}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PhotoViewer
@@ -99,16 +118,32 @@ function useSignedThumbs(photos: DraftPhoto[]) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  wrap: { gap: space.s8 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   thumbBox: { position: 'relative' },
-  thumb: { width: 84, height: 84, borderRadius: 12, backgroundColor: colors.border },
-  thumbEmpty: { borderWidth: 2, borderColor: colors.border },
-  remove: { position: 'absolute', top: -8, right: -8, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center' },
-  removeText: { color: '#fff', fontWeight: '800', fontSize: 15 },
-  add: { width: 84, height: 84, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.black, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: colors.card },
-  addPlus: { fontSize: 26, fontWeight: '800', lineHeight: 28 },
-  addText: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  meta: { fontSize: font.small, color: colors.muted },
+  thumb: { borderRadius: radius.small, backgroundColor: colors.border },
+  remove: {
+    position: 'absolute',
+    top: space.s4,
+    right: space.s4,
+    width: touch.tiny,
+    height: touch.tiny,
+    borderRadius: radius.round,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  add: {
+    borderRadius: radius.small,
+    borderWidth: stroke.outline,
+    borderStyle: 'dashed',
+    borderColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.s4,
+    backgroundColor: colors.card,
+  },
+  addText: { fontSize: font.caption, fontWeight: '600', textAlign: 'center' },
+  meta: { fontSize: font.caption, color: colors.secondary },
   error: { fontSize: font.small, color: colors.danger },
 });

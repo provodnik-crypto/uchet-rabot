@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
 import { ICON_STROKE, toolIcon, type IconShape } from '../lib/toolIcons';
 import { colors } from '../theme';
@@ -17,17 +18,19 @@ function Shape({ s }: { s: IconShape }) {
 }
 
 /** Значок инструмента на жёлтом круге (фото людей не храним). Без значка — первые буквы имени. */
-export function Avatar({ name, icon, size = 40 }: { name: string; icon?: number | null; size?: number }) {
+export function Avatar({ name, icon, size = 40, dark }: { name: string; icon?: number | null; size?: number; /** Чёрный круг с жёлтым значком (шапка главной). */ dark?: boolean }) {
   const tool = toolIcon(icon);
+  const bg = dark ? colors.black : colors.brand;
+  const fg = dark ? colors.brand : colors.black;
   if (tool) {
     return (
       <View accessibilityLabel={name}>
         <Svg width={size} height={size} viewBox="0 0 48 48">
-          <Circle cx={24} cy={24} r={24} fill={colors.brand} />
+          <Circle cx={24} cy={24} r={24} fill={bg} />
           <G
             transform="translate(9 9) scale(1.25)"
             fill="none"
-            stroke={colors.black}
+            stroke={fg}
             strokeWidth={ICON_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -50,8 +53,8 @@ export function Avatar({ name, icon, size = 40 }: { name: string; icon?: number 
     .map((w) => w[0]?.toUpperCase())
     .join('');
   return (
-    <View style={[styles.fallback, box]} accessibilityLabel={name}>
-      <Text style={[styles.text, { fontSize: size * 0.38 }]}>{initials || '?'}</Text>
+    <View style={[styles.fallback, box, { backgroundColor: bg }]} accessibilityLabel={name}>
+      <Text style={[styles.text, { fontSize: size * 0.38, color: fg }]}>{initials || '?'}</Text>
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Field } from '../../components/Field';
@@ -11,9 +12,12 @@ import { humanError } from '../../lib/errors';
 import { decideMasterReport, formatStoreTime, listMasterReports, reportStatusText, requestLabel, type MasterReport } from '../../lib/requests';
 import { useFocusQuery } from '../../lib/useQuery';
 import type { RemotePhoto } from '../../lib/workPhotos';
-import { colors, font } from '../../theme';
+import { colors, font, space, stroke } from '../../theme';
 
-/** Сообщения мастеров («работы нет в заявках»): создать заявку, отклонить с причиной. Открыли — «прочитано». */
+/**
+ * Сообщения мастеров: «работы нет в заявках» — создать заявку или отклонить с причиной;
+ * просьба «Передать подрядчику» по заявке — передать или не передавать (с причиной). Открыли — «прочитано».
+ */
 export default function ReportsScreen() {
   const query = useFocusQuery(
     async () => {
@@ -42,7 +46,8 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const open = m.status === 'new' || m.status === 'read';
 
-  async function act(action: 'request' | 'reject') {
+  const ask = m.about_request != null;
+  async function act(action: 'request' | 'reject' | 'contractor') {
     setBusy(true);
     setErr(null);
     try {
@@ -61,11 +66,23 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
       <Text style={styles.meta}>
         {m.author} · {formatStoreTime(m.created_at)}
       </Text>
-      <Text style={styles.text}>{m.text}</Text>
+      {ask ? (
+        <Text
+          style={styles.ask}
+          onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(m.about_request), number: m.about_number ?? '' } })}
+        >
+          Просит передать подрядчику {requestLabel(m.about_number)} →
+        </Text>
+      ) : null}
+      <Text style={styles.text}>{ask ? `Причина: ${m.text}` : m.text}</Text>
       <PhotoStrip photos={m.photos as unknown as RemotePhoto[]} />
       {!open ? (
         <Text style={[styles.status, m.status === 'rejected' && styles.bad]}>
-          {m.status === 'request' && m.request_number ? `Создана заявка ${requestLabel(m.request_number)}` : reportStatusText[m.status]}
+          {m.status === 'request' && m.request_number
+            ? `Создана заявка ${requestLabel(m.request_number)}`
+            : m.status === 'contractor'
+              ? `${requestLabel(m.about_number)} передана подрядчику`
+              : reportStatusText[m.status]}
           {m.answer ? ` · ${m.answer}` : ''}
         </Text>
       ) : mode === 'request' ? (
@@ -77,8 +94,13 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
       ) : mode === 'reject' ? (
         <View style={styles.card}>
           <Field label="Причина — её увидит мастер" value={reason} onChangeText={setReason} multiline placeholder="Например: уже передали подрядчику" />
-          <BigButton title="Отклонить" variant="danger" loading={busy} disabled={reason.trim().length < 3} onPress={() => act('reject')} />
+          <BigButton title={ask ? 'Не передавать' : 'Отклонить'} variant="danger" loading={busy} disabled={reason.trim().length < 3} onPress={() => act('reject')} />
           <BigButton title="Отмена" variant="secondary" onPress={() => setMode(null)} />
+        </View>
+      ) : ask ? (
+        <View style={styles.card}>
+          <BigButton title="Передать подрядчику" loading={busy} onPress={() => act('contractor')} />
+          <BigButton title="Не передавать" size="small" variant="secondary" onPress={() => setMode('reject')} />
         </View>
       ) : (
         <View style={styles.row}>
@@ -96,11 +118,12 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 8 },
-  open: { borderWidth: 2, borderColor: colors.brand },
-  row: { flexDirection: 'row', gap: 8 },
+  card: { gap: space.s8 },
+  open: { borderWidth: stroke.outline, borderColor: colors.brand },
+  row: { flexDirection: 'row', gap: space.s8 },
   flex: { flex: 1 },
   text: { fontSize: font.body },
+  ask: { fontSize: font.body, fontWeight: '700', color: colors.violet },
   meta: { fontSize: font.small, color: colors.muted },
   status: { fontSize: font.small, fontWeight: '800', color: colors.success },
   bad: { color: colors.danger },

@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Keyboard, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text } from '../components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, font, radius } from '../theme';
+import { colors, font, lineHeight, radius, space, stroke, touch, tourShadow } from '../theme';
 import { useAuth } from './auth';
 import { TOURS, WHATS_NEW, type TourId, type WhatsNew } from './tours';
 
@@ -238,7 +239,7 @@ function TourOverlay({
           <Text style={styles.counter}>{counter}</Text>
           <Text style={styles.text}>{step.text}</Text>
           <View style={styles.buttons}>
-            <Pressable accessibilityRole="button" onPress={skip} style={styles.skip} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={skip} style={styles.skip} hitSlop={space.s8}>
               <Text style={styles.skipText}>Пропустить</Text>
             </Pressable>
           </View>
@@ -257,7 +258,7 @@ function TourOverlay({
           <Text style={styles.counter}>{counter}</Text>
           <Text style={styles.text}>{step.text}</Text>
           <View style={styles.buttons}>
-            <Pressable accessibilityRole="button" onPress={skip} style={styles.skip} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={skip} style={styles.skip} hitSlop={space.s8}>
               <Text style={styles.skipText}>Пропустить</Text>
             </Pressable>
           </View>
@@ -288,7 +289,7 @@ function TourOverlay({
         <Text style={styles.counter}>{counter}</Text>
         <Text style={styles.text}>{step.text}</Text>
         <View style={styles.buttons}>
-          <Pressable accessibilityRole="button" onPress={skip} style={styles.skip} hitSlop={8}>
+          <Pressable accessibilityRole="button" onPress={skip} style={styles.skip} hitSlop={space.s8}>
             <Text style={styles.skipText}>Пропустить</Text>
           </Pressable>
           {step.kind === 'next' ? (
@@ -331,62 +332,56 @@ function WhatsNewModal({ entry, role, onClose }: { entry: WhatsNew | null; role:
 }
 
 const styles = StyleSheet.create({
-  dim: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.62)' },
+  dim: { position: 'absolute', backgroundColor: colors.overlayStrong },
   frame: {
     position: 'absolute',
     borderRadius: radius.control,
-    borderWidth: 3,
+    borderWidth: stroke.outline,
     borderColor: colors.brand,
   },
   tip: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: space.s12,
+    right: space.s12,
     backgroundColor: colors.card,
     borderRadius: radius.card,
-    padding: 14,
-    gap: 8,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    padding: space.s14,
+    gap: space.s8,
+    ...tourShadow,
+    shadowColor: colors.black,
   },
   pill: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: space.s12,
+    right: space.s12,
     backgroundColor: colors.card,
     borderRadius: radius.card,
-    borderWidth: 2,
+    borderWidth: stroke.outline,
     borderColor: colors.brand,
-    padding: 12,
-    gap: 6,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    padding: space.s12,
+    gap: space.s6,
+    ...tourShadow,
+    shadowColor: colors.black,
   },
-  counter: { fontSize: font.small - 1, color: colors.muted, fontWeight: '600' },
+  counter: { fontSize: font.caption, color: colors.muted, fontWeight: '600' },
   text: {
     fontSize: font.body,
-    lineHeight: font.body * 1.35,
+    lineHeight: lineHeight.body,
     color: colors.black,
   },
   buttons: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: space.s12,
   },
-  skip: { paddingVertical: 10, paddingHorizontal: 4 },
+  skip: { paddingVertical: space.s10, paddingHorizontal: space.s4 },
   skipText: { fontSize: font.body, color: colors.muted, fontWeight: '600' },
   nextBtn: {
     backgroundColor: colors.brand,
     borderRadius: radius.control,
-    paddingHorizontal: 22,
-    minHeight: 44,
+    paddingHorizontal: space.s20,
+    minHeight: touch.icon,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -394,19 +389,19 @@ const styles = StyleSheet.create({
   tapHint: { fontSize: font.small, fontWeight: '700', color: colors.black },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: colors.overlayStrong,
     justifyContent: 'center',
-    padding: 20,
+    padding: space.s20,
   },
   newsCard: {
     backgroundColor: colors.card,
     borderRadius: radius.card,
-    padding: 18,
-    gap: 10,
+    padding: space.s18,
+    gap: space.s10,
   },
   newsTitle: { fontSize: font.title, fontWeight: '800' },
-  newsRow: { flexDirection: 'row', gap: 8 },
+  newsRow: { flexDirection: 'row', gap: space.s8 },
   newsDot: { fontSize: font.body, fontWeight: '800', color: colors.black },
-  newsText: { flex: 1, fontSize: font.body, lineHeight: font.body * 1.35 },
-  newsBtn: { marginTop: 6, alignSelf: 'stretch' },
+  newsText: { flex: 1, fontSize: font.body, lineHeight: lineHeight.body },
+  newsBtn: { marginTop: space.s6, alignSelf: 'stretch' },
 });

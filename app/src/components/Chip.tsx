@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, font, radius, touch } from '../theme';
+import { Pressable, StyleSheet } from 'react-native';
+import { Text } from './Text';
+import { colors, font, opacity, radius, space, stroke, touch } from '../theme';
 
 type Props = { label: string; selected?: boolean; onPress: () => void; /** Картинка слева, например значок сотрудника. */ left?: ReactNode };
 
@@ -10,8 +11,8 @@ export function Chip({ label, selected, onPress, left }: Props) {
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      hitSlop={6}
-      style={({ pressed }) => [styles.chip, left ? styles.withLeft : null, selected && styles.selected, pressed && { opacity: 0.7 }]}
+      hitSlop={space.s6}
+      style={({ pressed }) => [styles.chip, left ? styles.withLeft : null, selected && styles.selected, pressed && { opacity: opacity.pressed }]}
     >
       {left}
       <Text style={[styles.text, selected && styles.selectedText]}>{label}</Text>
@@ -22,15 +23,15 @@ export function Chip({ label, selected, onPress, left }: Props) {
 const styles = StyleSheet.create({
   chip: {
     minHeight: touch.small,
-    paddingHorizontal: 14,
+    paddingHorizontal: space.s14,
     borderRadius: radius.chip,
-    borderWidth: 1,
+    borderWidth: stroke.hair,
     borderColor: colors.border,
     backgroundColor: colors.card,
     justifyContent: 'center',
   },
-  withLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 4 },
+  withLeft: { flexDirection: 'row', alignItems: 'center', gap: space.s6, paddingLeft: space.s4 },
   selected: { backgroundColor: colors.brand, borderColor: colors.brand },
-  text: { fontSize: font.small + 1 },
+  text: { fontSize: font.small },
   selectedText: { fontWeight: '700' },
 });

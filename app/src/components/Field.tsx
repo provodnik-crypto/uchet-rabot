@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, font, radius, touch } from '../theme';
+import { StyleSheet, View, type TextInputProps } from 'react-native';
+import { Text, TextInput } from './Text';
+import { colors, font, radius, space, stroke, touch } from '../theme';
 
 type Props = TextInputProps & { label: string; error?: string | null; hint?: string };
 
@@ -20,15 +21,15 @@ export const Field = forwardRef<TextInput, Props>(function Field({ label, error,
 });
 
 const styles = StyleSheet.create({
-  wrap: { gap: 4 },
-  label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
+  wrap: { gap: space.s4 },
+  label: { fontSize: font.small, fontWeight: '600', color: colors.secondary },
   input: {
     minHeight: touch.min,
     backgroundColor: colors.card,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
+    borderRadius: radius.small,
+    borderWidth: stroke.hair,
+    borderColor: colors.field,
+    paddingHorizontal: space.s12,
     fontSize: font.body,
     color: colors.text,
   },

@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { AccountForm } from '../../../components/AccountForm';
 import { Avatar } from '../../../components/Avatar';
 import { BigButton } from '../../../components/BigButton';
@@ -16,7 +17,7 @@ import { passwordError } from '../../../lib/password';
 import { refreshEmployeeIcons, useEmployeeIcons } from '../../../lib/employeeIcons';
 import { TOOL_ICONS } from '../../../lib/toolIcons';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font } from '../../../theme';
+import { colors, font, radius, size, space, stroke } from '../../../theme';
 
 export default function EmployeeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -70,7 +71,7 @@ export default function EmployeeScreen() {
     <Screen>
       <Stack.Screen options={{ title: emp.display_name }} />
       <Card style={styles.card}>
-        <Avatar name={emp.display_name} icon={icons[emp.id]} size={96} />
+        <Avatar name={emp.display_name} icon={icons[emp.id]} size={size.avatarBig} />
         <Text style={styles.meta}>
           {roleLabel[emp.role]} · {emp.is_active ? 'активен' : 'отключён'}
         </Text>
@@ -113,7 +114,7 @@ export default function EmployeeScreen() {
                   }
                   style={[styles.iconCell, t.id === emp.icon && styles.iconSelected]}
                 >
-                  <Avatar name={t.name} icon={t.id} size={44} />
+                  <Avatar name={t.name} icon={t.id} size={size.avatar} />
                 </Pressable>
               ))}
             </View>
@@ -185,11 +186,11 @@ export default function EmployeeScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: space.s12 },
   meta: { color: colors.muted, fontSize: font.small },
   h: { fontSize: font.body, fontWeight: '700' },
   msg: { fontSize: font.body },
-  icons: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  iconCell: { padding: 3, borderRadius: 30, borderWidth: 3, borderColor: 'transparent' },
+  icons: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s6 },
+  iconCell: { padding: space.s2, borderRadius: radius.round, borderWidth: stroke.outline, borderColor: 'transparent' },
   iconSelected: { borderColor: colors.black },
 });

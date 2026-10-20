@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from './Text';
 import { useAuth } from '../lib/auth';
 import { confirm } from '../lib/confirm';
 import { humanError } from '../lib/errors';
 import { addRequestComment, deleteRequestComment, editRequestComment, eventText, formatStoreTime, type RequestEvent } from '../lib/requests';
 import { TourTarget, useScrollBy } from '../lib/tour';
-import { colors, font, radius } from '../theme';
+import { colors, font, letterSpacing, lineHeight, opacity, radius, space, stroke, touch } from '../theme';
+import { ActionSheet, type SheetAction } from './ActionSheet';
 import { Card } from './Card';
 import { keepAboveKeyboard } from './Screen';
 
 /** Поле растёт до 6 строк, дальше — прокрутка внутри поля. */
-const LINE = 20;
+const LINE = lineHeight.list;
 const MAX_LINES = 6;
 
 /**
@@ -86,26 +88,24 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
   }
 
   /** Нажатие на сообщение: своё — исправить или удалить, руководителю — удалить чужое. */
+  const [menuFor, setMenuFor] = useState<RequestEvent | null>(null);
   function openMenu(e: RequestEvent) {
-    if (!e.id || e.deleted) return;
-    const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [];
-    if (e.mine) buttons.push({ text: 'Изменить', onPress: () => startEdit(e) });
-    if (e.mine || manager) buttons.push({ text: 'Удалить', style: 'destructive', onPress: () => remove(e) });
-    if (!buttons.length) return;
-    buttons.push({ text: 'Отмена', style: 'cancel' });
-    if (Platform.OS === 'web') {
-      if (e.mine && window.confirm('Изменить сообщение? (Отмена — удалить)')) startEdit(e);
-      else remove(e);
-      return;
-    }
-    Alert.alert('Сообщение', e.comment ?? '', buttons);
+    if (!e.id || e.deleted || !(e.mine || manager)) return;
+    setMenuFor(e);
   }
+  const menuActions: SheetAction[] = menuFor
+    ? [
+        ...(menuFor.mine ? [{ label: 'Изменить', onPress: () => startEdit(menuFor) }] : []),
+        { label: 'Удалить', danger: true, onPress: () => remove(menuFor) },
+      ]
+    : [];
 
   const canSend = !busy && !!text.trim() && !(editing && text.trim() === (editing.comment ?? '').trim());
 
   return (
     <Card style={styles.card}>
-      <Text style={styles.label}>Сообщения и история</Text>
+      <ActionSheet visible={!!menuFor} title={menuFor?.comment ?? undefined} actions={menuActions} onClose={() => setMenuFor(null)} />
+      <Text style={styles.label}>СООБЩЕНИЯ</Text>
       {!list.length ? <Text style={styles.empty}>Пока пусто. Напишите, если нужно что-то уточнить.</Text> : null}
       {list.map((e, i) =>
         e.kind === 'comment' ? (
@@ -121,7 +121,7 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
               disabled={!e.id || !(e.mine || manager)}
               accessibilityRole={e.id && (e.mine || manager) ? 'button' : undefined}
               accessibilityHint={e.mine ? 'Исправить или удалить' : manager ? 'Удалить' : undefined}
-              style={({ pressed }) => [styles.bubble, e.mine ? styles.mine : styles.theirs, editing?.id === e.id && styles.editingBubble, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.bubble, e.mine ? styles.mine : styles.theirs, editing?.id === e.id && styles.editingBubble, pressed && { opacity: opacity.pressed }]}
             >
               <Text style={styles.author}>
                 {e.mine ? 'Вы' : e.author ?? '—'} · {formatStoreTime(e.at)}
@@ -146,7 +146,7 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
         {editing ? (
           <View style={styles.editBar}>
             <Text style={styles.editText}>Исправление сообщения</Text>
-            <Pressable accessibilityRole="button" hitSlop={12} onPress={cancelEdit}>
+            <Pressable accessibilityRole="button" hitSlop={space.s12} onPress={cancelEdit}>
               <Text style={styles.editCancel}>Отменить</Text>
             </Pressable>
           </View>
@@ -179,8 +179,8 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
               accessibilityLabel={editing ? 'Сохранить исправление' : 'Отправить сообщение'}
               disabled={!canSend}
               onPress={send}
-              hitSlop={6}
-              style={({ pressed }) => [styles.send, !canSend && styles.sendOff, pressed && { opacity: 0.7 }]}
+              hitSlop={space.s6}
+              style={({ pressed }) => [styles.send, !canSend && styles.sendOff, pressed && { opacity: opacity.pressed }]}
             >
               <Text style={styles.sendText}>{busy ? '…' : editing ? '✓' : '➤'}</Text>
             </Pressable>
@@ -189,7 +189,7 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
         {err ? (
           <View style={styles.errRow}>
             <Text style={styles.err}>Не отправлено: {err}</Text>
-            <Pressable accessibilityRole="button" hitSlop={10} onPress={send} disabled={busy} style={styles.retry}>
+            <Pressable accessibilityRole="button" hitSlop={space.s10} onPress={send} disabled={busy} style={styles.retry}>
               <Text style={styles.retryText}>Повторить</Text>
             </Pressable>
           </View>
@@ -201,41 +201,47 @@ export function RequestFeed({ requestId, events, onSent }: { requestId: number; 
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 8 },
-  label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  empty: { fontSize: font.small, color: colors.muted },
-  bubble: { borderRadius: radius.card, paddingHorizontal: 12, paddingVertical: 8, maxWidth: '88%', gap: 2 },
-  mine: { alignSelf: 'flex-end', backgroundColor: '#FFF3C4' },
-  theirs: { alignSelf: 'flex-start', backgroundColor: colors.bg },
-  editingBubble: { borderWidth: 2, borderColor: colors.black },
-  author: { fontSize: font.small - 1, fontWeight: '700', color: colors.secondary },
-  text: { fontSize: font.body },
-  event: { fontSize: font.small - 1, color: colors.muted, textAlign: 'center' },
+  card: { gap: space.s10, paddingHorizontal: space.s18 },
+  label: { fontSize: font.caption, fontWeight: '700', letterSpacing: letterSpacing.caps },
+  empty: { fontSize: font.small, color: colors.secondary },
+  bubble: {
+    borderRadius: radius.control,
+    paddingHorizontal: space.s12,
+    paddingVertical: space.s10,
+    maxWidth: '85%',
+    gap: space.s2,
+  },
+  mine: { alignSelf: 'flex-end', backgroundColor: colors.note, borderBottomRightRadius: radius.tiny },
+  theirs: { alignSelf: 'flex-start', backgroundColor: colors.bg, borderBottomLeftRadius: radius.tiny },
+  editingBubble: { borderWidth: stroke.outline, borderColor: colors.black },
+  author: { fontSize: font.caption, color: colors.secondary },
+  text: { fontSize: font.list, lineHeight: lineHeight.list },
+  event: { fontSize: font.caption, color: colors.secondary, textAlign: 'center' },
   deleted: { fontStyle: 'italic' },
-  composer: { gap: 6, marginTop: 4 },
-  editBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bg, borderRadius: radius.control, paddingHorizontal: 10, paddingVertical: 6 },
+  composer: { gap: space.s6, marginTop: space.s4 },
+  editBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bg, borderRadius: radius.control, paddingHorizontal: space.s10, paddingVertical: space.s6 },
   editText: { fontSize: font.small, fontWeight: '700' },
   editCancel: { fontSize: font.small, fontWeight: '700', color: colors.danger },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.s8 },
   input: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: LINE * MAX_LINES + 20,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.control,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: touch.min,
+    maxHeight: LINE * MAX_LINES + space.s20,
+    borderWidth: stroke.hair,
+    borderColor: colors.field,
+    borderRadius: radius.small,
+    paddingHorizontal: space.s12,
+    paddingVertical: space.s10,
     fontSize: font.body,
     lineHeight: LINE,
     backgroundColor: colors.card,
   },
-  send: { width: 48, height: 44, borderRadius: radius.control, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
-  sendOff: { opacity: 0.4 },
-  sendText: { fontSize: 20, fontWeight: '800' },
-  hint: { fontSize: font.small - 2, color: colors.muted },
-  errRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  send: { width: touch.min, height: touch.min, borderRadius: radius.control, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
+  sendOff: { opacity: opacity.disabled },
+  sendText: { fontSize: font.number, fontWeight: '700' },
+  hint: { fontSize: font.caption, color: colors.secondary },
+  errRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   err: { flex: 1, color: colors.danger, fontSize: font.small },
-  retry: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.control, borderWidth: 1.5, borderColor: colors.black },
-  retryText: { fontSize: font.small, fontWeight: '800' },
+  retry: { paddingHorizontal: space.s12, paddingVertical: space.s8, borderRadius: radius.control, borderWidth: stroke.outline, borderColor: colors.black },
+  retryText: { fontSize: font.small, fontWeight: '700' },
 });

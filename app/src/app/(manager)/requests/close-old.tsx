@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -11,7 +12,7 @@ import { formatDate, maskDateInput, parseDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { closeOldRequests, formatRegistered, oldOpenRequests, type OldRequest, requestLabel } from '../../../lib/requests';
 import { storeToday } from '../../../lib/today';
-import { colors, font } from '../../../theme';
+import { colors, font, space, stroke } from '../../../theme';
 
 /** Дата на n дней раньше сегодняшней (по Тюмени), ГГГГ-ММ-ДД. */
 function daysAgo(n: number): string {
@@ -125,15 +126,15 @@ export default function CloseOldScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: space.s10 },
   h: { fontSize: font.body, fontWeight: '700' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s6 },
   meta: { fontSize: font.small, color: colors.secondary },
   err: { color: colors.danger, fontSize: font.body },
-  section: { fontSize: font.small, fontWeight: '700', color: colors.secondary, marginBottom: -4 },
-  row: { gap: 3 },
+  section: { fontSize: font.small, fontWeight: '700', color: colors.secondary, marginBottom: -space.s4 },
+  row: { gap: space.s2 },
   number: { fontSize: font.body, fontWeight: '800' },
   desc: { fontSize: font.body },
-  done: { gap: 4, borderWidth: 2, borderColor: colors.success },
+  done: { gap: space.s4, borderWidth: stroke.outline, borderColor: colors.success },
   doneText: { fontSize: font.title, fontWeight: '800', color: colors.success },
 });

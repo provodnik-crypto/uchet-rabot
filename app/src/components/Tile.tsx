@@ -1,5 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, font, touch } from '../theme';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
+import { colors, font, iconSize, opacity, radius, size, space, touch } from '../theme';
 import { Card } from './Card';
 import { Icon } from './Icon';
 
@@ -19,17 +20,17 @@ export function Tile({ title, subtitle, badge, onPress, soon }: Props) {
           <Text style={styles.badgeText}>{badge}</Text>
         </View>
       ) : null}
-      {soon ? null : <Icon name="chevronRight" size={16} color={colors.muted} strokeWidth={2.4} />}
+      {soon ? null : <Icon name="chevronRight" size={iconSize.small} color={colors.muted} />}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  tile: { minHeight: touch.big, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  soon: { opacity: 0.5 },
-  text: { flex: 1, gap: 2 },
+  tile: { minHeight: touch.big, flexDirection: 'row', alignItems: 'center', gap: space.s10 },
+  soon: { opacity: opacity.disabled },
+  text: { flex: 1, gap: space.s2 },
   title: { fontSize: font.body, fontWeight: '700' },
   subtitle: { fontSize: font.small, color: colors.secondary },
-  badge: { minWidth: 24, height: 24, borderRadius: 12, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  badge: { minWidth: size.badge, height: size.badge, borderRadius: radius.control, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.s6 },
   badgeText: { fontWeight: '800', fontSize: font.small },
 });

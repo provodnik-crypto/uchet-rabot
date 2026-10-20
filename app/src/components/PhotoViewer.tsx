@@ -1,20 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  FlatList,
-  Image,
-  Modal,
-  PanResponder,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type GestureResponderEvent,
-} from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, FlatList, Image, Modal, PanResponder, Pressable, StyleSheet, View, type GestureResponderEvent } from 'react-native';
+import { Text } from './Text';
 import { signedUrls } from '../lib/workPhotos';
-import { font } from '../theme';
+import { colors, font, radius, space, touch } from '../theme';
 
 /** Что показывать: локальный файл (до отправки) или путь в хранилище. */
 export type ViewerPhoto = { uri?: string; path?: string };
@@ -56,7 +44,7 @@ export function PhotoViewer({ photos, index, visible, onClose }: Props) {
             const uri = item.uri ?? (item.path ? urls[item.path] : undefined);
             return (
               <View style={{ width, height }}>
-                {uri ? <ZoomableImage uri={uri} width={width} height={height} onZoom={setZoomed} /> : <ActivityIndicator color="#fff" style={styles.center} />}
+                {uri ? <ZoomableImage uri={uri} width={width} height={height} onZoom={setZoomed} /> : <ActivityIndicator color={colors.white} style={styles.center} />}
               </View>
             );
           }}
@@ -65,7 +53,7 @@ export function PhotoViewer({ photos, index, visible, onClose }: Props) {
           <Text style={styles.counter}>
             {current + 1} / {photos.length}
           </Text>
-          <Pressable onPress={onClose} style={styles.close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Закрыть">
+          <Pressable onPress={onClose} style={styles.close} hitSlop={space.s12} accessibilityRole="button" accessibilityLabel="Закрыть">
             <Text style={styles.closeText}>✕</Text>
           </Pressable>
         </View>
@@ -162,12 +150,12 @@ function ZoomableImage({ uri, width, height, onZoom }: { uri: string; width: num
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#000' },
+  bg: { flex: 1, backgroundColor: colors.black },
   center: { flex: 1 },
-  top: { position: 'absolute', top: 40, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16 },
-  counter: { color: '#fff', fontSize: font.body, fontWeight: '700' },
-  close: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  closeText: { color: '#fff', fontSize: 24, fontWeight: '700' },
-  hint: { position: 'absolute', bottom: 28, left: 16, right: 16, color: 'rgba(255,255,255,0.7)', textAlign: 'center', fontSize: font.small },
-  error: { position: 'absolute', top: 100, left: 16, right: 16, color: '#FF8A80', textAlign: 'center', fontSize: font.body },
+  top: { position: 'absolute', top: touch.small, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.s16 },
+  counter: { color: colors.white, fontSize: font.body, fontWeight: '700' },
+  close: { width: touch.min, height: touch.min, borderRadius: radius.round, backgroundColor: colors.onPhotoGlass, alignItems: 'center', justifyContent: 'center' },
+  closeText: { color: colors.white, fontSize: font.h1, fontWeight: '700' },
+  hint: { position: 'absolute', bottom: space.s24, left: space.s16, right: space.s16, color: colors.onPhotoText, textAlign: 'center', fontSize: font.small },
+  error: { position: 'absolute', top: space.s32, left: space.s16, right: space.s16, color: colors.errorOnDark, textAlign: 'center', fontSize: font.body },
 });

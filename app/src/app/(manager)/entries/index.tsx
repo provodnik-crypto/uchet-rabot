@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from 'expo-router';
 import { requestLabel } from '../../../lib/requests';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { Avatar } from '../../../components/Avatar';
 import { Card } from '../../../components/Card';
 import { FilterSelect } from '../../../components/FilterSelect';
@@ -24,11 +25,11 @@ import {
 import { formatKop } from '../../../lib/money';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { formatQuantity, statusLabel } from '../../../lib/shift';
-import { colors, font } from '../../../theme';
+import { colors, font, radius, size, space } from '../../../theme';
 
 const STATUSES: EntryStatus[] = ['priced', 'awaiting', 'pending', 'rejected'];
-const pill = StyleSheet.create({ priced: { backgroundColor: '#E0EDE9' }, pending: { backgroundColor: '#FFF3C4' }, rejected: { backgroundColor: '#F7DCD5' }, awaiting: { backgroundColor: '#E8E4F3' } });
-const dot = StyleSheet.create({ priced: { backgroundColor: colors.success }, pending: { backgroundColor: '#BE9200' }, rejected: { backgroundColor: colors.danger }, awaiting: { backgroundColor: '#5E35B1' } });
+const pill = StyleSheet.create({ priced: { backgroundColor: colors.successBg }, pending: { backgroundColor: colors.note }, rejected: { backgroundColor: colors.dangerBg }, awaiting: { backgroundColor: colors.violetBg } });
+const dot = StyleSheet.create({ priced: { backgroundColor: colors.success }, pending: { backgroundColor: colors.brandDark }, rejected: { backgroundColor: colors.danger }, awaiting: { backgroundColor: colors.violet } });
 
 export default function EntriesScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');
@@ -116,7 +117,7 @@ export default function EntriesScreen() {
                 allLabel="Все сотрудники"
                 value={filters.employeeId}
                 onChange={(v) => set({ employeeId: v })}
-                options={people.map((p) => ({ value: p.id, label: p.display_name, left: <Avatar name={p.display_name} icon={icons[p.id]} size={32} /> }))}
+                options={people.map((p) => ({ value: p.id, label: p.display_name, left: <Avatar name={p.display_name} icon={icons[p.id]} size={size.avatarSmall} /> }))}
               />
               <FilterSelect
                 label="Магазин"
@@ -175,26 +176,26 @@ export default function EntriesScreen() {
           </Card>
         )}
         ListEmptyComponent={!loading && !error ? <Text style={styles.count}>Нет работ по этим условиям</Text> : null}
-        ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: 16 }} /> : null}
+        ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: space.s16 }} /> : null}
       />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, paddingTop: 12, gap: 6, paddingBottom: 32 },
-  header: { gap: 8, marginBottom: 2 },
-  filtersBox: { marginHorizontal: -16 },
-  filters: { gap: 6, paddingHorizontal: 16, paddingVertical: 2 },
-  count: { color: colors.secondary, fontSize: font.small - 1, paddingHorizontal: 2 },
-  card: { gap: 5, paddingVertical: 10 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
+  content: { padding: space.s16, paddingTop: space.s12, gap: space.s6, paddingBottom: space.s32 },
+  header: { gap: space.s8, marginBottom: space.s2 },
+  filtersBox: { marginHorizontal: -space.s16 },
+  filters: { gap: space.s6, paddingHorizontal: space.s16, paddingVertical: space.s2 },
+  count: { color: colors.secondary, fontSize: font.caption, paddingHorizontal: space.s2 },
+  card: { gap: space.s4, paddingVertical: space.s10 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.s10 },
   name: { flex: 1, fontSize: font.body, fontWeight: '600' },
   sum: { fontSize: font.body, fontWeight: '700' },
   meta: { flex: 1, fontSize: font.small, color: colors.secondary },
   qty: { fontSize: font.small, color: colors.secondary },
   people: { flex: 1, fontSize: font.small },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 22, paddingHorizontal: 8, borderRadius: 11 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  pillText: { fontSize: font.small - 1, fontWeight: '600', color: colors.text },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: space.s4, height: size.tag, paddingHorizontal: space.s8, borderRadius: radius.small },
+  dot: { width: size.dotSmall, height: size.dotSmall, borderRadius: radius.tiny },
+  pillText: { fontSize: font.caption, fontWeight: '600', color: colors.text },
 });

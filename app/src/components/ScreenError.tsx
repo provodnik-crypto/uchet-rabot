@@ -1,7 +1,8 @@
 import type { ErrorBoundaryProps } from 'expo-router';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, font } from '../theme';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
+import { colors, font, space } from '../theme';
 import { BigButton } from './BigButton';
 import { reportError } from '../lib/errorLog';
 import { useEffect } from 'react';
@@ -28,8 +29,8 @@ export function ScreenError({ error, retry }: ErrorBoundaryProps) {
 }
 
 const styles = StyleSheet.create({
-  box: { flex: 1, padding: 24, gap: 14, justifyContent: 'center', backgroundColor: colors.bg },
+  box: { flex: 1, padding: space.s24, gap: space.s14, justifyContent: 'center', backgroundColor: colors.bg },
   title: { fontSize: font.title, fontWeight: '800' },
   text: { fontSize: font.body },
-  detail: { fontSize: font.small - 1, color: colors.muted },
+  detail: { fontSize: font.caption, color: colors.muted },
 });

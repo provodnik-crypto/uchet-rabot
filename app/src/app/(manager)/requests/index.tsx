@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { humanError } from '../../../lib/errors';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -16,7 +17,7 @@ import { useFocusQuery } from '../../../lib/useQuery';
 import { FilterSelect } from '../../../components/FilterSelect';
 import { RequestBadges } from '../../../components/RequestBadges';
 import { TourTarget } from '../../../lib/tour';
-import { colors, font } from '../../../theme';
+import { colors, font, opacity, radius, space, stroke, touch } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
 
 export default function RequestsScreen() {
@@ -66,7 +67,7 @@ export default function RequestsScreen() {
                   accessibilityRole="button"
                   disabled={!m.request_id}
                   onPress={() => m.request_id && router.push({ pathname: '/requests/[id]', params: { id: String(m.request_id), number: m.number ?? '' } })}
-                  style={({ pressed }) => [styles.nowRow, pressed && { opacity: 0.6 }]}
+                  style={({ pressed }) => [styles.nowRow, pressed && { opacity: opacity.pressed }]}
                 >
                   <Text style={styles.nowName}>{m.display_name}</Text>
                   {m.request_id ? (
@@ -137,11 +138,11 @@ export default function RequestsScreen() {
       <Card style={styles.limit}>
         <Text style={styles.limitText}>Подсвечивать, если в работе дольше</Text>
         <View style={styles.limitRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Меньше на день" hitSlop={8} style={styles.limitBtn} onPress={() => changeLimit(-1)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Меньше на день" hitSlop={space.s8} style={styles.limitBtn} onPress={() => changeLimit(-1)}>
             <Text style={styles.limitBtnText}>−</Text>
           </Pressable>
           <Text style={styles.limitValue}>{limit} раб. дн.</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Больше на день" hitSlop={8} style={styles.limitBtn} onPress={() => changeLimit(1)}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Больше на день" hitSlop={space.s8} style={styles.limitBtn} onPress={() => changeLimit(1)}>
             <Text style={styles.limitBtnText}>+</Text>
           </Pressable>
         </View>
@@ -195,28 +196,28 @@ export default function RequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  over: { borderWidth: 3, borderColor: colors.danger },
+  over: { borderWidth: stroke.outline, borderColor: colors.danger },
   overText: { color: colors.danger, fontWeight: '800' },
   state: { fontSize: font.small, fontWeight: '800', color: colors.success },
-  open: { color: '#8A6500' },
-  card: { gap: 4 },
+  open: { color: colors.noteText },
+  card: { gap: space.s4 },
   number: { fontSize: font.body, fontWeight: '800' },
   subject: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.muted },
-  filters: { gap: 8, paddingVertical: 2 },
-  stale: { borderWidth: 3, borderColor: '#E65100' },
-  staleText: { color: '#E65100', fontWeight: '800' },
-  limit: { gap: 6 },
+  filters: { gap: space.s8, paddingVertical: space.s2 },
+  stale: { borderWidth: stroke.outline, borderColor: colors.noteText },
+  staleText: { color: colors.noteText, fontWeight: '800' },
+  limit: { gap: space.s6 },
   limitText: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  limitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  limitBtn: { width: 48, height: 40, borderRadius: 10, borderWidth: 2, borderColor: colors.black, alignItems: 'center', justifyContent: 'center' },
-  limitBtnText: { fontSize: 20, fontWeight: '800' },
+  limitRow: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
+  limitBtn: { width: touch.min, height: touch.small, borderRadius: radius.small, borderWidth: stroke.outline, borderColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  limitBtnText: { fontSize: font.number, fontWeight: '800' },
   limitValue: { flex: 1, textAlign: 'center', fontSize: font.body, fontWeight: '800' },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
-  now: { gap: 6 },
+  now: { gap: space.s6 },
   nowTitle: { fontSize: font.body, fontWeight: '800' },
-  nowRow: { paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.bg, gap: 2 },
+  nowRow: { paddingVertical: space.s6, borderTopWidth: stroke.hair, borderTopColor: colors.bg, gap: space.s2 },
   nowName: { fontSize: font.body, fontWeight: '700' },
   nowReq: { fontSize: font.small, fontWeight: '700' },
-  nowWarn: { fontSize: font.small, fontWeight: '700', color: '#E65100' },
+  nowWarn: { fontSize: font.small, fontWeight: '700', color: colors.noteText },
 });

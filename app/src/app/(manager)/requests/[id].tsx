@@ -1,6 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -26,7 +27,7 @@ import {
 import { listMasters } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { TourTarget } from '../../../lib/tour';
-import { colors, font, radius } from '../../../theme';
+import { colors, font, radius, space, stroke } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
 
 
@@ -253,12 +254,12 @@ const styles = StyleSheet.create({
   meta: { fontSize: font.small, color: colors.muted },
   body: { fontSize: font.body },
   closed: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
-  card: { gap: 12 },
-  pause: { gap: 8, padding: 12, borderRadius: radius.card, borderWidth: 2, borderColor: '#E65100', backgroundColor: '#FFF3E0' },
-  pauseTitle: { fontSize: font.body, fontWeight: '800', color: '#E65100' },
+  card: { gap: space.s12 },
+  pause: { gap: space.s8, padding: space.s12, borderRadius: radius.card, borderWidth: stroke.outline, borderColor: colors.noteText, backgroundColor: colors.note },
+  pauseTitle: { fontSize: font.body, fontWeight: '800', color: colors.noteText },
   h: { fontSize: font.body, fontWeight: '700' },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   hint: { fontSize: font.small, color: colors.muted },
   err: { color: colors.danger, fontSize: font.body },
 });

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from '../../components/Text';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { PeriodPicker } from '../../components/PeriodPicker';
@@ -8,7 +9,7 @@ import { humanError } from '../../lib/errors';
 import { exportExcel } from '../../lib/excel';
 import { presetPeriod, type PeriodPreset } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
-import { colors, font } from '../../theme';
+import { colors, font, space } from '../../theme';
 
 export default function ExportScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');
@@ -51,7 +52,7 @@ export default function ExportScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 6 },
+  card: { gap: space.s6 },
   h: { fontSize: font.body, fontWeight: '700' },
   item: { fontSize: font.small },
   meta: { fontSize: font.small, color: colors.muted },

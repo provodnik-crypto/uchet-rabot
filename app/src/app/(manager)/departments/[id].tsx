@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -9,7 +10,7 @@ import { StateView } from '../../../components/StateView';
 import { getDepartment, isWholeStore, setDefaultDepartment, updateDepartment } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font } from '../../../theme';
+import { colors, font, space } from '../../../theme';
 
 export default function DepartmentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -105,7 +106,7 @@ export default function DepartmentScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: space.s12 },
   meta: { color: colors.muted, fontSize: font.small },
   msg: { fontSize: font.body },
 });

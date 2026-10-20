@@ -103,9 +103,6 @@ export const lifecycleLabel: Record<LifecycleStatus, string> = {
 /** 1 — срочно … 4 — низкий. */
 export type Priority = 1 | 2 | 3 | 4;
 export const priorityLabel: Record<Priority, string> = { 1: 'Срочно', 2: 'Высокий', 3: 'Обычный', 4: 'Низкий' };
-/** Цвет метки приоритета (обычный не показываем). Подрядчик — отдельный фиолетовый, чтобы не путать. */
-export const priorityColor: Record<Priority, string> = { 1: '#C62828', 2: '#E65100', 3: '#595959', 4: '#757575' };
-export const CONTRACTOR_COLOR = '#5E35B1';
 
 export type OpenRequest = {
   id: number;
@@ -322,7 +319,7 @@ export const sendRequestForReviewPhotos = (id: number, comment: string | null, p
 export const startPlannedWork = (title: string, details: string | null) =>
   rpc<{ id: number; number: string }>('start_planned_work', { p_title: title, p_details: details });
 
-export type ReportStatus = 'new' | 'read' | 'request' | 'rejected';
+export type ReportStatus = 'new' | 'read' | 'request' | 'rejected' | 'contractor';
 export type MasterReport = {
   id: number;
   text: string;
@@ -332,6 +329,9 @@ export type MasterReport = {
   decided_at?: string | null;
   request_id: number | null;
   request_number: string | null;
+  /** Просьба «Передать подрядчику»: о какой заявке. */
+  about_request?: number | null;
+  about_number?: string | null;
   unseen?: boolean;
   author?: string;
   photos: { path: string; thumb_path: string }[];
@@ -341,12 +341,13 @@ export const reportStatusText: Record<ReportStatus, string> = {
   read: 'Руководитель прочитал',
   request: 'Создана заявка',
   rejected: 'Отклонено',
+  contractor: 'Заявку передали подрядчику',
 };
 export const createMasterReport = (text: string, photos: unknown[]) => rpc<number>('create_master_report', { p_text: text, p_photos: photos });
 export const myMasterReports = () => rpc<MasterReport[]>('my_master_reports');
 export const markMyReportsSeen = () => rpc<void>('mark_my_reports_seen').catch(() => {});
 export const listMasterReports = (open = true) => rpc<MasterReport[]>('list_master_reports', { p_open: open });
-export const decideMasterReport = (id: number, action: 'read' | 'reject' | 'request', comment: string | null = null, title: string | null = null) =>
+export const decideMasterReport = (id: number, action: 'read' | 'reject' | 'request' | 'contractor', comment: string | null = null, title: string | null = null) =>
   rpc<{ id: number; number: string } | null>('decide_master_report', { p_id: id, p_action: action, p_comment: comment, p_title: title });
 
 // ---------- Одна заявка в работе ----------
@@ -361,6 +362,8 @@ export function holdText(reason: HoldReason | null | undefined, holdNumber?: str
 export const requestPause = (id: number, reason: string) => rpc<void>('request_pause', { p_id: id, p_reason: reason });
 export const decidePause = (id: number, approve: boolean, comment: string | null) =>
   rpc<void>('decide_pause', { p_id: id, p_approve: approve, p_comment: comment });
+/** Мастер просит руководителя передать свою заявку подрядчику (уходит в «Сообщения от мастеров»). */
+export const requestContractor = (id: number, reason: string) => rpc<number>('request_contractor', { p_id: id, p_reason: reason });
 export const resumeRequest = (id: number) => rpc<void>('resume_request', { p_id: id });
 export type MasterNow = {
   employee_id: number;

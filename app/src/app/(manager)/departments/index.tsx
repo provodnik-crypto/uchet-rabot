@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -9,7 +10,7 @@ import { StateView } from '../../../components/StateView';
 import { addDepartment, isWholeStore, listDepartments } from '../../../lib/departments';
 import { humanError } from '../../../lib/errors';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font } from '../../../theme';
+import { colors, font, radius, space } from '../../../theme';
 
 export default function DepartmentsScreen() {
   const query = useFocusQuery(listDepartments, { key: 'departments' });
@@ -57,10 +58,10 @@ export default function DepartmentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: space.s12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name: { fontSize: font.body, fontWeight: '700' },
   off: { color: colors.muted, textDecorationLine: 'line-through' },
-  badge: { fontSize: font.small, fontWeight: '700', backgroundColor: colors.brand, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, overflow: 'hidden' },
-  sub: { fontSize: font.small, color: colors.muted, marginTop: 4 },
+  badge: { fontSize: font.small, fontWeight: '700', backgroundColor: colors.brand, paddingHorizontal: space.s10, paddingVertical: space.s4, borderRadius: radius.small, overflow: 'hidden' },
+  sub: { fontSize: font.small, color: colors.muted, marginTop: space.s4 },
 });

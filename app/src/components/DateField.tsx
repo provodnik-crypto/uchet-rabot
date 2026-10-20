@@ -3,6 +3,7 @@ import { formatDate, maskDateInput } from '../lib/dates';
 import { storeToday, storeYesterday } from '../lib/today';
 import { Chip } from './Chip';
 import { Field } from './Field';
+import { space } from '../theme';
 
 type Props = {
   label: string;
@@ -46,6 +47,6 @@ export function DateField({ label, value, onChange, error, hint, quick = true }:
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 6 },
-  chips: { flexDirection: 'row', gap: 8 },
+  wrap: { gap: space.s6 },
+  chips: { flexDirection: 'row', gap: space.s8 },
 });

@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, touch } from '../theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
+import { colors, font, radius, space, touch } from '../theme';
 
 type Props<T extends string> = { options: { value: T; label: string; a11y?: string }[]; value: T; onChange: (value: T) => void };
 
@@ -26,8 +27,8 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', gap: 2, padding: 3, backgroundColor: colors.card, borderRadius: radius.control },
-  item: { flex: 1, height: touch.small + 4, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  wrap: { flexDirection: 'row', gap: space.s2, padding: space.s2, backgroundColor: colors.card, borderRadius: radius.control },
+  item: { flex: 1, height: touch.small + 4, borderRadius: radius.small, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.s2 },
   on: { backgroundColor: colors.brand },
   text: { fontSize: font.small },
   textOn: { fontWeight: '700' },

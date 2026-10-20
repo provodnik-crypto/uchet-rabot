@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { signedUrls, type RemotePhoto } from '../lib/workPhotos';
-import { colors, font } from '../theme';
+import { colors, font, radius, size, space, stroke } from '../theme';
 import { PhotoViewer } from './PhotoViewer';
 
 /** Миниатюры уже отправленных фото; по нажатию — на весь экран. size="small" — одна миниатюра со счётчиком. */
@@ -52,7 +53,7 @@ export function PhotoBadge({ photos }: { photos: RemotePhoto[] | undefined }) {
   if (!photos?.length) return null;
   return (
     <>
-      <Pressable onPress={() => setViewer(0)} style={styles.pill} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Фото: ${photos.length}`}>
+      <Pressable onPress={() => setViewer(0)} style={styles.pill} hitSlop={space.s8} accessibilityRole="button" accessibilityLabel={`Фото: ${photos.length}`}>
         <Text style={styles.pillText}>📷 {photos.length}</Text>
       </Pressable>
       <PhotoViewer visible={viewer !== null} index={0} photos={photos.map((p) => ({ path: p.path }))} onClose={() => setViewer(null)} />
@@ -61,12 +62,12 @@ export function PhotoBadge({ photos }: { photos: RemotePhoto[] | undefined }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  img: { width: 96, height: 96, borderRadius: 12, backgroundColor: colors.border },
-  empty: { borderWidth: 2, borderColor: colors.border },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
+  img: { width: size.thumb, height: size.thumb, borderRadius: radius.control, backgroundColor: colors.border },
+  empty: { borderWidth: stroke.outline, borderColor: colors.border },
   small: { position: 'relative' },
-  smallImg: { width: 64, height: 64, borderRadius: 10, backgroundColor: colors.border },
-  badge: { position: 'absolute', right: -6, bottom: -6, backgroundColor: colors.black, color: '#fff', fontWeight: '800', fontSize: 13, minWidth: 24, textAlign: 'center', borderRadius: 12, paddingHorizontal: 6, overflow: 'hidden' },
-  pill: { alignSelf: 'flex-start', backgroundColor: colors.bg, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, marginTop: 4 },
+  smallImg: { width: size.thumbSmall, height: size.thumbSmall, borderRadius: radius.small, backgroundColor: colors.border },
+  badge: { position: 'absolute', right: -space.s6, bottom: -space.s6, backgroundColor: colors.black, color: colors.white, fontWeight: '800', fontSize: font.caption, minWidth: size.badge, textAlign: 'center', borderRadius: radius.control, paddingHorizontal: space.s6, overflow: 'hidden' },
+  pill: { alignSelf: 'flex-start', backgroundColor: colors.bg, borderRadius: radius.card, paddingHorizontal: space.s10, paddingVertical: space.s4, marginTop: space.s4 },
   pillText: { fontSize: font.small, fontWeight: '700' },
 });

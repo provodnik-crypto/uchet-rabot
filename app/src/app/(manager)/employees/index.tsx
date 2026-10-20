@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Screen } from '../../../components/Screen';
@@ -8,7 +9,7 @@ import { Avatar } from '../../../components/Avatar';
 import { listEmployees, roleLabel } from '../../../lib/employees';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font } from '../../../theme';
+import { colors, font, space, touch } from '../../../theme';
 
 export default function EmployeesScreen() {
   const query = useFocusQuery(listEmployees, { key: 'employees' });
@@ -21,7 +22,7 @@ export default function EmployeesScreen() {
       {data?.map((e) => (
         <Card key={e.id} onPress={() => router.push({ pathname: '/employees/[id]', params: { id: String(e.id) } })}>
           <View style={styles.person}>
-            <Avatar name={e.display_name} icon={icons[e.id]} size={52} />
+            <Avatar name={e.display_name} icon={icons[e.id]} size={touch.mid} />
             <View style={styles.flex}>
               <Text style={[styles.name, !e.is_active && styles.off]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                 {e.display_name}
@@ -45,10 +46,10 @@ export default function EmployeesScreen() {
 }
 
 const styles = StyleSheet.create({
-  person: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  person: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
   flex: { flex: 1 },
   name: { fontSize: font.body, fontWeight: '700' },
   off: { color: colors.muted, textDecorationLine: 'line-through' },
   role: { fontSize: font.small, color: colors.muted },
-  sub: { fontSize: font.small, color: colors.muted, marginTop: 4 },
+  sub: { fontSize: font.small, color: colors.muted, marginTop: space.s4 },
 });

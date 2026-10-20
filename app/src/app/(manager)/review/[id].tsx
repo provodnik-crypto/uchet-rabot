@@ -1,6 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -16,7 +17,7 @@ import { humanError } from '../../../lib/errors';
 import { acceptRequest, markRequestRead, requestCard, returnRequest, requestLabel } from '../../../lib/requests';
 import { formatQuantity } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font } from '../../../theme';
+import { colors, font, space } from '../../../theme';
 
 const workStatus = { priced: 'Цена есть', pending: 'Ждёт цены (На оценке)', rejected: 'Отклонена', awaiting: 'Цена есть' } as const;
 
@@ -114,11 +115,11 @@ const styles = StyleSheet.create({
   op: { fontSize: font.body, fontWeight: '700' },
   body: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.secondary },
-  card: { gap: 6 },
+  card: { gap: space.s6 },
   label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  row: { gap: 2, paddingTop: 4 },
+  row: { gap: space.s2, paddingTop: space.s4 },
   name: { fontSize: font.body, fontWeight: '600' },
-  warn: { color: '#BE9200', fontWeight: '700', fontSize: font.small },
+  warn: { color: colors.brandDark, fontWeight: '700', fontSize: font.small },
   err: { color: colors.danger, fontSize: font.body },
   event: { fontSize: font.small, color: colors.muted },
 });

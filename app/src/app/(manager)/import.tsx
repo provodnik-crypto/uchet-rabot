@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../../components/Text';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Chip } from '../../components/Chip';
@@ -10,7 +11,7 @@ import { formatDate, maskDateInput, parseDate } from '../../lib/dates';
 import { humanError } from '../../lib/errors';
 import { inWindow, recheckDescription, titleFromText, type ItsmFile, type ItsmRow } from '../../lib/itsm';
 import { formatRegistered, formatStoreTime, importApply, importContext, pickItsmFile, type ImportContext } from '../../lib/requests';
-import { colors, font, radius } from '../../theme';
+import { colors, font, radius, size, space, stroke } from '../../theme';
 
 type Result = { inserted: number; skipped: number; closed: number; outside: number; errors: number };
 
@@ -374,30 +375,30 @@ function Highlighted({ text, words }: { text: string; words: string[] }) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: space.s10 },
   h: { fontSize: font.body, fontWeight: '800' },
   body: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.muted },
   warn: { fontSize: font.small, color: colors.danger, fontWeight: '700' },
   err: { color: colors.danger, fontSize: font.body },
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  row: { flexDirection: 'row', gap: space.s8, flexWrap: 'wrap' },
   flex: { flex: 1 },
-  stat: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  stat: { flexDirection: 'row', justifyContent: 'space-between', gap: space.s8 },
   statValue: { fontSize: font.body, fontWeight: '800' },
-  outside: { gap: 8 },
-  missing: { gap: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+  outside: { gap: space.s8 },
+  missing: { gap: space.s6, borderTopWidth: stroke.hair, borderTopColor: colors.border, paddingTop: space.s10 },
   number: { fontSize: font.body, fontWeight: '800' },
   mark: { backgroundColor: colors.brand, fontWeight: '800' },
   edit: {
-    minHeight: 100,
-    borderWidth: 2,
+    minHeight: size.bigText,
+    borderWidth: stroke.outline,
     borderColor: colors.border,
     borderRadius: radius.control,
-    padding: 12,
+    padding: space.s12,
     fontSize: font.body,
     textAlignVertical: 'top',
     backgroundColor: colors.card,
   },
-  done: { gap: 6, borderWidth: 2, borderColor: colors.success },
+  done: { gap: space.s6, borderWidth: stroke.outline, borderColor: colors.success },
   doneTitle: { fontSize: font.title, fontWeight: '800', color: colors.success },
 });

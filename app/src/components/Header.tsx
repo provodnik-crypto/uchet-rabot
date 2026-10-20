@@ -1,11 +1,11 @@
-import { colors } from '../theme';
+import { colors, font, fontFiles } from '../theme';
 
 /** Общие настройки шапки внутри разделов. */
 export const stackHeader = {
   headerShown: true,
   headerStyle: { backgroundColor: colors.brand },
   headerTintColor: colors.black,
-  headerTitleStyle: { fontWeight: '700' as const, fontSize: 18 },
+  headerTitleStyle: { fontFamily: fontFiles.bold, fontSize: font.title },
   headerShadowVisible: false,
   headerBackTitle: 'Назад',
   contentStyle: { backgroundColor: colors.bg },

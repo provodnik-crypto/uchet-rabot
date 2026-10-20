@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
@@ -9,7 +10,7 @@ import { StateView } from '../../../components/StateView';
 import { humanError } from '../../../lib/errors';
 import { formatKop } from '../../../lib/money';
 import { adminPriceItems, PAGE_SIZE, priceFilterLabel, type AdminPriceItem, type PriceFilter } from '../../../lib/price';
-import { colors, font } from '../../../theme';
+import { colors, font, space, touch } from '../../../theme';
 
 const FILTERS: PriceFilter[] = ['active', 'inactive', 'material', 'all'];
 
@@ -110,7 +111,7 @@ export default function PriceScreen() {
             </View>
           </Card>
         )}
-        ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: 16 }} /> : null}
+        ListFooterComponent={loading ? <ActivityIndicator color={colors.black} style={{ margin: space.s16 }} /> : null}
         ListEmptyComponent={!loading && !error ? <Text style={styles.count}>Ничего не найдено</Text> : null}
       />
     </Screen>
@@ -118,15 +119,15 @@ export default function PriceScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 10, paddingBottom: 40 },
-  header: { gap: 12, marginBottom: 4 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  content: { padding: space.s16, gap: space.s10, paddingBottom: touch.small },
+  header: { gap: space.s12, marginBottom: space.s4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   count: { color: colors.muted, fontSize: font.small },
-  card: { gap: 4 },
+  card: { gap: space.s4 },
   name: { fontSize: font.body, fontWeight: '700' },
   off: { color: colors.muted },
   cat: { fontSize: font.small, color: colors.muted },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space.s4 },
   price: { fontSize: font.body, fontWeight: '600' },
   status: { fontSize: font.small, color: colors.muted },
 });

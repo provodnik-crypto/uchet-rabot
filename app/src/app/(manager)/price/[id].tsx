@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -13,7 +14,7 @@ import { humanError } from '../../../lib/errors';
 import { formatKop, parseRubToKop } from '../../../lib/money';
 import { getAdminPriceItem, listUnits, setPrice, updatePriceItem } from '../../../lib/price';
 import { useFocusQuery } from '../../../lib/useQuery';
-import { colors, font } from '../../../theme';
+import { colors, font, space } from '../../../theme';
 
 export default function PriceItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -171,14 +172,14 @@ export default function PriceItemScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: space.s12 },
   cat: { fontSize: font.small, color: colors.muted },
   full: { fontSize: font.body, fontWeight: '700' },
   meta: { color: colors.muted, fontSize: font.small },
   h: { fontSize: font.body, fontWeight: '700' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
   msg: { fontSize: font.body },
-  histRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  histRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.s8 },
   histDate: { fontSize: font.body, flex: 1 },
   histPrice: { fontSize: font.body, fontWeight: '600' },
 });

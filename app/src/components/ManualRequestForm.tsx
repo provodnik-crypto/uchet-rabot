@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { humanError } from '../lib/errors';
 import { stripContacts } from '../lib/itsm';
 import { createManualRequest } from '../lib/requests';
 import { listMasters } from '../lib/shift';
 import { useFocusQuery } from '../lib/useQuery';
-import { colors, font } from '../theme';
+import { colors, font, space } from '../theme';
 import { BigButton } from './BigButton';
 import { Card } from './Card';
 import { Chip } from './Chip';
@@ -70,9 +71,9 @@ export function ManualRequestForm({ manager, onCreated }: { manager: boolean; on
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: space.s10 },
   label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  hint: { fontSize: font.small - 1, color: colors.muted },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s6 },
+  hint: { fontSize: font.caption, color: colors.muted },
   err: { color: colors.danger, fontSize: font.body },
 });

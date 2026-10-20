@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { generatePassword } from '../lib/password';
 import { BigButton } from './BigButton';
 import { Field } from './Field';
+import { space } from '../theme';
 
 type Props = {
   login?: { value: string; onChange: (v: string) => void; error?: string | null };
@@ -40,4 +41,4 @@ export function AccountForm({ login, password, onPassword, passwordError }: Prop
   );
 }
 
-const styles = StyleSheet.create({ wrap: { gap: 12 } });
+const styles = StyleSheet.create({ wrap: { gap: space.s12 } });

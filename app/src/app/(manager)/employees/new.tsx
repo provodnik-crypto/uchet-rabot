@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { AccountForm } from '../../../components/AccountForm';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
@@ -11,7 +12,7 @@ import { adminUsers, initialError, nameError } from '../../../lib/employees';
 import { humanError } from '../../../lib/errors';
 import { loginError, normalizeLogin } from '../../../lib/login';
 import { passwordError } from '../../../lib/password';
-import { colors, font } from '../../../theme';
+import { colors, font, space } from '../../../theme';
 
 export default function NewEmployeeScreen() {
   const [name, setName] = useState('');
@@ -77,9 +78,9 @@ export default function NewEmployeeScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12 },
+  card: { gap: space.s12 },
   hint: { fontSize: font.small, color: colors.muted },
   label: { fontSize: font.small, fontWeight: '600', color: colors.muted },
-  chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  chips: { flexDirection: 'row', gap: space.s8, flexWrap: 'wrap' },
   error: { color: colors.danger, fontSize: font.body },
 });

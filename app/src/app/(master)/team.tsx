@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { PeriodPicker } from '../../components/PeriodPicker';
+import { AppHeader } from '../../components/AppHeader';
+import { BottomTabs } from '../../components/BottomTabs';
 import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
 import { useAuth } from '../../lib/auth';
@@ -11,7 +14,7 @@ import { formatKop } from '../../lib/money';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { teamByMonth, teamRating } from '../../lib/shift';
 import { useFocusQuery } from '../../lib/useQuery';
-import { colors, font } from '../../theme';
+import { colors, font, radius, size, space, stroke } from '../../theme';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -33,7 +36,7 @@ export default function TeamScreen() {
   const monthKeys = [...new Set(data?.months.map((m) => m.month) ?? [])];
 
   return (
-    <Screen status={query}>
+    <Screen status={query} tabs footer={<BottomTabs />} header={<AppHeader title="Команда" large />}>
       <PeriodPicker preset={preset} period={period} onChange={(p, per) => { setPreset(p); setPeriod(per); }} />
       {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
       {data ? (
@@ -45,7 +48,7 @@ export default function TeamScreen() {
               <Card key={r.employee_id} style={[styles.card, mine && styles.mine]}>
                 <View style={styles.row}>
                   <Text style={styles.place}>{r.total_kop > 0 ? (MEDALS[i] ?? `${i + 1}`) : '–'}</Text>
-                  <Avatar name={r.display_name} icon={icons[r.employee_id]} size={44} />
+                  <Avatar name={r.display_name} icon={icons[r.employee_id]} size={size.avatar} />
                   <View style={styles.flex}>
                     <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                       {r.display_name}
@@ -78,7 +81,7 @@ export default function TeamScreen() {
                     <Text style={styles.month}>{monthName(m)}</Text>
                     {rows.map((x) => (
                       <View key={x.employee_id} style={styles.monthRow}>
-                        <Avatar name={x.display_name} icon={icons[x.employee_id]} size={28} />
+                        <Avatar name={x.display_name} icon={icons[x.employee_id]} size={size.check} />
                         <View style={styles.flex}>
                           <View style={styles.row}>
                             <Text style={[styles.small, styles.flex, x.employee_id === me?.id && styles.bold]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
@@ -106,20 +109,20 @@ export default function TeamScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },
-  card: { gap: 8 },
-  mine: { borderWidth: 2, borderColor: colors.brand },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  place: { fontSize: font.title, width: 28, textAlign: 'center', fontWeight: '800' },
+  section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', marginTop: space.s8 },
+  card: { gap: space.s8 },
+  mine: { borderWidth: stroke.outline, borderColor: colors.brand },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
+  place: { fontSize: font.title, width: size.check, textAlign: 'center', fontWeight: '800' },
   flex: { flex: 1 },
   name: { fontSize: font.body, fontWeight: '700' },
-  sum: { fontSize: font.title, fontWeight: '800', marginTop: 2 },
+  sum: { fontSize: font.title, fontWeight: '800', marginTop: space.s2 },
   meta: { fontSize: font.small, color: colors.muted },
-  barBg: { height: 10, backgroundColor: colors.bg, borderRadius: 5, overflow: 'hidden' },
-  barBgThin: { height: 6, backgroundColor: colors.bg, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
-  bar: { height: '100%', backgroundColor: colors.brand, borderRadius: 5 },
+  barBg: { height: size.dot, backgroundColor: colors.bg, borderRadius: radius.tiny, overflow: 'hidden' },
+  barBgThin: { height: size.barThin, backgroundColor: colors.bg, borderRadius: radius.tiny, overflow: 'hidden', marginTop: space.s4 },
+  bar: { height: '100%', backgroundColor: colors.brand, borderRadius: radius.tiny },
   month: { fontSize: font.body, fontWeight: '700', textTransform: 'capitalize' },
-  monthRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  monthRow: { flexDirection: 'row', alignItems: 'center', gap: space.s10 },
   small: { fontSize: font.small },
   bold: { fontWeight: '800' },
 });

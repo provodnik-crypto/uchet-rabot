@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { PeriodPicker } from '../../components/PeriodPicker';
@@ -9,7 +10,7 @@ import { monthName, presetPeriod, reportByEmployee, reportByMonth, reportTotals,
 import { formatKop } from '../../lib/money';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { useFocusQuery } from '../../lib/useQuery';
-import { colors, font } from '../../theme';
+import { colors, font, radius, size, space } from '../../theme';
 
 export default function SummaryScreen() {
   const [preset, setPreset] = useState<PeriodPreset>('month');
@@ -47,7 +48,7 @@ export default function SummaryScreen() {
           {data.employees.map((e) => (
             <Card key={e.employee_id} style={styles.card}>
               <View style={styles.row}>
-                <Avatar name={e.display_name} icon={icons[e.employee_id]} size={44} />
+                <Avatar name={e.display_name} icon={icons[e.employee_id]} size={size.avatar} />
                 <View style={styles.flex}>
                   <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                     {e.display_name}
@@ -87,22 +88,22 @@ export default function SummaryScreen() {
 }
 
 const styles = StyleSheet.create({
-  total: { gap: 4, backgroundColor: colors.black },
-  totalLabel: { fontSize: font.small, color: '#BBBBBB' },
-  totalSum: { fontSize: 30, fontWeight: '800', color: colors.brand },
-  totalMeta: { fontSize: font.small, color: '#BBBBBB' },
-  warn: { fontSize: font.small, color: '#FFFFFF', fontWeight: '700' },
-  section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', marginTop: 8 },
-  card: { gap: 6 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  total: { gap: space.s4, backgroundColor: colors.black },
+  totalLabel: { fontSize: font.small, color: colors.onDarkMuted },
+  totalSum: { fontSize: font.sum, fontWeight: '800', color: colors.brand },
+  totalMeta: { fontSize: font.small, color: colors.onDarkMuted },
+  warn: { fontSize: font.small, color: colors.white, fontWeight: '700' },
+  section: { fontSize: font.small, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', marginTop: space.s8 },
+  card: { gap: space.s6 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space.s8 },
   name: { fontSize: font.body, fontWeight: '700' },
   flex: { flex: 1 },
   sum: { fontSize: font.body, fontWeight: '800' },
-  empSum: { fontSize: font.title, fontWeight: '800', marginTop: 2 },
+  empSum: { fontSize: font.title, fontWeight: '800', marginTop: space.s2 },
   meta: { fontSize: font.small, color: colors.muted },
-  barBg: { height: 10, backgroundColor: colors.bg, borderRadius: 5, overflow: 'hidden' },
-  bar: { height: 10, backgroundColor: colors.brand, borderRadius: 5 },
+  barBg: { height: size.dot, backgroundColor: colors.bg, borderRadius: radius.tiny, overflow: 'hidden' },
+  bar: { height: size.dot, backgroundColor: colors.brand, borderRadius: radius.tiny },
   barGrey: { backgroundColor: colors.border },
-  month: { gap: 6, backgroundColor: colors.card, borderRadius: 16, padding: 16 },
+  month: { gap: space.s6, backgroundColor: colors.card, borderRadius: radius.card, padding: space.s16 },
   monthName: { fontSize: font.body, fontWeight: '600' },
 });

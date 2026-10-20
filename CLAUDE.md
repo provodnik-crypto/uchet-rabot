@@ -92,6 +92,11 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
 * **Время выполнения не учитываем** (22.10.2026): ввода, плана и статистики нет. Архив (не показывать):
   `shift_requests.minutes`, `requests.plan_minutes`. Давность заявки — `request_work_days(taken_at)` (рабочие дни),
   порог `stores.stale_work_days` (`set_stale_work_days`). На проверку — только с работой.
+* **Вид** (24.10.2026, макеты): все цвета/размеры/отступы — только `app/src/theme.ts`; текст — `Text`/`TextInput` из
+  `components/Text.tsx` (шрифт LM Main по жирности). Статус заявки — `StatusPill` + `requestTone` (цвет + слово).
+  Мастер: нижнее меню `BottomTabs`, жёлтая шапка `AppHeader`, главная кнопка — `footer` у `Screen`, редкие действия —
+  `ActionSheet`. Руководитель — прежняя раскладка. «Передать подрядчику» мастера — просьба `request_contractor`
+  в `master_reports` (`about_request`), решает руководитель (`decide_master_report … 'contractor'`).
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
 * Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).
   После каждого обновления добавить запись в начало `WHATS_NEW` (тексты пишет Claude, заказчик проверяет).

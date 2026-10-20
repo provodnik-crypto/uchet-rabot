@@ -1,7 +1,8 @@
 import { type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, font, touch } from '../theme';
+import { colors, font, iconSize, radius, sheetHandle, space, stroke, touch } from '../theme';
 import { Icon } from './Icon';
 
 export type PickerOption<T> = { value: T; label: string; left?: ReactNode };
@@ -25,12 +26,12 @@ export function PickerSheet<T>({ visible, title, options, selected, onPick, onCl
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityLabel="Закрыть" onPress={onClose} />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + space.s12 }]}>
           <View style={styles.handle} />
           <View style={styles.head}>
             <Text style={styles.title}>{title}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Закрыть" onPress={onClose} style={styles.close}>
-              <Icon name="close" size={18} />
+              <Icon name="close" size={iconSize.medium} />
             </Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled">
@@ -46,7 +47,7 @@ export function PickerSheet<T>({ visible, title, options, selected, onPick, onCl
                 >
                   {o.left}
                   <Text style={[styles.rowText, checked && styles.rowChecked]}>{o.label}</Text>
-                  {checked ? <Icon name="check" size={20} strokeWidth={2.6} /> : null}
+                  {checked ? <Icon name="check" size={iconSize.medium} /> : null}
                 </Pressable>
               );
             })}
@@ -59,14 +60,14 @@ export function PickerSheet<T>({ visible, title, options, selected, onPick, onCl
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: { maxHeight: '80%', backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingTop: 8 },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#D0D0D0', alignSelf: 'center', marginBottom: 4 },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, paddingRight: 4 },
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
+  sheet: { maxHeight: '80%', backgroundColor: colors.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, paddingTop: space.s8 },
+  handle: { width: sheetHandle.width, height: sheetHandle.height, borderRadius: radius.tiny, backgroundColor: colors.handle, alignSelf: 'center', marginBottom: space.s4 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: space.s16, paddingRight: space.s4 },
   title: { fontSize: font.title, fontWeight: '700' },
   close: { width: touch.min, height: touch.min, alignItems: 'center', justifyContent: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: touch.min, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.bg },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.s12, minHeight: touch.min, paddingHorizontal: space.s16, borderBottomWidth: stroke.hair, borderBottomColor: colors.bg },
   rowText: { flex: 1, fontSize: font.body },
   rowChecked: { fontWeight: '700' },
-  footer: { paddingHorizontal: 16, paddingTop: 12 },
+  footer: { paddingHorizontal: space.s16, paddingTop: space.s12 },
 });

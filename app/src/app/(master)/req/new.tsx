@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -8,7 +9,7 @@ import { Screen } from '../../../components/Screen';
 import { humanError } from '../../../lib/errors';
 import { startPlannedWork } from '../../../lib/requests';
 import { stripContacts } from '../../../lib/itsm';
-import { colors, font } from '../../../theme';
+import { colors, font, space } from '../../../theme';
 
 /**
  * «Работа без заявки» — плановая работа. Создаётся заявка № N, сразу «В работе» у мастера; дальше обычный путь:
@@ -51,7 +52,7 @@ export default function PlannedWorkScreen() {
 
 const styles = StyleSheet.create({
   lead: { fontSize: font.body },
-  card: { gap: 10 },
-  hint: { fontSize: font.small - 1, color: colors.muted },
+  card: { gap: space.s10 },
+  hint: { fontSize: font.caption, color: colors.muted },
   err: { color: colors.danger, fontSize: font.body },
 });

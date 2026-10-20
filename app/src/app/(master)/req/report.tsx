@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
@@ -13,7 +14,7 @@ import { stripContacts } from '../../../lib/itsm';
 import { createMasterReport, markMyReportsSeen, myMasterReports, reportStatusText, requestLabel, formatStoreTime } from '../../../lib/requests';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { toPayload, uploadAll, type DraftPhoto, type RemotePhoto } from '../../../lib/workPhotos';
-import { colors, font } from '../../../theme';
+import { colors, font, space, stroke } from '../../../theme';
 
 /**
  * «Сообщить руководителю» — когда работы нет в списке заявок: коротко что случилось и фото.
@@ -72,9 +73,9 @@ export default function ReportScreen() {
       {list?.map((m) => (
         <Card key={m.id} style={[styles.card, m.unseen && styles.fresh]}>
           <Text style={styles.meta}>{formatStoreTime(m.created_at)}</Text>
-          <Text style={styles.text}>{m.text}</Text>
+          <Text style={styles.text}>{m.about_number ? `Просьба передать подрядчику ${requestLabel(m.about_number)}: ${m.text}` : m.text}</Text>
           <PhotoStrip photos={m.photos as unknown as RemotePhoto[]} size="small" />
-          <Text style={[styles.status, m.status === 'rejected' && styles.bad, m.status === 'request' && styles.good]}>
+          <Text style={[styles.status, m.status === 'rejected' && styles.bad, (m.status === 'request' || m.status === 'contractor') && styles.good]}>
             {m.status === 'request' && m.request_number ? `Создана заявка ${requestLabel(m.request_number)}` : reportStatusText[m.status]}
           </Text>
           {m.answer ? <Text style={styles.text}>{m.status === 'rejected' ? 'Причина: ' : 'Ответ: '}{m.answer}</Text> : null}
@@ -86,13 +87,13 @@ export default function ReportScreen() {
 
 const styles = StyleSheet.create({
   lead: { fontSize: font.body },
-  card: { gap: 8 },
-  fresh: { borderWidth: 2, borderColor: colors.brand },
+  card: { gap: space.s8 },
+  fresh: { borderWidth: stroke.outline, borderColor: colors.brand },
   label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  section: { fontSize: font.body + 2, fontWeight: '700', marginTop: 8 },
+  section: { fontSize: font.text, fontWeight: '700', marginTop: space.s8 },
   text: { fontSize: font.body },
   meta: { fontSize: font.small, color: colors.muted },
-  hint: { fontSize: font.small - 1, color: colors.muted },
+  hint: { fontSize: font.caption, color: colors.muted },
   status: { fontSize: font.small, fontWeight: '800', color: colors.secondary },
   bad: { color: colors.danger },
   good: { color: colors.success },

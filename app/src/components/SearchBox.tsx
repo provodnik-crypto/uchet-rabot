@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, font, radius } from '../theme';
+import { Pressable, StyleSheet, View, type TextInputProps } from 'react-native';
+import { TextInput } from './Text';
+import { colors, font, iconSize, radius, space, touch } from '../theme';
 import { Icon } from './Icon';
 
 type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & { value: string; onChangeText: (t: string) => void; label: string };
@@ -8,7 +9,7 @@ type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & { value: string; o
 export function SearchBox({ value, onChangeText, label, style, ...rest }: Props) {
   return (
     <View style={styles.box}>
-      <Icon name="search" size={18} color={colors.secondary} />
+      <Icon name="search" size={iconSize.medium} color={colors.secondary} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -18,8 +19,8 @@ export function SearchBox({ value, onChangeText, label, style, ...rest }: Props)
         {...rest}
       />
       {value ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Очистить" onPress={() => onChangeText('')} hitSlop={12}>
-          <Icon name="close" size={16} color={colors.secondary} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Очистить" onPress={() => onChangeText('')} hitSlop={space.s12}>
+          <Icon name="close" size={iconSize.small} color={colors.secondary} />
         </Pressable>
       ) : null}
     </View>
@@ -27,6 +28,6 @@ export function SearchBox({ value, onChangeText, label, style, ...rest }: Props)
 }
 
 const styles = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 12, backgroundColor: colors.card, borderRadius: radius.control },
-  input: { flex: 1, fontSize: font.small + 2, color: colors.text, paddingVertical: 0 },
+  box: { flexDirection: 'row', alignItems: 'center', gap: space.s10, height: touch.min, paddingHorizontal: space.s14, backgroundColor: colors.card, borderRadius: radius.control },
+  input: { flex: 1, fontSize: font.body, color: colors.text, paddingVertical: 0 },
 });

@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { requestLabel } from '../../../lib/requests';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
@@ -17,7 +18,7 @@ import { formatQuantity, parseQuantity, searchWork, type WorkItem } from '../../
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
-import { colors, font } from '../../../theme';
+import { colors, font, radius, space, stroke, touch } from '../../../theme';
 
 type Mode = 'price' | 'replace' | 'reject';
 
@@ -191,20 +192,20 @@ export default function PendingEntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10 },
+  card: { gap: space.s10 },
   name: { fontSize: font.body, fontWeight: '700' },
   qty: { fontSize: font.title, fontWeight: '800' },
   meta: { fontSize: font.small, color: colors.muted },
   hint: { fontSize: font.small, fontWeight: '700', color: colors.success },
   total: { fontSize: font.body, fontWeight: '700' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  check: { flexDirection: 'row', gap: 12, alignItems: 'center', minHeight: 56 },
-  box: { width: 32, height: 32, borderRadius: 8, borderWidth: 2, borderColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
+  check: { flexDirection: 'row', gap: space.s12, alignItems: 'center', minHeight: touch.big },
+  box: { width: touch.tiny, height: touch.tiny, borderRadius: radius.small, borderWidth: stroke.outline, borderColor: colors.black, alignItems: 'center', justifyContent: 'center' },
   boxOn: { backgroundColor: colors.brand, borderColor: colors.brand },
-  tick: { fontSize: 20, fontWeight: '800' },
+  tick: { fontSize: font.number, fontWeight: '800' },
   checkText: { flex: 1, fontSize: font.small },
-  picked: { backgroundColor: colors.bg, borderRadius: 12, padding: 12, gap: 2 },
-  found: { borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 10, minHeight: 56, justifyContent: 'center' },
+  picked: { backgroundColor: colors.bg, borderRadius: radius.control, padding: space.s12, gap: space.s2 },
+  found: { borderTopWidth: stroke.hair, borderTopColor: colors.border, paddingVertical: space.s10, minHeight: touch.big, justifyContent: 'center' },
   foundName: { fontSize: font.body, fontWeight: '600' },
   err: { color: colors.danger, fontSize: font.body },
 });

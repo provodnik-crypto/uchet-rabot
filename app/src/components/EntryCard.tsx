@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font } from '../theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
+import { colors, font, radius, size, space, touch } from '../theme';
 import { Card } from './Card';
 
 type Props = {
@@ -48,7 +49,7 @@ export function EntryCard({ name, category, isCustom, quantity, unitCode, depart
           </View>
         ) : null}
         {onRemove ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={`Удалить: ${name}`} onPress={onRemove} hitSlop={10} style={styles.remove}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Удалить: ${name}`} onPress={onRemove} hitSlop={space.s10} style={styles.remove}>
             <Text style={styles.removeText}>Удалить</Text>
           </Pressable>
         ) : null}
@@ -60,20 +61,20 @@ export function EntryCard({ name, category, isCustom, quantity, unitCode, depart
   );
 }
 
-const pill = StyleSheet.create({ ok: { backgroundColor: '#E0EDE9' }, wait: { backgroundColor: '#FFF3C4' }, bad: { backgroundColor: '#F7DCD5' } });
-const dot = StyleSheet.create({ ok: { backgroundColor: colors.success }, wait: { backgroundColor: '#BE9200' }, bad: { backgroundColor: colors.danger } });
+const pill = StyleSheet.create({ ok: { backgroundColor: colors.successBg }, wait: { backgroundColor: colors.note }, bad: { backgroundColor: colors.dangerBg } });
+const dot = StyleSheet.create({ ok: { backgroundColor: colors.success }, wait: { backgroundColor: colors.brandDark }, bad: { backgroundColor: colors.danger } });
 
 const styles = StyleSheet.create({
-  card: { gap: 4, paddingVertical: 10 },
-  row: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'space-between' },
+  card: { gap: space.s4, paddingVertical: space.s10 },
+  row: { flexDirection: 'row', gap: space.s10, alignItems: 'center', justifyContent: 'space-between' },
   name: { flex: 1, fontSize: font.body, fontWeight: '600' },
   qty: { fontSize: font.body, fontWeight: '700' },
   meta: { fontSize: font.small, color: colors.secondary },
   people: { flex: 1, fontSize: font.small },
   comment: { fontSize: font.small, color: colors.danger, fontWeight: '600' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 22, paddingHorizontal: 8, borderRadius: 11 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  pillText: { fontSize: font.small - 1, fontWeight: '600', color: colors.text },
-  remove: { minHeight: 32, justifyContent: 'center', paddingHorizontal: 4 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: space.s4, height: size.tag, paddingHorizontal: space.s8, borderRadius: radius.small },
+  dot: { width: size.dotSmall, height: size.dotSmall, borderRadius: radius.tiny },
+  pillText: { fontSize: font.caption, fontWeight: '600', color: colors.text },
+  remove: { minHeight: touch.tiny, justifyContent: 'center', paddingHorizontal: space.s4 },
   removeText: { color: colors.danger, fontSize: font.small, fontWeight: '700' },
 });

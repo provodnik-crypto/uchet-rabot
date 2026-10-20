@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { requestLabel } from '../../../lib/requests';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { Card } from '../../../components/Card';
 import { PhotoStrip } from '../../../components/PhotoStrip';
 import { Screen } from '../../../components/Screen';
@@ -12,7 +13,7 @@ import { formatQuantity } from '../../../lib/shift';
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
-import { colors, font } from '../../../theme';
+import { colors, font, space } from '../../../theme';
 
 export default function PendingScreen() {
   const query = useFocusQuery(async () => {
@@ -56,10 +57,10 @@ export default function PendingScreen() {
 }
 
 const styles = StyleSheet.create({
-  empty: { color: colors.muted, fontSize: font.body, textAlign: 'center', marginTop: 24 },
+  empty: { color: colors.muted, fontSize: font.body, textAlign: 'center', marginTop: space.s24 },
   count: { fontSize: font.body, fontWeight: '700' },
-  card: { gap: 4 },
-  top: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  card: { gap: space.s4 },
+  top: { flexDirection: 'row', gap: space.s12, alignItems: 'flex-start' },
   flex: { flex: 1 },
   name: { fontSize: font.body, fontWeight: '700' },
   qty: { fontSize: font.title, fontWeight: '800' },

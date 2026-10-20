@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, font, radius, touch } from '../theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
+import { colors, font, iconSize, opacity, radius, size, space, stroke, touch } from '../theme';
 import { Icon } from './Icon';
 import { PickerSheet } from './PickerSheet';
 
@@ -29,19 +30,19 @@ export function FilterSelect<T extends string | number>({ label, title, allLabel
     <>
       {current ? (
         <View style={[styles.pill, styles.active]}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${title ?? label}: ${current.label}`} onPress={() => setOpen(true)} hitSlop={{ top: 6, bottom: 6, left: 6 }} style={styles.activeMain}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${title ?? label}: ${current.label}`} onPress={() => setOpen(true)} hitSlop={{ top: space.s6, bottom: space.s6, left: space.s6 }} style={styles.activeMain}>
             <Text style={styles.activeText} numberOfLines={1}>
               {current.label}
             </Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Сбросить: ${title ?? label}`} onPress={() => onChange(null)} hitSlop={{ top: 6, bottom: 6, right: 6 }} style={styles.clear}>
-            <Icon name="close" size={14} strokeWidth={2.8} />
+          <Pressable accessibilityRole="button" accessibilityLabel={`Сбросить: ${title ?? label}`} onPress={() => onChange(null)} hitSlop={{ top: space.s6, bottom: space.s6, right: space.s6 }} style={styles.clear}>
+            <Icon name="close" size={iconSize.small} />
           </Pressable>
         </View>
       ) : (
-        <Pressable accessibilityRole="button" accessibilityLabel={title ? `${title}: ${label}` : label} onPress={() => setOpen(true)} hitSlop={6} style={({ pressed }) => [styles.pill, styles.idle, pressed && { opacity: 0.7 }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={title ? `${title}: ${label}` : label} onPress={() => setOpen(true)} hitSlop={space.s6} style={({ pressed }) => [styles.pill, styles.idle, pressed && { opacity: opacity.pressed }]}>
           <Text style={styles.idleText}>{label}</Text>
-          <Icon name="chevronDown" size={14} color={colors.secondary} strokeWidth={2.4} />
+          <Icon name="chevronDown" size={iconSize.small} color={colors.secondary} />
         </Pressable>
       )}
       <PickerSheet<T | typeof ALL>
@@ -61,10 +62,10 @@ export function FilterSelect<T extends string | number>({ label, title, allLabel
 
 const styles = StyleSheet.create({
   pill: { height: touch.small, borderRadius: radius.chip, flexDirection: 'row', alignItems: 'center' },
-  idle: { gap: 6, paddingLeft: 14, paddingRight: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-  idleText: { fontSize: font.small + 1 },
-  active: { backgroundColor: colors.brand, maxWidth: 220 },
-  activeMain: { height: touch.small, justifyContent: 'center', paddingLeft: 14, paddingRight: 4, flexShrink: 1 },
-  activeText: { fontSize: font.small + 1, fontWeight: '700' },
-  clear: { width: 32, height: touch.small, alignItems: 'center', justifyContent: 'center' },
+  idle: { gap: space.s6, paddingLeft: space.s14, paddingRight: space.s12, backgroundColor: colors.card, borderWidth: stroke.hair, borderColor: colors.border },
+  idleText: { fontSize: font.small },
+  active: { backgroundColor: colors.brand, maxWidth: size.filterMax },
+  activeMain: { height: touch.small, justifyContent: 'center', paddingLeft: space.s14, paddingRight: space.s4, flexShrink: 1 },
+  activeText: { fontSize: font.small, fontWeight: '700' },
+  clear: { width: touch.tiny, height: touch.small, alignItems: 'center', justifyContent: 'center' },
 });

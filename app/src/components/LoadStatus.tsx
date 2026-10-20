@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { formatUpdatedAt } from '../lib/useQuery';
-import { colors, font, radius } from '../theme';
+import { colors, font, radius, space, stroke } from '../theme';
 import { BigButton } from './BigButton';
 
 /** То, что экран знает о своих загрузках: данные, ошибка, идёт ли загрузка, когда обновлено. */
@@ -52,8 +53,8 @@ export function LoadStatus({ status, frame }: { status?: StatusLike | StatusLike
 }
 
 const styles = StyleSheet.create({
-  banner: { gap: 6, padding: 12, borderRadius: radius.card, backgroundColor: '#FDECEA', borderWidth: 1, borderColor: colors.danger },
+  banner: { gap: space.s6, padding: space.s12, borderRadius: radius.card, backgroundColor: colors.dangerBg, borderWidth: stroke.hair, borderColor: colors.danger },
   bannerText: { fontSize: font.body, color: colors.danger, fontWeight: '600' },
   bannerMeta: { fontSize: font.small, color: colors.secondary },
-  line: { fontSize: font.small - 1, color: colors.muted, textAlign: 'right', marginBottom: -6 },
+  line: { fontSize: font.caption, color: colors.muted, textAlign: 'right', marginBottom: -space.s6 },
 });

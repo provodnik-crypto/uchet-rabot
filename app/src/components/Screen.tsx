@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TourScrollProvider } from '../lib/tour';
-import { colors } from '../theme';
+import { colors, space, stroke } from '../theme';
 import { LoadStatus, toList, type StatusLike } from './LoadStatus';
 
 /** Вложенные списки со своей загрузкой (например, список заявок) подключаются к свайпу вниз экрана. */
@@ -63,10 +63,17 @@ type Props = {
   status?: StatusLike | StatusLike[];
   /** Экран показывает каркас и без данных (главная) — плашка ошибки видна, даже если данных нет. */
   frame?: boolean;
+  /** Шапка над прокруткой (жёлтая, своя у экранов без шапки навигации). */
+  header?: ReactNode;
+  /** Закреплено внизу: главная кнопка экрана или нижнее меню. */
+  footer?: ReactNode;
+  /** Низ — нижнее меню (без отступов, белая полоса до края экрана). */
+  tabs?: boolean;
 };
 
 /** Общая обёртка экрана: серый фон, отступы, прокрутка, клавиатура не перекрывает поля. */
-export function Screen({ children, scroll = true, status, frame }: Props) {
+export function Screen({ children, scroll = true, status, frame, header, footer, tabs }: Props) {
+  const insets = useSafeAreaInsets();
   const ref = useRef<ScrollView>(null);
   const outer = useRef<View>(null);
   const kbInset = useKeyboardInset(outer);
@@ -91,7 +98,8 @@ export function Screen({ children, scroll = true, status, frame }: Props) {
     ref.current?.scrollTo({ y: offset.current, animated: false });
   }, []);
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={footer ? ['left', 'right'] : ['bottom', 'left', 'right']}>
+      {header}
       <View ref={outer} style={[styles.flex, kbInset ? { paddingBottom: kbInset } : null]} collapsable={false}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
@@ -115,6 +123,10 @@ export function Screen({ children, scroll = true, status, frame }: Props) {
         ) : (
           children
         )}
+        {/* нижнее меню прячется, пока открыта клавиатура */}
+        {footer && !(tabs && kbInset) ? (
+          <View style={[tabs ? styles.tabs : styles.footer, { paddingBottom: (tabs ? 0 : space.s18) + (kbInset ? 0 : insets.bottom) }]}>{footer}</View>
+        ) : null}
       </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
@@ -124,5 +136,7 @@ export function Screen({ children, scroll = true, status, frame }: Props) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  content: { padding: 16, gap: 12, paddingBottom: 32 },
+  content: { padding: space.s16, gap: space.s12, paddingBottom: space.s32 },
+  footer: { backgroundColor: colors.card, borderTopWidth: stroke.hair, borderTopColor: colors.border, paddingHorizontal: space.s16, paddingTop: space.s12, gap: space.s8 },
+  tabs: { backgroundColor: colors.card, borderTopWidth: stroke.hair, borderTopColor: colors.border },
 });

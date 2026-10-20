@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { AppHeader } from '../../../../components/AppHeader';
 import { BigButton } from '../../../../components/BigButton';
-import { Card } from '../../../../components/Card';
-import { Field } from '../../../../components/Field';
 import { PhotoPicker } from '../../../../components/PhotoPicker';
 import { Screen } from '../../../../components/Screen';
+import { Section } from '../../../../components/Section';
 import { StateView } from '../../../../components/StateView';
+import { Text, TextInput } from '../../../../components/Text';
 import { formatDate } from '../../../../lib/dates';
 import { humanError } from '../../../../lib/errors';
 import { requestCard, requestLabel, sendRequestForReviewPhotos } from '../../../../lib/requests';
@@ -14,9 +15,9 @@ import { formatQuantity } from '../../../../lib/shift';
 import { TourTarget } from '../../../../lib/tour';
 import { useFocusQuery } from '../../../../lib/useQuery';
 import { toPayload, uploadAll, type DraftPhoto } from '../../../../lib/workPhotos';
-import { colors, font } from '../../../../theme';
+import { colors, font, radius, space, stroke, textArea } from '../../../../theme';
 
-/** «Отправить на проверку» — одно окно: работы по заявке, фото результата (минимум одно), комментарий. */
+/** «Отправить на проверку» — три шага: проверить работы, фото результата (минимум одно), комментарий. */
 export default function SendRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
@@ -27,7 +28,8 @@ export default function SendRequestScreen() {
   const [progress, setProgress] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  if (!r) return <Screen><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
+  const header = <AppHeader title="Отправить на проверку" subtitle={r ? requestLabel(r.number) : undefined} back />;
+  if (!r) return <Screen header={header}><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
 
   const works = r.works;
   const ready = works.length > 0 && photos.length > 0;
@@ -53,50 +55,78 @@ export default function SendRequestScreen() {
   }
 
   return (
-    <Screen status={query}>
-      <Text style={styles.number}>{requestLabel(r.number)}</Text>
-      {r.operation ? <Text style={styles.meta}>{r.operation}</Text> : null}
-
-      <Card style={styles.card}>
-        <Text style={styles.label}>Работы: {works.length}</Text>
+    <Screen
+      status={query}
+      header={header}
+      footer={
+        <>
+          {progress ? <Text style={styles.meta}>{progress}</Text> : null}
+          {err ? <Text style={styles.err}>Не отправлено: {err}</Text> : null}
+          {!ready ? <Text style={styles.meta}>{!works.length ? 'Сначала добавьте работу в карточке заявки.' : 'Добавьте хотя бы одно фото результата.'}</Text> : null}
+          <TourTarget id="send.go">
+            <BigButton title={err ? 'Повторить' : 'Отправить'} variant="dark" size="big" loading={busy} disabled={!ready} onPress={send} />
+          </TourTarget>
+        </>
+      }
+    >
+      <Section title="1 · Проверьте работы">
         {works.map((w, i) => (
-          <View key={w.id ?? i} style={styles.row}>
-            <Text style={styles.name}>{w.name}</Text>
-            <Text style={styles.meta}>
-              {formatQuantity(w.quantity)} {w.unit} · {w.performers} · {formatDate(w.work_date)}
+          <View key={w.id ?? i} style={[styles.row, i > 0 && styles.line]}>
+            <View style={styles.flex}>
+              <Text style={styles.body}>{w.name}</Text>
+              <Text style={styles.meta}>
+                {formatDate(w.work_date)}
+                {w.performers ? ` · ${w.performers}` : ''}
+              </Text>
+            </View>
+            <Text style={styles.qty}>
+              {formatQuantity(w.quantity)} {w.unit}
             </Text>
           </View>
         ))}
         {!works.length ? <Text style={styles.err}>Работ нет — вернитесь и нажмите «+ Добавить работу».</Text> : null}
-      </Card>
+        {works.length ? <Text style={styles.meta}>Что-то не так — вернитесь в заявку и нажмите на работу.</Text> : null}
+      </Section>
 
       <TourTarget id="send.photo">
-        <Card style={styles.card}>
-          <Text style={styles.label}>Фото результата — хотя бы одно (до 3)</Text>
+        <Section title="2 · Фото результата">
           <PhotoPicker photos={photos} onChange={setPhotos} required />
-        </Card>
+        </Section>
       </TourTarget>
 
-      <Field label="Комментарий руководителю (необязательно)" value={comment} onChangeText={setComment} multiline placeholder="Что сделано, что осталось" />
-
-      {progress ? <Text style={styles.meta}>{progress}</Text> : null}
-      {err ? <Text style={styles.err}>Не отправлено: {err}</Text> : null}
-      <TourTarget id="send.go">
-        <BigButton title={err ? 'Повторить' : 'Отправить на проверку'} size="big" loading={busy} disabled={!ready} onPress={send} />
-      </TourTarget>
-      {!photos.length && works.length ? <Text style={styles.hint}>Сфотографируйте результат — без фото отправить нельзя.</Text> : null}
-      <Text style={styles.hint}>После отправки заявка уйдёт руководителю, а вы сможете взять следующую.</Text>
+      <Section title="3 · Комментарий (необязательно)">
+        <TextInput
+          value={comment}
+          onChangeText={setComment}
+          multiline
+          textAlignVertical="top"
+          maxLength={1000}
+          placeholder="Например: заменил 4 крепежа, механизм работает"
+          placeholderTextColor={colors.muted}
+          accessibilityLabel="Комментарий руководителю"
+          style={styles.input}
+        />
+      </Section>
+      <Text style={styles.meta}>После отправки заявка уйдёт руководителю, а вы сможете взять следующую.</Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  number: { fontSize: font.title, fontWeight: '800' },
-  meta: { fontSize: font.small, color: colors.secondary },
-  card: { gap: 6 },
-  label: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  row: { gap: 2, paddingTop: 4 },
-  name: { fontSize: font.body, fontWeight: '600' },
+  flex: { flex: 1, gap: space.s2 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12, paddingVertical: space.s8 },
+  line: { borderTopWidth: stroke.hair, borderTopColor: colors.border },
+  body: { fontSize: font.body },
+  qty: { fontSize: font.body, fontWeight: '700' },
+  meta: { fontSize: font.caption, color: colors.secondary },
   err: { color: colors.danger, fontSize: font.body },
-  hint: { fontSize: font.small - 1, color: colors.muted },
+  input: {
+    minHeight: textArea.minHeight,
+    borderWidth: stroke.hair,
+    borderColor: colors.field,
+    borderRadius: radius.small,
+    paddingHorizontal: space.s12,
+    paddingVertical: space.s10,
+    fontSize: font.body,
+  },
 });

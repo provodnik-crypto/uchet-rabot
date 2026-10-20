@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { CONTRACTOR_COLOR, lifecycleLabel, priorityColor, priorityLabel, type LifecycleStatus, type Priority } from '../lib/requests';
-import { colors, font, radius } from '../theme';
+import { StyleSheet, View } from 'react-native';
+import type { LifecycleStatus, Priority } from '../lib/requests';
+import { space } from '../theme';
+import { PriorityPill, requestTone, StatusPill } from './StatusPill';
 
-/** Метки заявки: «Назначено вам», приоритет (цвет + слово), статус, подрядчик. */
+/** Метки заявки: «Назначено вам», статус (цвет + слово), приоритет, новые сообщения. */
 export function RequestBadges({
   status,
   priority,
@@ -10,6 +11,7 @@ export function RequestBadges({
   mine,
   responsibleName,
   unread,
+  returned,
 }: {
   status: LifecycleStatus;
   priority: Priority;
@@ -19,46 +21,19 @@ export function RequestBadges({
   responsibleName?: string | null;
   /** Новые сообщения и события. */
   unread?: number;
+  /** Вернули на доработку. */
+  returned?: boolean;
 }) {
-  const showStatus = status !== 'waiting' && !(status === 'contractor');
+  const s = requestTone({ status, contractor, returned, busyName: responsibleName });
   return (
     <View style={styles.row}>
-      {unread ? <Text style={[styles.badge, styles.unread]}>💬 {unread} нов.</Text> : null}
-      {mine ? <Text style={[styles.badge, styles.mine]}>{status === 'in_work' || status === 'review' || status === 'paused' ? 'Ваша заявка' : 'Назначено вам'}</Text> : null}
-      {priority !== 3 ? (
-        <Text style={[styles.badge, { borderColor: priorityColor[priority], color: priorityColor[priority] }, priority === 1 && styles.urgent]}>
-          {priority === 1 ? '● ' : ''}
-          {priorityLabel[priority]}
-        </Text>
-      ) : null}
-      {contractor || status === 'contractor' ? <Text style={[styles.badge, styles.contractor]}>Подрядчик</Text> : null}
-      {showStatus ? (
-        <Text style={[styles.badge, styles.status, status === 'review' && styles.review, status === 'accepted' && styles.accepted, status === 'paused' && styles.paused]}>
-          {status === 'in_work' && responsibleName ? `🔒 В работе · ${responsibleName}` : lifecycleLabel[status] ?? status}
-        </Text>
-      ) : null}
+      {mine && status === 'waiting' && !contractor ? <StatusPill tone="in_work" label="Назначено вам" /> : <StatusPill tone={s.tone} label={s.label} />}
+      <PriorityPill priority={priority} />
+      {unread ? <StatusPill tone="busy" label={`Новое: ${unread}`} /> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  badge: {
-    fontSize: font.small,
-    fontWeight: '800',
-    borderRadius: radius.chip,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    overflow: 'hidden',
-  },
-  mine: { backgroundColor: colors.brand, borderColor: colors.brand },
-  unread: { backgroundColor: '#1565C0', borderColor: '#1565C0', color: '#FFFFFF' },
-  urgent: { backgroundColor: '#FDECEA' },
-  contractor: { borderColor: CONTRACTOR_COLOR, color: CONTRACTOR_COLOR },
-  paused: { borderColor: '#E65100', color: '#E65100', backgroundColor: '#FFF3E0' },
-  status: { color: colors.secondary, backgroundColor: colors.bg },
-  review: { color: '#1565C0', borderColor: '#1565C0' },
-  accepted: { color: colors.success, borderColor: colors.success },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s6 },
 });

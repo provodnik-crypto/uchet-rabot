@@ -1,7 +1,8 @@
-import { Linking, Pressable, StyleSheet, Text } from 'react-native';
+import { Linking, Pressable, StyleSheet } from 'react-native';
+import { Text } from './Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApkRelease } from '../lib/appUpdate';
-import { colors, font } from '../theme';
+import { colors, font, radius, space } from '../theme';
 
 /**
  * Полоса сверху — только когда вышла новая сборка APK (новая иконка, разрешения или нативные модули):
@@ -22,7 +23,7 @@ export function UpdateBanner() {
 }
 
 const styles = StyleSheet.create({
-  bar: { backgroundColor: colors.black, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  text: { color: '#FFFFFF', fontSize: font.small, fontWeight: '600', flex: 1 },
-  btn: { backgroundColor: colors.brand, color: colors.black, fontWeight: '700', fontSize: font.small + 1, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, overflow: 'hidden' },
+  bar: { backgroundColor: colors.black, paddingHorizontal: space.s16, paddingBottom: space.s8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s12 },
+  text: { color: colors.white, fontSize: font.small, fontWeight: '600', flex: 1 },
+  btn: { backgroundColor: colors.brand, color: colors.black, fontWeight: '700', fontSize: font.small, paddingHorizontal: space.s14, paddingVertical: space.s8, borderRadius: radius.small, overflow: 'hidden' },
 });

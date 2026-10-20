@@ -1,71 +1,121 @@
 import { router, useIsFocused } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { AppHeader, IconButton } from '../../components/AppHeader';
 import { Avatar } from '../../components/Avatar';
 import { BigButton } from '../../components/BigButton';
-import { Card } from '../../components/Card';
-import { Icon } from '../../components/Icon';
+import { BottomTabs } from '../../components/BottomTabs';
 import { Screen } from '../../components/Screen';
-import { Tile } from '../../components/Tile';
-import { appVersionLabel } from '../../lib/appUpdate';
+import { Section } from '../../components/Section';
+import { PriorityPill, StatusPill } from '../../components/StatusPill';
+import { Text } from '../../components/Text';
 import { useAuth } from '../../lib/auth';
 import { confirm } from '../../lib/confirm';
 import { formatDate } from '../../lib/dates';
-import { useLegacyDraft } from '../../lib/legacyDraft';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
-import { formatKop } from '../../lib/money';
+import { useLegacyDraft } from '../../lib/legacyDraft';
 import { monthName } from '../../lib/manager';
-import { holdText, myNotifications, myRequests, myRequestsBadge, requestLabel } from '../../lib/requests';
-import { Notices, type Notice } from '../../components/Notices';
-import { RequestBadges } from '../../components/RequestBadges';
+import { formatKop } from '../../lib/money';
+import { holdText, myNotifications, myRequests, openRequests, previewText, requestCard, requestLabel } from '../../lib/requests';
 import { myEntries, myMonthSummary } from '../../lib/shift';
 import { storeToday } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
 import { useFocusQuery } from '../../lib/useQuery';
-import { colors, font } from '../../theme';
-import { DueLine } from '../../components/DueLine';
+import { colors, font, letterSpacing, lineHeight, opacity, radius, size, space, stroke, touch } from '../../theme';
+
+/** Строка ленты «Что нового»: красная точка — вернули/отклонили/срочно, чёрная — сообщения и прочее. */
+type FeedItem = { key: string; red?: boolean; title: string; text?: string | null; onPress: () => void };
+const FEED_SHORT = 5;
+
+/** «N-й день» с даты взятия (по календарю магазина). */
+function dayNumber(takenAt: string | null): number | null {
+  if (!takenAt) return null;
+  const from = Date.parse(takenAt.slice(0, 10));
+  const to = Date.parse(storeToday());
+  return Number.isFinite(from) && Number.isFinite(to) ? Math.max(1, Math.round((to - from) / 86_400_000) + 1) : null;
+}
+
+/** «Добрый день» по времени магазина (Тюмень). */
+function greeting(): string {
+  const h = (new Date().getUTCHours() + 5) % 24;
+  return h < 5 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
+}
 
 export default function MasterHome() {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
   const legacy = useLegacyDraft();
   const icons = useEmployeeIcons();
   const entriesQ = useFocusQuery(() => myEntries(14), { key: 'home:entries' });
   const monthQ = useFocusQuery(myMonthSummary, { key: 'home:month' });
-  const badgeQ = useFocusQuery(() => (me ? myRequestsBadge(me.id) : Promise.resolve(null)));
   const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
   const notesQ = useFocusQuery(myNotifications, { key: 'home:notes' });
+  // тот же список, что во вкладке «Заявки» (общий запас данных)
+  const openQ = useFocusQuery(() => openRequests('', 'all'), { key: 'open:all:' });
+  const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
+  const cardQ = useFocusQuery(() => (active ? requestCard({ id: active.id }) : Promise.resolve(null)), {
+    key: `card:${active?.id ?? 0}`,
+    persist: false,
+  });
+  const [allFeed, setAllFeed] = useState(false);
   const { data: entries } = entriesQ;
   const { data: month } = monthQ;
-  const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
-  const { data: badge } = badgeQ;
-  const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
-  const mineList = mineQ.data?.filter((m) => m.id !== active?.id) ?? null;
   const { data: notes } = notesQ;
+  const works = active && cardQ.data?.id === active.id ? cardQ.data.works.length : null;
+  const free = openQ.data?.filter((r) => r.status === 'waiting' && !r.to_contractor && (!r.assignee_id || r.mine)).length ?? null;
+  const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
+
   const openCard = (id: number) => router.push({ pathname: '/req/[id]', params: { id: String(id) } });
-  const notices: Notice[] = [
-    ...(notes?.returned ?? []).map((n) => ({
-      key: `r${n.id}`,
-      tone: 'red' as const,
-      title: `Вернули ${requestLabel(n.number)}${n.queued ? ' — в очереди' : ''}`,
-      text: n.queued ? `Возьмётся сама, когда отправите текущую. Что исправить: ${n.comment}` : n.comment,
+  const sendActive = () => active && router.push({ pathname: '/req/send/[id]', params: { id: String(active.id) } });
+
+  const feed: FeedItem[] = [
+    ...(notes?.returned ?? [])
+      .filter((n) => n.id !== active?.id)
+      .map((n) => ({
+        key: `r${n.id}`,
+        red: true,
+        title: `Вернули на доработку ${requestLabel(n.number)}`,
+        text: n.queued ? `В очереди: станет активной, когда отправите текущую. ${n.comment}` : n.comment,
+        onPress: () => openCard(n.id),
+      })),
+    ...(notes?.urgent ?? []).map((n) => ({
+      key: `s${n.id}`,
+      red: true,
+      title: `Срочно: ${requestLabel(n.number)}`,
+      text: n.status === 'in_work' ? `Ваша заявка · ${n.operation ?? ''}` : `Свободна · ${n.operation ?? ''}`,
       onPress: () => openCard(n.id),
     })),
     ...(Array.isArray(notes?.reports) ? notes.reports : []).map((n) => ({
       key: `m${n.id}`,
-      tone: n.status === 'rejected' ? ('red' as const) : ('blue' as const),
-      title: n.status === 'request' ? `По вашему сообщению создана заявка ${requestLabel(n.request_number)}` : 'Руководитель отклонил ваше сообщение',
-      text: n.status === 'rejected' ? `Причина: ${n.answer ?? '—'}` : n.text,
+      red: n.status === 'rejected',
+      title:
+        n.status === 'request'
+          ? `По вашему сообщению создана заявка ${requestLabel(n.request_number)}`
+          : n.status === 'contractor'
+            ? 'Заявку передали подрядчику'
+            : 'Руководитель ответил на ваше сообщение',
+      text: n.status === 'rejected' ? `Отклонено: ${n.answer ?? '—'}` : n.answer ?? n.text,
       onPress: () => router.push('/req/report'),
     })),
-    ...(notes?.unread ?? []).map((n) => ({ key: `u${n.id}`, tone: 'blue' as const, title: `Новое по заявке ${requestLabel(n.number)}`, text: `Сообщений и событий: ${n.count}`, onPress: () => openCard(n.id) })),
-    ...(notes?.urgent ?? []).map((n) => ({
-      key: `s${n.id}`,
-      tone: 'red' as const,
-      title: `● Срочно: ${requestLabel(n.number)}`,
-      text: n.status === 'in_work' ? `Ваша заявка · ${n.operation ?? ''}` : `Свободна · ${n.operation ?? ''}`,
+    ...(notes?.unread ?? []).map((n) => ({
+      key: `u${n.id}`,
+      title: `Новое сообщение по ${requestLabel(n.number)}`,
+      text: n.count > 1 ? `Новых: ${n.count}` : null,
       onPress: () => openCard(n.id),
     })),
+    ...(rejected
+      ? [{ key: 'rej', red: true, title: `Отклонено работ: ${rejected}`, text: 'Комментарий руководителя — в «Истории»', onPress: () => router.push('/history') }]
+      : []),
+    ...(mineQ.data ?? [])
+      .filter((m) => m.id !== active?.id && !m.returned_comment && (m.status === 'paused' || !m.responsible))
+      .map((m) => ({
+        key: `p${m.id}`,
+        title: m.responsible ? `${requestLabel(m.number)} приостановлена` : `Вы напарник: ${requestLabel(m.number)}`,
+        text: m.responsible ? holdText(m.hold_reason, m.hold_number) : `Работы вносит ${m.responsible_name ?? 'мастер'}`,
+        onPress: () => openCard(m.id),
+      })),
   ];
+  const shownFeed = allFeed ? feed : feed.slice(0, FEED_SHORT);
+
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // Первый вход — обучение; уже работавшему мастеру после обновления — «Что нового».
@@ -73,101 +123,147 @@ export default function MasterHome() {
     if (focused && entries && month) autoStart('master', entries.length > 0 || month.entries > 0 || month.pending > 0);
   }, [focused, entries, month, autoStart]);
 
+  const returned = !!active?.returned_comment;
+  const day = dayNumber(active?.taken_at ?? null);
+  const sum = month ? formatKop(month.total_kop).replace(/\s?₽$/, '') : '…';
+
   return (
-    <Screen status={[entriesQ, monthQ, badgeQ, mineQ, notesQ]} frame>
-      <View style={styles.helloRow}>
-        {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={44} /> : null}
-        <Text style={styles.hello}>Здравствуйте, {me?.displayName.split(' ')[0]}!</Text>
-      </View>
-
-      <TourTarget id="home.month">
-      <Card style={styles.month} onPress={() => router.push('/team')}>
-        <Text style={styles.monthLabel}>Мои работы за {monthName(storeToday())}</Text>
-        <Text style={styles.monthSum}>{month ? formatKop(month.total_kop) : '…'}</Text>
-        <Text style={styles.monthMeta}>
-          Выполнено заявок: {month?.requests ?? '…'} · работ: {month?.entries ?? '…'}
-        </Text>
-        {month?.pending ? <Text style={styles.monthMeta}>Ещё на оценке: {month.pending} — добавятся после оценки</Text> : null}
-        {month?.awaiting ? <Text style={styles.monthMeta}>Работ по заявкам ждут приёмки: {month.awaiting} — добавятся, когда руководитель примет</Text> : null}
-        <Text style={styles.monthLink}>Рейтинг команды →</Text>
-      </Card>
-      </TourTarget>
-
-      <TourTarget id="home.notices">
-        <Notices items={notices} />
-      </TourTarget>
-
+    <Screen
+      status={[entriesQ, monthQ, mineQ, notesQ]}
+      frame
+      tabs
+      footer={<BottomTabs />}
+      header={
+        <AppHeader>
+          <View style={styles.hello}>
+            {me ? <Avatar name={me.displayName} icon={icons[me.id]} size={touch.icon} dark /> : null}
+            <View style={styles.flex}>
+              <Text style={styles.greet}>{greeting()}</Text>
+              <Text style={styles.name} numberOfLines={1}>
+                {me?.displayName.split(' ')[0]}
+              </Text>
+            </View>
+            <TourTarget id="home.help">
+              <IconButton icon="user" label="Профиль: помощь и выход" round onPress={() => router.push('/profile')} />
+            </TourTarget>
+          </View>
+        </AppHeader>
+      }
+    >
+      {/* ---------- Главная карточка: по ситуации ---------- */}
       {active ? (
         <TourTarget id="home.active">
-          <Card style={styles.active} onPress={() => openCard(active.id)}>
-            <Text style={styles.activeLabel}>Моя заявка сейчас</Text>
-            <RequestBadges status="in_work" priority={active.priority} unread={active.unread} />
-            <Text style={styles.mineNumber}>
-              {requestLabel(active.number)}
-              {active.operation ? <Text style={styles.mineOp}> · {active.operation}</Text> : null}
-            </Text>
-            {active.returned_comment ? <Text style={styles.returnedText}>Вернули: {active.returned_comment}</Text> : null}
-            {active.pause_request ? <Text style={styles.mineMeta}>Запрос на приостановку у руководителя</Text> : null}
-            <DueLine dueAt={active.due_at} status={active.status} />
-            <Text style={styles.mineMeta}>
-              {active.taken_at ? `В работе с ${formatDate(active.taken_at.slice(0, 10))}` : 'В работе'}
-            </Text>
-            <View style={styles.activeButtons}>
-              <View style={styles.flex}>
-                <BigButton title="Открыть" variant="secondary" onPress={() => openCard(active.id)} />
-              </View>
-              <View style={styles.flex}>
-                <BigButton title="Проверить и отправить" onPress={() => router.push({ pathname: '/req/send/[id]', params: { id: String(active.id) } })} />
+          <View style={styles.main}>
+            <View style={styles.mainHead}>
+              <Text style={styles.caps}>МОЯ ЗАЯВКА СЕЙЧАС</Text>
+              <View style={styles.pills}>
+                <PriorityPill priority={active.priority} />
+                {returned ? <StatusPill tone="returned" label="Вернули" /> : <StatusPill tone="in_work" label="В работе" />}
               </View>
             </View>
-          </Card>
-        </TourTarget>
-      ) : null}
-
-      {mineList?.length ? (
-        <TourTarget id="home.mine" style={styles.mineBox}>
-          <Text style={styles.section}>Мои заявки</Text>
-          {mineList.map((r) => (
-            <Card
-              key={r.id}
-              style={[styles.mineCard, r.returned_comment ? styles.mineReturned : null]}
-              onPress={() => router.push({ pathname: '/req/[id]', params: { id: String(r.id) } })}
-            >
-              <RequestBadges status={r.status === 'in_work' ? 'waiting' : r.status} priority={r.priority} unread={r.unread} />
-              <Text style={styles.mineNumber}>
-                {requestLabel(r.number)}
-                {r.operation ? <Text style={styles.mineOp}> · {r.operation}</Text> : null}
+            <View style={styles.mainBody}>
+              <Text style={styles.number} selectable>
+                {requestLabel(active.number)}
               </Text>
-              <DueLine dueAt={r.due_at} status={r.status} />
-              <Text style={styles.mineMeta}>
-                {r.status === 'paused'
-                  ? `${holdText(r.hold_reason, r.hold_number)}${r.returned_comment ? `. Что исправить: ${r.returned_comment}` : ''}`
-                  : r.returned_comment
-                  ? `Вернули: ${r.returned_comment}`
-                  : r.status === 'review'
-                    ? 'На проверке у руководителя'
-                    : r.responsible
-                    ? r.taken_at ? `В работе с ${formatDate(r.taken_at.slice(0, 10))}` : 'В работе'
-                    : `Взял ${r.responsible_name} · вы напарник`}
+              <Text style={styles.summary} numberOfLines={3}>
+                {active.operation || previewText(active.description) || 'Без описания'}
               </Text>
-            </Card>
-          ))}
+              {returned ? <Text style={styles.returned}>Что исправить: {active.returned_comment}</Text> : null}
+              <Text style={styles.meta}>
+                {[works != null ? `Внесено работ: ${works}` : null, day ? `${day}-й день` : null].filter(Boolean).join(' · ') || 'В работе'}
+              </Text>
+              {active.pause_request ? <Text style={styles.meta}>Запрос на приостановку у руководителя</Text> : null}
+            </View>
+            {returned ? (
+              <BigButton title="Исправить" variant="dark" size="big" onPress={() => openCard(active.id)} />
+            ) : (
+              <>
+                <BigButton title="Продолжить" variant="dark" size="big" onPress={() => openCard(active.id)} />
+                <BigButton title="Отправить на проверку" size="mid" disabled={works === 0} onPress={sendActive} />
+                {works === 0 ? <Text style={styles.meta}>Чтобы отправить, добавьте хотя бы одну работу.</Text> : null}
+              </>
+            )}
+          </View>
         </TourTarget>
-      ) : null}
+      ) : (
+        <TourTarget id="home.active">
+          <View style={styles.main}>
+            <Text style={styles.caps}>СЕЙЧАС ЗАЯВКИ В РАБОТЕ НЕТ</Text>
+            <Text style={styles.number}>Свободных заявок: {free ?? '…'}</Text>
+            <Text style={styles.meta}>Возьмите заявку — работы вносятся в её карточке.</Text>
+            <BigButton title="Взять заявку" variant="dark" size="big" onPress={() => router.push('/req')} />
+          </View>
+        </TourTarget>
+      )}
 
-      {rejected ? (
-        <Card onPress={() => router.push('/history')} style={styles.alert}>
-          <Text style={styles.alertTitle}>Отклонено работ: {rejected}</Text>
-          <Text style={styles.alertText}>Посмотрите комментарий руководителя в истории</Text>
-        </Card>
-      ) : null}
+      {/* ---------- Сумма за месяц ---------- */}
+      <TourTarget id="home.month">
+        <Pressable onPress={() => router.push('/team')} accessibilityRole="button" style={({ pressed }) => [styles.month, pressed && styles.pressed]}>
+          <View style={styles.monthRow}>
+            <View style={styles.flex}>
+              <Text style={styles.monthLabel}>Мои работы за {monthName(storeToday())}</Text>
+              <Text style={styles.monthSum}>
+                {sum} <Text style={styles.rub}>₽</Text>
+              </Text>
+            </View>
+            <View style={styles.monthRight}>
+              <Text style={styles.monthMeta}>Заявок: {month?.requests ?? '…'}</Text>
+              <Text style={styles.monthMeta}>Работ: {month?.entries ?? '…'}</Text>
+            </View>
+          </View>
+          {month?.pending || month?.awaiting ? (
+            <Text style={styles.monthNote}>
+              {[month.awaiting ? `ждут приёмки: ${month.awaiting}` : null, month.pending ? `на оценке: ${month.pending}` : null].filter(Boolean).join(' · ')}
+              {' — добавятся позже'}
+            </Text>
+          ) : null}
+        </Pressable>
+      </TourTarget>
+
+      {/* ---------- Что нового ---------- */}
+      <TourTarget id="home.notices">
+        <Section title="Что нового" right={feed.length > FEED_SHORT ? <FeedToggle all={allFeed} onPress={() => setAllFeed((x) => !x)} /> : null}>
+          {shownFeed.length ? (
+            shownFeed.map((n, i) => (
+              <Pressable
+                key={n.key}
+                accessibilityRole="button"
+                onPress={n.onPress}
+                style={({ pressed }) => [styles.feedRow, i > 0 && styles.feedLine, pressed && styles.pressed]}
+              >
+                <View style={[styles.dot, n.red && styles.dotRed]} />
+                <View style={styles.flex}>
+                  <Text style={styles.feedTitle}>{n.title}</Text>
+                  {n.text ? (
+                    <Text style={styles.feedText} numberOfLines={2}>
+                      {n.text}
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            ))
+          ) : (
+            <Text style={styles.meta}>Новых событий нет</Text>
+          )}
+        </Section>
+      </TourTarget>
+
+      {/* ---------- Нет заявки на работу ---------- */}
+      <View style={styles.extras}>
+        <TourTarget id="req.planned">
+          <BigButton title="Работа без заявки" variant="secondary" size="small" onPress={() => router.push('/req/new')} />
+        </TourTarget>
+        <TourTarget id="req.report">
+          <BigButton title="Сообщить руководителю" variant="secondary" size="small" onPress={() => router.push('/req/report')} />
+        </TourTarget>
+      </View>
 
       {legacy.draft ? (
-        <Card style={styles.alert}>
-          <Text style={styles.alertTitle}>
+        <Section title="Старая смена">
+          <Text style={styles.feedTitle}>
             Неотправленная смена за {formatDate(legacy.draft.workDate)} · работ: {legacy.draft.entries.length}
           </Text>
-          <Text style={styles.alertText}>
+          <Text style={styles.meta}>
             {legacy.sending ? 'Отправляется…' : legacy.error ? `Не отправилась: ${legacy.error}` : 'Осталась от старой версии приложения — отправится сама.'}
           </Text>
           {legacy.error ? (
@@ -183,65 +279,49 @@ export default function MasterHome() {
               />
             </>
           ) : null}
-        </Card>
+        </Section>
       ) : null}
-
-      <TourTarget id="home.requests">
-        <Card style={[styles.reqCard, badge?.assigned ? styles.reqMine : null]} onPress={() => router.push('/req')}>
-          <View style={styles.reqRow}>
-            <View style={styles.reqText}>
-              <Text style={styles.reqTitle}>Заявки</Text>
-              <Text style={styles.reqSub}>
-                {badge ? `Взять, внести работы, отправить · назначено вам: ${badge.assigned}` : 'Взять, внести работы, отправить на проверку'}
-              </Text>
-            </View>
-            <Icon name="chevronRight" size={18} color={colors.secondary} strokeWidth={2.4} />
-          </View>
-        </Card>
-      </TourTarget>
-
-      <Tile title="Команда" subtitle="Рейтинг и суммы по месяцам" onPress={() => router.push('/team')} />
-      <TourTarget id="home.history">
-        <Tile title="Моя история" subtitle="Внесённые работы и их статусы" onPress={() => router.push('/history')} />
-      </TourTarget>
-      <TourTarget id="home.help">
-        <Tile title="Помощь" subtitle="Обучение по шагам и «Что нового»" onPress={() => router.push('/help')} />
-      </TourTarget>
-      <BigButton title="Выйти" variant="secondary" onPress={signOut} />
-      <Text style={styles.role}>Вы вошли как мастер · {me?.login}</Text>
-      <Text style={styles.role}>{appVersionLabel()}</Text>
     </Screen>
   );
 }
 
+function FeedToggle({ all, onPress }: { all: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={space.s12}>
+      <Text style={styles.toggle}>{all ? 'Свернуть' : 'Все'}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  helloRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  hello: { fontSize: font.header, fontWeight: '800', flex: 1 },
-  month: { gap: 4, backgroundColor: colors.black },
-  monthLabel: { fontSize: font.small, color: '#BBBBBB' },
-  monthSum: { fontSize: 30, fontWeight: '800', color: colors.brand },
-  monthMeta: { fontSize: font.small, color: '#DDDDDD' },
-  monthLink: { fontSize: font.small, color: colors.brand, fontWeight: '700', marginTop: 4 },
-  alert: { borderWidth: 1.5, borderColor: colors.danger, gap: 4 },
-  alertTitle: { fontSize: font.body, fontWeight: '800', color: colors.danger },
-  alertText: { fontSize: font.small, color: colors.muted },
-  active: { gap: 6, borderWidth: 2, borderColor: colors.brand },
-  activeLabel: { fontSize: font.small, fontWeight: '800', color: colors.secondary, textTransform: 'uppercase' },
-  activeButtons: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  returnedText: { fontSize: font.small, fontWeight: '700', color: colors.danger },
   flex: { flex: 1 },
-  section: { fontSize: font.small, fontWeight: '700', color: colors.secondary },
-  mineBox: { gap: 6 },
-  mineCard: { gap: 3, borderLeftWidth: 4, borderLeftColor: colors.brand },
-  mineReturned: { borderLeftColor: colors.danger },
-  mineNumber: { fontSize: font.body, fontWeight: '800' },
-  mineOp: { fontWeight: '600' },
-  mineMeta: { fontSize: font.small, color: colors.secondary },
-  reqCard: { minHeight: 72, justifyContent: 'center', backgroundColor: colors.brand },
-  reqMine: { borderWidth: 2, borderColor: colors.black },
-  reqRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  reqText: { flex: 1, gap: 2 },
-  reqTitle: { fontSize: font.title, fontWeight: '800' },
-  reqSub: { fontSize: font.small, color: colors.black, fontWeight: '600' },
-  role: { textAlign: 'center', color: colors.muted, fontSize: font.small },
+  pressed: { opacity: opacity.pressed },
+  hello: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
+  greet: { fontSize: font.small },
+  name: { fontSize: font.header, fontWeight: '700' },
+  main: { backgroundColor: colors.card, borderRadius: radius.card, padding: space.s18, gap: space.s12 },
+  mainHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
+  pills: { flexDirection: 'row', gap: space.s6 },
+  mainBody: { gap: space.s4 },
+  caps: { fontSize: font.caption, fontWeight: '700', letterSpacing: letterSpacing.caps },
+  number: { fontSize: font.number, fontWeight: '700' },
+  summary: { fontSize: font.body, lineHeight: lineHeight.body },
+  returned: { fontSize: font.small, fontWeight: '700', color: colors.danger },
+  meta: { fontSize: font.small, color: colors.secondary },
+  month: { backgroundColor: colors.black, borderRadius: radius.card, paddingVertical: space.s16, paddingHorizontal: space.s18, gap: space.s6 },
+  monthRow: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
+  monthLabel: { fontSize: font.caption, color: colors.onDarkMuted },
+  monthSum: { fontSize: font.sum, fontWeight: '700', color: colors.onDark },
+  rub: { fontSize: font.header, color: colors.brand },
+  monthRight: { alignItems: 'flex-end', gap: space.s2 },
+  monthMeta: { fontSize: font.small, color: colors.onDark },
+  monthNote: { fontSize: font.caption, color: colors.onDarkMuted },
+  feedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12, paddingVertical: space.s12 },
+  feedLine: { borderTopWidth: stroke.hair, borderTopColor: colors.border },
+  dot: { width: size.dot, height: size.dot, borderRadius: radius.round, backgroundColor: colors.black, marginTop: space.s6 },
+  dotRed: { backgroundColor: colors.danger },
+  feedTitle: { fontSize: font.list, fontWeight: '700' },
+  feedText: { fontSize: font.small, color: colors.secondary },
+  extras: { gap: space.s8 },
+  toggle: { fontSize: font.small, fontWeight: '700', textDecorationLine: 'underline' },
 });

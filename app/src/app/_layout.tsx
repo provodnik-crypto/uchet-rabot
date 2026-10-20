@@ -1,7 +1,9 @@
+import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BigButton } from '../components/BigButton';
 import { UpdateBanner } from '../components/UpdateBanner';
@@ -10,7 +12,8 @@ import { installCrashLog, setCurrentScreen } from '../lib/errorLog';
 import { useAppUpdate } from '../lib/appUpdate';
 import { TourProvider } from '../lib/tour';
 import { isConfigured } from '../lib/supabase';
-import { colors, font } from '../theme';
+import { setFontsReady } from '../components/Text';
+import { colors, font, fontFiles, space } from '../theme';
 
 installCrashLog();
 
@@ -34,6 +37,14 @@ function RootStack() {
   const { loading, session, me, accessError, loadError, retry, signOut } = useAuth();
   // при запуске — до 5 секунд ждём новое обновление, чтобы сразу открыть свежую версию
   const { starting } = useAppUpdate();
+  // шрифт LM Main: не загрузился — приложение работает на системном
+  const [fontsLoaded, fontError] = useFonts({
+    [fontFiles.regular]: require('../../assets/fonts/LMMain-Regular.otf'),
+    [fontFiles.demi]: require('../../assets/fonts/LMMain-DemiBold.otf'),
+    [fontFiles.bold]: require('../../assets/fonts/LMMain-Bold.otf'),
+  });
+  const fontsDone = fontsLoaded || !!fontError;
+  setFontsReady(fontsLoaded);
 
   if (!isConfigured) {
     return (
@@ -43,7 +54,7 @@ function RootStack() {
       </Centered>
     );
   }
-  if (loading || starting) {
+  if (loading || starting || !fontsDone) {
     return (
       <Centered>
         <ActivityIndicator size="large" color={colors.black} />
@@ -88,7 +99,7 @@ function Centered({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'stretch', justifyContent: 'center', padding: 24, gap: 16 },
+  centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'stretch', justifyContent: 'center', padding: space.s24, gap: space.s16 },
   title: { fontSize: font.title, fontWeight: '700', textAlign: 'center' },
   text: { fontSize: font.body, textAlign: 'center', color: colors.muted },
 });
