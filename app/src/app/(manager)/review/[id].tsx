@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
@@ -9,17 +9,15 @@ import { RequestBadges } from '../../../components/RequestBadges';
 import { PhotoStrip } from '../../../components/PhotoStrip';
 import type { RemotePhoto } from '../../../lib/workPhotos';
 import { RequestFeed } from '../../../components/RequestFeed';
+import { WorksMoney } from '../../../components/WorksMoney';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
 import { acceptRequest, markRequestRead, requestCard, returnRequest, requestLabel } from '../../../lib/requests';
-import { formatQuantity } from '../../../lib/shift';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, space } from '../../../theme';
-
-const workStatus = { priced: 'Цена есть', pending: 'Ждёт цены (На оценке)', rejected: 'Отклонена', awaiting: 'Цена есть' } as const;
 
 /** Проверка заявки: работы, комментарий мастера; «Принять» или «Вернуть». */
 export default function ReviewRequestScreen() {
@@ -33,7 +31,6 @@ export default function ReviewRequestScreen() {
 
   if (!r) return <Screen><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
   const sendNote = r.events.find((e) => e.kind === 'send')?.comment;
-  const pending = r.works.filter((w) => w.status === 'pending').length;
 
   async function act(kind: 'accept' | 'return') {
     if (!r) return;
@@ -67,19 +64,7 @@ export default function ReviewRequestScreen() {
         {r.taken_at ? ` · с ${formatDate(r.taken_at.slice(0, 10))}` : ''}
       </Text>
 
-      <Card style={styles.card}>
-        <Text style={styles.label}>Работы: {r.works.length}</Text>
-        {r.works.map((w, i) => (
-          <View key={i} style={styles.row}>
-            <Text style={styles.name}>{w.name}</Text>
-            <Text style={styles.meta}>
-              {formatDate(w.work_date)} · {formatQuantity(w.quantity)} {w.unit} · {w.performers}
-            </Text>
-            <Text style={[styles.meta, w.status === 'pending' && styles.warn]}>{workStatus[w.status]}</Text>
-          </View>
-        ))}
-        {pending ? <Text style={styles.warn}>Работ вне прайса без цены: {pending}. Цену назначьте в «На оценке» — до или после приёмки.</Text> : null}
-      </Card>
+      <WorksMoney requestId={r.id} works={r.works} />
 
       {r.result_photos?.length ? (
         <Card style={styles.card}>

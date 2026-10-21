@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { RequestFeed } from '../../../components/RequestFeed';
+import { WorksMoney } from '../../../components/WorksMoney';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
@@ -234,6 +235,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
       </Card>
       </TourTarget>
 
+      {card?.works.length ? <WorksMoney requestId={card.id} works={card.works} /> : null}
       {card ? <RequestFeed requestId={card.id} events={card.events} onSent={reloadCard} /> : null}
 
       {itsm ? (

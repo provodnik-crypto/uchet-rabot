@@ -409,6 +409,16 @@ export type Notifications = {
 export const myNotifications = () => rpc<Notifications>('my_notifications');
 
 // ---------- Руководитель ----------
+/** Цены и суммы работ заявки — только руководителю (мастеру база не отдаёт). */
+export type RequestMoney = {
+  works: { id: number; unit_price_kop: number | null; total_kop: number | null }[];
+  /** Итог по работам с ценой, кроме отклонённых. */
+  total_kop: number;
+  /** Работ без цены (вне прайса, ждут оценки). */
+  unpriced: number;
+};
+export const requestMoney = (id: number) => rpc<RequestMoney>('request_money', { p_id: id });
+
 export const assignRequest = (id: number, employeeId: number | null, contractor: boolean) =>
   rpc<void>('assign_request', { p_id: id, p_employee_id: employeeId, p_contractor: contractor });
 export const setRequestOpen = (id: number, open: boolean) => rpc<void>('set_request_open', { p_id: id, p_open: open });

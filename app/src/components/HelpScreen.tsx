@@ -26,7 +26,7 @@ export function HelpScreen({ role }: { role: 'master' | 'manager' }) {
         </Card>
       ))}
       <Text style={styles.section}>Что нового</Text>
-      {WHATS_NEW.map((w) => (
+      {WHATS_NEW.filter((w) => (role === 'manager' ? w.manager : w.master).length > 0).map((w) => (
         <Card key={w.id} style={styles.card} onPress={() => showWhatsNew(w)}>
           <Text style={styles.title}>Обновление от {w.date}</Text>
           <View style={styles.list}>

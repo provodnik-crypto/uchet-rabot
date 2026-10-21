@@ -90,7 +90,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
       autoDone.current = me.id;
       try {
         const first = FIRST[role];
-        const latest = WHATS_NEW[0]?.id;
+        // последняя запись, где для этой роли что-то есть (обновление только для руководителя мастеру не показываем)
+        const entry = WHATS_NEW.find((w) => w[role].length > 0);
+        const latest = entry?.id;
         const [done, seen] = await Promise.all([AsyncStorage.getItem(key(me.id, first)), AsyncStorage.getItem(key(me.id, 'whats-new'))]);
         if (!done && !existingUser) {
           // новый сотрудник: обучение вместо «Что нового»
@@ -101,7 +103,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         if (!done) await AsyncStorage.setItem(key(me.id, first), '1');
         if (latest && seen !== latest) {
           await AsyncStorage.setItem(key(me.id, 'whats-new'), latest);
-          setNews(WHATS_NEW[0]);
+          setNews(entry ?? null);
         }
       } catch {
         // без хранилища просто не показываем
