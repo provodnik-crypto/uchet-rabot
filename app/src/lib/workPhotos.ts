@@ -1,5 +1,5 @@
 import { Alert, Linking, Platform } from 'react-native';
-import { supabase } from './supabase';
+import { supabase, viaServerBase } from './supabase';
 import { uuid } from './today';
 
 /** Фото работы в черновике: снятое на телефоне (localUri) и/или уже загруженное (path). */
@@ -175,8 +175,9 @@ export async function signedUrls(paths: string[]): Promise<Record<string, string
     if (error) throw error;
     for (const r of data ?? []) {
       if (r.path && r.signedUrl) {
-        out[r.path] = r.signedUrl;
-        linkCache.set(r.path, { url: r.signedUrl, at: now });
+        const link = viaServerBase(r.signedUrl);
+        out[r.path] = link;
+        linkCache.set(r.path, { url: link, at: now });
       }
     }
   }

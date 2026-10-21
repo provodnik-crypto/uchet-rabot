@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import { Platform } from 'react-native';
 import { sanitize } from './errorText';
-import { supabase } from './supabase';
+import { serverBase, supabase } from './supabase';
 
 /**
  * Журнал ошибок на устройствах (таблица app_errors). Без личных данных: экран, время, вид и текст
@@ -87,7 +87,8 @@ export function reportError(e: unknown, kind: string, screen?: string) {
         code: code.slice(0, 20),
         app_version: appVersion(),
         runtime_version: String(Updates.runtimeVersion ?? ''),
-        os: `${Platform.OS} ${Platform.Version}`,
+        // через посредника в России или напрямую — чтобы видеть, помогает ли посредник
+        os: `${Platform.OS} ${Platform.Version}${serverBase().includes('supabase.co') ? '' : ' · посредник'}`,
         device,
       });
       if (q.length > MAX_QUEUE) q.splice(0, q.length - MAX_QUEUE);
