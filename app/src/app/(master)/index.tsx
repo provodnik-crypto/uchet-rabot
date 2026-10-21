@@ -60,7 +60,7 @@ export default function MasterHome() {
   const { data: entries } = entriesQ;
   const { data: month } = monthQ;
   const { data: notes } = notesQ;
-  const works = active && cardQ.data?.id === active.id ? cardQ.data.works.length : null;
+  const works = active && cardQ.data?.id === active.id ? cardQ.data.works.filter((w) => w.status !== 'rejected').length : null;
   const free = openQ.data?.filter((r) => r.status === 'waiting' && !r.to_contractor && (!r.assignee_id || r.mine)).length ?? null;
   const rejected = entries?.filter((e) => e.status === 'rejected').length ?? 0;
 

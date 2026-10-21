@@ -12,7 +12,8 @@ import { Screen } from '../../../components/Screen';
 import { SelectField } from '../../../components/SelectField';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
-import { addRequestWork, type RequestWork } from '../../../lib/requests';
+import { addRequestWork, requestCard, type RequestWork } from '../../../lib/requests';
+import { uuid } from '../../../lib/today';
 import { humanError } from '../../../lib/errors';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
 import { listUnits, type Unit } from '../../../lib/price';
@@ -47,8 +48,13 @@ type Params = {
 
 type PriceChoice = { id: number; name: string; category: string; unitId: number; unitCode: string; integerOnly: boolean };
 
-/** Отдел и исполнители последней внесённой работы — подставляются в следующую (пока приложение открыто). */
-let lastChoice: { departmentId: number; performerIds: number[] } | null = null;
+/**
+ * Отдел и исполнители последней работы — подставляются в следующую (пока приложение открыто).
+ * Исполнители помнятся отдельно для каждой заявки и мастера: из заявки А в заявку Б и к другому мастеру
+ * на общем телефоне они не переезжают. Отдел — последний у этого мастера.
+ */
+const lastPerformers: Record<string, number[]> = {};
+const lastDepartment: Record<number, number> = {};
 
 export default function EntryScreen() {
   const params = useLocalSearchParams<Params>();
@@ -65,8 +71,14 @@ export default function EntryScreen() {
   const [refsError, setRefsError] = useState<string | null>(null);
   const loadRefs = () => {
     setRefsError(null);
-    Promise.all([listMasters(), listActiveDepartments(), listUnits()])
-      .then(([masters, departments, units]) => setRefs({ masters, departments, units }))
+    Promise.all([listMasters(), listActiveDepartments(), listUnits(), requestId ? requestCard({ id: requestId }).catch(() => null) : null])
+      .then(([masters, departments, units, card]) => {
+        setRefs({ masters, departments, units });
+        // новая работа: исполнители по умолчанию — вы и напарники заявки (сумма делится между исполнителями)
+        if (!editing && !lastPerformers[choiceKey] && me && card) {
+          setPerformerIds([...new Set([me.id, ...card.members.map((m) => m.id)])].filter((id) => masters.some((p) => p.id === id)));
+        }
+      })
       .catch((e) => setRefsError(humanError(e)));
   };
   useEffect(loadRefs, []);
@@ -93,8 +105,12 @@ export default function EntryScreen() {
   const [customName, setCustomName] = useState(editing?.custom ? editing.name : params.custom ? (params.name ?? '') : '');
   const [unitId, setUnitId] = useState<number | null>(editing && !editing.price_item_id ? (editing.unit_id ?? null) : null);
   const [quantity, setQuantity] = useState(editing ? formatQuantity(editing.quantity) : '');
-  const [departmentId, setDepartmentId] = useState<number | null>(editing?.department_id ?? lastChoice?.departmentId ?? null);
-  const [performerIds, setPerformerIds] = useState<number[]>(editing?.performer_ids ?? lastChoice?.performerIds ?? (me ? [me.id] : []));
+  const choiceKey = `${me?.id ?? 0}:${requestId}`;
+  const [departmentId, setDepartmentId] = useState<number | null>(editing?.department_id ?? (me ? lastDepartment[me.id] : undefined) ?? null);
+  const [performerIds, setPerformerIds] = useState<number[]>(editing?.performer_ids ?? lastPerformers[choiceKey] ?? (me ? [me.id] : []));
+  // одно нажатие «Добавить работу» — один ключ: повтор после обрыва связи не создаёт дубль
+  const clientKey = useRef(uuid());
+  const saving = useRef(false);
   const [note, setNote] = useState(editing?.note ?? '');
   const [workPhotos, setWorkPhotos] = useState<DraftPhoto[]>([]);
   // при исправлении — уже приложенные фото работы
@@ -175,6 +191,9 @@ export default function EntryScreen() {
     };
     setErrors(e);
     if (Object.values(e).some(Boolean)) return;
+    // второе быстрое нажатие, пока первое сохраняется, — пропускаем
+    if (saving.current) return;
+    saving.current = true;
     setBusy(true);
     setSaveError(null);
     try {
@@ -190,10 +209,12 @@ export default function EntryScreen() {
           note: note.trim() || null,
           performer_ids: performerIds,
           photos: toPayload(photos),
+          client_key: clientKey.current,
         },
         editId,
       );
-      lastChoice = { departmentId: departmentId!, performerIds };
+      lastPerformers[choiceKey] = performerIds;
+      if (me) lastDepartment[me.id] = departmentId!;
       // назад в карточку заявки (из выбора работы — через два экрана)
       if (editId) router.back();
       else router.dismissTo({ pathname: '/req/[id]', params: { id: String(requestId) } });
@@ -201,6 +222,7 @@ export default function EntryScreen() {
       // всё введённое остаётся на экране — можно нажать ещё раз
       setSaveError(humanError(x));
     } finally {
+      saving.current = false;
       setBusy(false);
       setProgress(null);
     }

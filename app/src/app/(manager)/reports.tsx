@@ -11,6 +11,7 @@ import { StateView } from '../../components/StateView';
 import { humanError } from '../../lib/errors';
 import { decideMasterReport, formatStoreTime, listMasterReports, reportStatusText, requestLabel, type MasterReport } from '../../lib/requests';
 import { useFocusQuery } from '../../lib/useQuery';
+import { settleBeforeLeaving } from '../../lib/settle';
 import type { RemotePhoto } from '../../lib/workPhotos';
 import { colors, font, space, stroke } from '../../theme';
 
@@ -53,6 +54,8 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
     setBusy(true);
     setErr(null);
     try {
+      if ((action === 'contractor' || action === 'close') && m.about_request != null &&
+          !(await settleBeforeLeaving(m.about_request, action === 'close' ? 'Закрыть заявку' : 'Передать подрядчику'))) return;
       const r = await decideMasterReport(m.id, action, action === 'reject' ? reason.trim() : null, action === 'request' ? title.trim() : null);
       if (action === 'request' && r) router.push({ pathname: '/requests/[id]', params: { id: String(r.id), number: r.number } });
       onDone();

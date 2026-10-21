@@ -31,7 +31,22 @@ export default function SendRequestScreen() {
   const header = <AppHeader title="Отправить на проверку" subtitle={r ? requestLabel(r.number) : undefined} back />;
   if (!r) return <Screen header={header}><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
 
-  const works = r.works;
+  // заявка уже не у мастера в работе (ушла на проверку — в том числе если ответ на отправку потерялся)
+  if (r.status !== 'in_work' || !r.is_responsible) {
+    return (
+      <Screen status={query} header={header}>
+        <Section>
+          <Text style={styles.body}>
+            {r.status === 'review' ? 'Заявка уже на проверке у руководителя. Отправлять ещё раз не нужно.' : 'Заявка сейчас не у вас в работе — отправить её нельзя.'}
+          </Text>
+          <BigButton title="На главную" variant="dark" onPress={() => router.dismissTo('/')} />
+        </Section>
+      </Screen>
+    );
+  }
+
+  // отклонённые работы не считаются: без других работ сервер не примет отправку
+  const works = r.works.filter((w) => w.status !== 'rejected');
   const ready = works.length > 0 && photos.length > 0;
 
   async function send() {

@@ -23,6 +23,9 @@ for t in "$here"/[0-9]*.sql; do
   nums=$(grep -oiE "'request_number', '(RFS|INC)[0-9]{6}_[0-9]{4}'" "$t" | grep -oiE "(RFS|INC)[0-9]{6}_[0-9]{4}" | tr a-z A-Z | sort -u | grep -vxF -f <(grep -oE '"number": "[A-Z0-9_]+"' "$t" | grep -oE "(RFS|INC)[0-9_]+" || true) | sed "s/.*/('&')/" | paste -sd, - || true)
   pre=""
   [ -n "$nums" ] && pre="insert into public.requests (number) values $nums on conflict (number) do nothing;"
-  { cat "$here/helpers.sql"; echo "$pre"; cat "$t"; } | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
+  # Тесты до 23-го проверяют расчёт денег через старую «Закрыть смену» — им разрешено её прежнее поведение.
+  legacy=""
+  [ "$(basename "$t" | cut -c1-2)" -le 23 ] && legacy="select set_config('uchet.allow_legacy_shift', 'on', false);"
+  { cat "$here/helpers.sql"; echo "$legacy"; echo "$pre"; cat "$t"; } | "${psql_cmd[@]}" 2>&1 | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
 done
 echo "Все тесты пройдены"

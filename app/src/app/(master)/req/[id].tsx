@@ -89,6 +89,8 @@ export default function RequestCardScreen() {
   const working = r.status === 'in_work' && r.is_responsible;
   const isMember = r.members.some((m) => m.id === me?.id);
   const works = r.works;
+  // отклонённые работы не в счёт: отправить на проверку можно, только если есть другие
+  const liveWorks = works.filter((w) => w.status !== 'rejected').length;
   const returned = !!r.returned_comment && (r.status === 'in_work' || r.status === 'paused');
   const day = r.status === 'in_work' ? dayNumber(r.taken_at) : null;
   const tone = requestTone({
@@ -150,7 +152,7 @@ export default function RequestCardScreen() {
     else if (working)
       footer = (
         <TourTarget id="card.send">
-          <BigButton title={returned ? 'Исправить и отправить' : 'Отправить на проверку'} size="big" disabled={!works.length} onPress={send} />
+          <BigButton title={returned ? 'Исправить и отправить' : 'Отправить на проверку'} size="big" disabled={!liveWorks} onPress={send} />
         </TourTarget>
       );
     else if (paused && (r.hold_reason === 'pause' || r.hold_reason === 'materials') && !r.my_active)
@@ -294,7 +296,9 @@ export default function RequestCardScreen() {
         <ReasonPanel
           label="Почему отказываетесь?"
           placeholder="Например: нет запчасти"
-          hint="Заявка снова станет «Ожидает», руководитель увидит ваш комментарий."
+          hint={`Заявка снова станет «Ожидает», руководитель увидит ваш комментарий.${
+            liveWorks ? ` Ваши работы по заявке (${liveWorks}) будут удалены — их не получит следующий мастер.` : ''
+          }`}
           button="Отказаться"
           danger
           run={(t) => refuseRequest(r.id, t)}
@@ -335,7 +339,7 @@ export default function RequestCardScreen() {
               <BigButton title="+ Добавить работу" variant="secondary" size="mid" onPress={addWork} />
             </TourTarget>
           ) : null}
-          {working && !works.length ? <Text style={styles.small}>Отправить на проверку можно, когда есть хотя бы одна работа.</Text> : null}
+          {working && !liveWorks ? <Text style={styles.small}>Отправить на проверку можно, когда есть хотя бы одна работа (отклонённые не в счёт).</Text> : null}
         </Section>
       ) : null}
 

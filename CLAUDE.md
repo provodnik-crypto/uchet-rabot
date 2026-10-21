@@ -101,6 +101,9 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
 * **«Не могу выполнить»** (26.10.2026): `cant_do(заявка, materials|not_needed|contractor, комментарий)`. Нет материалов —
   `paused/materials` («Ждёт материалы», мастер свободен, продолжить — `resume_request`); не нужна — просьба
   `master_reports.kind = 'close'`, закрывает только руководитель; подрядчик — `request_contractor`.
+* **Деньги и дубли** (27.10.2026): работа — `client_key` (повтор без дубля); исполнители по умолчанию — мастер + напарники;
+  `settle_request_works` — зачёт «ждут приёмки» при подрядчике/закрытии; отказ удаляет несданные работы; `submit_shift`
+  у мастера — только своя заявка «В работе» (тестам 01–23 — `uchet.allow_legacy_shift`).
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
 * Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).
   После каждого обновления добавить запись в начало `WHATS_NEW` (тексты пишет Claude, заказчик проверяет).

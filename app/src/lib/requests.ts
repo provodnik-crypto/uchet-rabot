@@ -310,9 +310,13 @@ export type WorkPayload = {
   note: string | null;
   performer_ids: number[];
   photos: ReturnType<typeof import('./workPhotos').toPayload>;
+  /** Одноразовый ключ нажатия: повтор после обрыва связи не создаёт дубль. */
+  client_key?: string;
 };
 export const addRequestWork = (requestId: number, entry: WorkPayload, replaceId: number | null = null) =>
   rpc<number>('add_request_work', { p_request: requestId, p_entry: entry, p_replace: replaceId });
+/** Руководитель: работы «ждут приёмки» заявки, которую не примут (подрядчик, закрытие) — засчитать мастеру или нет. */
+export const settleRequestWorks = (id: number, credit: boolean) => rpc<number>('settle_request_works', { p_id: id, p_credit: credit });
 export const deleteMyWork = (entryId: number) => rpc<void>('delete_my_work', { p_entry: entryId });
 export const sendRequestForReviewPhotos = (id: number, comment: string | null, photos: unknown[]) =>
   rpc<void>('send_request_for_review_photos', { p_id: id, p_comment: comment, p_photos: photos });

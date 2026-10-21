@@ -30,6 +30,7 @@ import { useFocusQuery } from '../../../lib/useQuery';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font, radius, space, stroke } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
+import { settleBeforeLeaving } from '../../../lib/settle';
 
 
 /** Открывается из списка (данные строки в параметрах) или по номеру — из уведомлений на главной. */
@@ -90,6 +91,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
 
   const assign = (employeeId: number | null, toContractor: boolean) =>
     run('assign', async () => {
+      if (toContractor && !(await settleBeforeLeaving(r.id, 'Передать подрядчику', card))) return;
       await assignRequest(r.id, employeeId, toContractor);
       setAssignee(employeeId);
       setContractor(toContractor);
@@ -99,6 +101,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
   async function toggleOpen() {
     if (isOpen && !(await confirm('Закрыть заявку?', 'Мастера перестанут видеть её в списке заявок.', 'Закрыть'))) return;
     run('open', async () => {
+      if (isOpen && !(await settleBeforeLeaving(r.id, 'Закрыть заявку', card))) return;
       await setRequestOpen(r.id, !isOpen);
       setIsOpen(!isOpen);
     });
