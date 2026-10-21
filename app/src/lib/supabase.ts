@@ -39,6 +39,13 @@ export const fetchWithTimeout: typeof fetch = (input, init) => {
     else outer.addEventListener('abort', () => ctrl.abort());
   }
   return fetch(input, { ...init, signal: ctrl.signal })
+    .then(async (res) => {
+      // Ответ читаем целиком в пределах того же ожидания: при обрыве связи посреди ответа
+      // будет ошибка связи (с «Повторить»), а не пустые данные без ошибки.
+      const empty = res.status === 204 || res.status === 205 || res.status === 304 || method === 'HEAD';
+      const body = empty ? null : await res.arrayBuffer();
+      return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+    })
     .catch((e) => {
       throw timedOut ? new TimeoutError() : e;
     })
