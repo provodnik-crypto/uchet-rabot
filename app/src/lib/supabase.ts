@@ -42,9 +42,13 @@ export const fetchWithTimeout: typeof fetch = (input, init) => {
     .then(async (res) => {
       // Ответ читаем целиком в пределах того же ожидания: при обрыве связи посреди ответа
       // будет ошибка связи (с «Повторить»), а не пустые данные без ошибки.
+      // Только текстовые ответы (JSON) и только как текст: так буквы остаются в UTF-8.
+      // (Чтение байтами ломало русские буквы на Android — 22.10.2026.) Прочие ответы — как есть.
+      const type = res.headers.get('content-type') ?? '';
       const empty = res.status === 204 || res.status === 205 || res.status === 304 || method === 'HEAD';
-      const body = empty ? null : await res.arrayBuffer();
-      return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+      if (empty || !/json|text/i.test(type)) return res;
+      const text = await res.text();
+      return new Response(text, { status: res.status, statusText: res.statusText, headers: res.headers });
     })
     .catch((e) => {
       throw timedOut ? new TimeoutError() : e;
