@@ -6,7 +6,7 @@ import { Card } from '../../components/Card';
 import { PeriodPicker } from '../../components/PeriodPicker';
 import { Screen } from '../../components/Screen';
 import { StateView } from '../../components/StateView';
-import { monthName, presetPeriod, reportByEmployee, reportByMonth, reportTotals, type PeriodPreset } from '../../lib/manager';
+import { awaitingTotals, monthName, presetPeriod, reportByEmployee, reportByMonth, reportTotals, type PeriodPreset } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
 import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { useFocusQuery } from '../../lib/useQuery';
@@ -19,8 +19,13 @@ export default function SummaryScreen() {
   // смена периода меняет ключ — данные грузятся заново
   const query = useFocusQuery(
     async () => {
-      const [totals, employees, months] = await Promise.all([reportTotals(period), reportByEmployee(period), reportByMonth(period)]);
-      return { totals, employees, months };
+      const [totals, employees, months, awaiting] = await Promise.all([
+        reportTotals(period),
+        reportByEmployee(period),
+        reportByMonth(period),
+        awaitingTotals(period).catch(() => null),
+      ]);
+      return { totals, employees, months, awaiting };
     },
     { key: `summary:${period.from}:${period.to}` },
   );
@@ -40,6 +45,11 @@ export default function SummaryScreen() {
             <Text style={styles.totalSum}>{formatKop(data.totals.total_kop)}</Text>
             <Text style={styles.totalMeta}>работ с ценой: {data.totals.entries}</Text>
             {data.totals.pending ? <Text style={styles.warn}>Без цены (на оценке): {data.totals.pending} — в сумму не входят</Text> : null}
+            {data.awaiting?.entries ? (
+              <Text style={styles.warn}>
+                Ждут приёмки: {data.awaiting.entries} на {formatKop(data.awaiting.total_kop)} — войдут в сумму, когда заявки примут
+              </Text>
+            ) : null}
             {data.totals.rejected ? <Text style={styles.totalMeta}>Отклонено: {data.totals.rejected}</Text> : null}
           </Card>
 

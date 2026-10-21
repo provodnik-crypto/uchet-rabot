@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../../../components/AppHeader';
 import { BigButton } from '../../../../components/BigButton';
 import { PhotoPicker } from '../../../../components/PhotoPicker';
-import { Screen } from '../../../../components/Screen';
+import { Screen, useKeepAboveKeyboard } from '../../../../components/Screen';
 import { Section } from '../../../../components/Section';
 import { StateView } from '../../../../components/StateView';
 import { Text, TextInput } from '../../../../components/Text';
@@ -27,6 +27,7 @@ export default function SendRequestScreen() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const keep = useKeepAboveKeyboard();
 
   const header = <AppHeader title="Отправить на проверку" subtitle={r ? requestLabel(r.number) : undefined} back />;
   if (!r) return <Screen header={header}><StateView loading={loading} error={error} onRetry={reload} /></Screen>;
@@ -110,7 +111,10 @@ export default function SendRequestScreen() {
       </TourTarget>
 
       <Section title="3 · Комментарий (необязательно)">
+        <View ref={keep.ref} collapsable={false}>
         <TextInput
+          onFocus={keep.onFocus}
+          onBlur={keep.onBlur}
           value={comment}
           onChangeText={setComment}
           multiline
@@ -121,6 +125,7 @@ export default function SendRequestScreen() {
           accessibilityLabel="Комментарий руководителю"
           style={styles.input}
         />
+        </View>
       </Section>
       <Text style={styles.meta}>После отправки заявка уйдёт руководителю, а вы сможете взять следующую.</Text>
     </Screen>

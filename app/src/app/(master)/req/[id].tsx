@@ -33,7 +33,8 @@ import {
   type RequestWork,
 } from '../../../lib/requests';
 import { formatQuantity, listMasters } from '../../../lib/shift';
-import { storeToday } from '../../../lib/today';
+import { takenDayNumber } from '../../../lib/today';
+import { ScrollIntoView } from '../../../components/ScrollIntoView';
 import { TourTarget } from '../../../lib/tour';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, lineHeight, opacity, radius, space, stroke } from '../../../theme';
@@ -47,12 +48,6 @@ const workStatus: Record<RequestWork['status'], string> = {
 
 type Panel = null | 'take' | 'refuse' | 'pause' | 'cant';
 
-/** «N-й день» с даты взятия (по календарю магазина). */
-function dayNumber(takenAt: string | null): number | null {
-  if (!takenAt) return null;
-  const n = Math.round((Date.parse(storeToday()) - Date.parse(takenAt.slice(0, 10))) / 86_400_000) + 1;
-  return Number.isFinite(n) ? Math.max(1, n) : null;
-}
 
 /**
  * Карточка заявки — весь путь мастера: «Взять в работу» → «+ Добавить работу» (сразу сохраняется) →
@@ -93,7 +88,7 @@ export default function RequestCardScreen() {
   // отклонённые работы не в счёт: отправить на проверку можно, только если есть другие
   const liveWorks = works.filter((w) => w.status !== 'rejected').length;
   const returned = !!r.returned_comment && (r.status === 'in_work' || r.status === 'paused');
-  const day = r.status === 'in_work' ? dayNumber(r.taken_at) : null;
+  const day = r.status === 'in_work' ? takenDayNumber(r.taken_at) : null;
   const tone = requestTone({
     status: r.status,
     returned,
@@ -270,20 +265,36 @@ export default function RequestCardScreen() {
         </View>
       ) : null}
 
+      {r.open_asks?.length && working ? (
+        <View style={styles.plate}>
+          <Text style={styles.plateTitle}>
+            {r.open_asks.includes('close') ? 'Просьба закрыть заявку — у руководителя' : 'Просьба передать подрядчику — у руководителя'}
+          </Text>
+          <Text style={styles.meta}>Пока руководитель не решил, заявка остаётся у вас в работе. Ответ придёт в «Что нового».</Text>
+        </View>
+      ) : null}
+
       {/* ---------- Панели действий ---------- */}
-      {panel === 'take' ? <TakePanel requestId={r.id} meId={me?.id ?? 0} onDone={done} onCancel={() => setPanel(null)} /> : null}
+      {panel === 'take' ? (
+        <ScrollIntoView>
+          <TakePanel requestId={r.id} meId={me?.id ?? 0} onDone={done} onCancel={() => setPanel(null)} />
+        </ScrollIntoView>
+      ) : null}
       {panel === 'pause' ? (
+        <ScrollIntoView>
         <ReasonPanel
           label="Почему заявка не может двигаться дальше?"
-          placeholder="Например: ждём материалы, нет доступа"
-          hint="Запрос уйдёт руководителю. Пока он не подтвердил, заявка остаётся у вас в работе."
+          placeholder="Например: нет доступа в помещение"
+          hint="Запрос уйдёт руководителю. Пока он не подтвердил, заявка остаётся у вас в работе. Нет материалов — лучше «⋯» → «Не могу выполнить»: вы сразу свободны."
           button="Отправить запрос"
           run={(t) => requestPause(r.id, t)}
           onDone={done}
           onCancel={() => setPanel(null)}
         />
+        </ScrollIntoView>
       ) : null}
       {panel === 'cant' ? (
+        <ScrollIntoView>
         <CantDoPanel
           requestId={r.id}
           onDone={(msg) => {
@@ -292,8 +303,10 @@ export default function RequestCardScreen() {
           }}
           onCancel={() => setPanel(null)}
         />
+        </ScrollIntoView>
       ) : null}
       {panel === 'refuse' ? (
+        <ScrollIntoView>
         <ReasonPanel
           label="Почему отказываетесь?"
           placeholder="Например: нет запчасти"
@@ -306,6 +319,7 @@ export default function RequestCardScreen() {
           onDone={done}
           onCancel={() => setPanel(null)}
         />
+        </ScrollIntoView>
       ) : null}
 
       {/* ---------- Работы ---------- */}
@@ -314,8 +328,12 @@ export default function RequestCardScreen() {
           {works.map((w, i) => (
             <Pressable
               key={w.id ?? i}
-              disabled={!w.can_edit || !w.id}
-              onPress={() => setWorkFor(w)}
+              disabled={!w.id || (!w.can_edit && !(working && w.status === 'rejected'))}
+              onPress={() =>
+                w.status === 'rejected'
+                  ? router.push({ pathname: '/fix', params: { id: String(w.id) } })
+                  : setWorkFor(w)
+              }
               accessibilityRole={w.can_edit ? 'button' : undefined}
               accessibilityHint={w.can_edit ? 'Исправить или удалить' : undefined}
               style={({ pressed }) => [styles.work, i > 0 && styles.workLine, pressed && styles.pressed]}
@@ -325,7 +343,9 @@ export default function RequestCardScreen() {
                 <Text style={styles.small}>
                   {formatDate(w.work_date)}
                   {w.performers ? ` · ${w.performers}` : ''} ·{' '}
-                  <Text style={[w.status === 'rejected' && styles.red, w.status === 'priced' && styles.green]}>{workStatus[w.status]}</Text>
+                  <Text style={[w.status === 'rejected' && styles.red, w.status === 'priced' && styles.green]}>{workStatus[w.status]}
+                    {w.status === 'rejected' ? (working ? ' — нажмите, чтобы исправить' : ' — исправит руководитель') : ''}
+                  </Text>
                 </Text>
               </View>
               <Text style={styles.qty}>

@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/Text';
 import { BigButton } from '../../../components/BigButton';
@@ -13,7 +13,7 @@ import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { listRequests, updateRequest, type RequestRow } from '../../../lib/manager';
+import { requestRow, setManualRequestTitle, updateRequest, type RequestRow } from '../../../lib/manager';
 import {
   assignRequest,
   formatRegistered,
@@ -36,10 +36,11 @@ import { settleBeforeLeaving } from '../../../lib/settle';
 /** Открывается из списка (данные строки в параметрах) или по номеру — из уведомлений на главной. */
 export default function RequestScreen() {
   const { data, id, number } = useLocalSearchParams<{ id: string; data?: string; number?: string }>();
-  const { data: rows, error, loading, reload } = useFocusQuery(() =>
-    data ? Promise.resolve([JSON.parse(data) as RequestRow]) : listRequests(number ?? '', 'all'),
-  );
-  const row = rows?.find((x) => x.id === Number(id));
+  // строка заявки всегда свежая (по id); снимок из списка — только чтобы сразу что-то показать
+  const snapshot = data ? (JSON.parse(data) as RequestRow) : null;
+  const { data: fresh, error, loading, reload } = useFocusQuery(() => requestRow(Number(id)), { key: `reqrow:${id}`, persist: false });
+  const row = fresh ?? (snapshot && snapshot.id === Number(id) ? snapshot : null);
+  void number;
   if (!row) {
     return (
       <Screen>
@@ -59,6 +60,13 @@ function RequestDetail({ r }: { r: RequestRow }) {
   const [assignee, setAssignee] = useState<number | null>(r.assignee_id);
   const [contractor, setContractor] = useState(r.to_contractor);
   const [isOpen, setIsOpen] = useState(r.is_open);
+  // после любых действий карточка перечитывается — назначение и «закрыта» берём из неё
+  useEffect(() => {
+    if (!card) return;
+    setAssignee(card.assignee_id);
+    setContractor(card.to_contractor);
+    setIsOpen(card.is_open);
+  }, [card]);
   const itsm = r.source === 'itsm';
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -68,7 +76,8 @@ function RequestDetail({ r }: { r: RequestRow }) {
     setBusy('save');
     setMessage(null);
     try {
-      await updateRequest(r.id, { subject: subject.trim() || null });
+      if (r.source === 'manual') await setManualRequestTitle(r.id, subject.trim());
+      else await updateRequest(r.id, { subject: subject.trim() || null });
       router.back();
     } catch (e) {
       setMessage(humanError(e));
@@ -89,14 +98,24 @@ function RequestDetail({ r }: { r: RequestRow }) {
     }
   }
 
-  const assign = (employeeId: number | null, toContractor: boolean) =>
-    run('assign', async () => {
+  const assign = async (employeeId: number | null, toContractor: boolean) => {
+    if (busy) return;
+    // случайное касание чипа не должно сразу отдавать заявку подрядчику или снимать назначение
+    if (toContractor && !contractor) {
+      const atMaster = card && (card.status === 'in_work' || card.status === 'paused') ? card.responsible_name : null;
+      if (!(await confirm('Передать подрядчику?', atMaster ? `Заявка уйдёт от мастера ${atMaster}.` : 'Мастера перестанут её видеть как свободную.', 'Передать'))) return;
+    }
+    if (!toContractor && employeeId === null && (assignee || contractor)) {
+      if (!(await confirm('Снять назначение?', 'Заявка станет свободной для всех мастеров.', 'Снять'))) return;
+    }
+    return run('assign', async () => {
       if (toContractor && !(await settleBeforeLeaving(r.id, 'Передать подрядчику', card))) return;
       await assignRequest(r.id, employeeId, toContractor);
       setAssignee(employeeId);
       setContractor(toContractor);
       reloadCard();
     });
+  };
 
   async function toggleOpen() {
     const atMaster = card && (card.status === 'in_work' || card.status === 'paused') ? card.responsible_name : null;
@@ -156,7 +175,13 @@ function RequestDetail({ r }: { r: RequestRow }) {
       ) : null}
 
       <Card style={styles.card}>
-        <Field label="Тема" value={subject} onChangeText={setSubject} multiline hint="Что нужно сделать. Без имён, фамилий и телефонов." />
+        <Field
+          label={itsm ? 'Тема (для себя)' : 'Название заявки'}
+          value={subject}
+          onChangeText={setSubject}
+          multiline
+          hint={itsm ? 'Мастер видит текст заявки из ITSM. Без имён, фамилий и телефонов.' : 'Это название видит мастер. Без имён, фамилий и телефонов.'}
+        />
       </Card>
       {message ? <Text style={styles.err}>{message}</Text> : null}
       <BigButton title="Сохранить" loading={busy === 'save'} disabled={!!busy} onPress={save} />
@@ -205,30 +230,44 @@ function RequestDetail({ r }: { r: RequestRow }) {
         {card?.status === 'review' ? (
           <BigButton title="Проверить заявку" onPress={() => router.push({ pathname: '/review/[id]', params: { id: String(r.id) } })} />
         ) : null}
-        <Text style={styles.label}>Приоритет</Text>
-        <View style={styles.chips}>
-          {([1, 2, 3, 4] as Priority[]).map((p) => (
-            <Chip
-              key={p}
-              label={priorityLabel[p]}
-              selected={(card?.priority ?? r.priority) === p}
-              onPress={() => run('priority', async () => (await setRequestPriority(r.id, p), reloadCard()))}
-            />
-          ))}
-        </View>
+        {isOpen && card?.status !== 'accepted' ? (
+          <>
+            <Text style={styles.label}>Приоритет</Text>
+            <View style={styles.chips}>
+              {([1, 2, 3, 4] as Priority[]).map((p) => (
+                <Chip
+                  key={p}
+                  label={priorityLabel[p]}
+                  selected={(card?.priority ?? r.priority) === p}
+                  onPress={() => !busy && run('priority', async () => (await setRequestPriority(r.id, p), reloadCard()))}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
         {card && (card.status === 'in_work' || card.status === 'waiting' || card.status === 'paused') && isOpen ? (
           <>
             <Text style={styles.label}>{card.status === 'in_work' ? 'Переназначить или снять с мастера' : 'Отдать в работу мастеру'}</Text>
             <View style={styles.chips}>
               {card.status !== 'waiting' ? (
-                <Chip label="Снять с мастера" onPress={() => run('resp', async () => (await setRequestResponsible(r.id, null), reloadCard()))} />
+                <Chip
+                  label="Снять с мастера"
+                  onPress={async () => {
+                    if (!(await confirm('Снять заявку с мастера?', `${card.responsible_name ?? 'Мастер'} больше не будет её вести, заявка снова «Ожидает».`, 'Снять'))) return;
+                    run('resp', async () => (await setRequestResponsible(r.id, null), reloadCard()));
+                  }}
+                />
               ) : null}
               {(masters ?? []).map((m) => (
                 <Chip
                   key={m.id}
                   label={m.display_name}
                   selected={card.responsible_id === m.id}
-                  onPress={() => run('resp', async () => (await setRequestResponsible(r.id, m.id), reloadCard()))}
+                  onPress={async () => {
+                    if (card.responsible_id === m.id) return;
+                    if (card.status !== 'waiting' && !(await confirm('Переназначить заявку?', `Заявку поведёт ${m.display_name} вместо ${card.responsible_name ?? 'текущего мастера'}.`, 'Переназначить'))) return;
+                    run('resp', async () => (await setRequestResponsible(r.id, m.id), reloadCard()));
+                  }}
                 />
               ))}
             </View>

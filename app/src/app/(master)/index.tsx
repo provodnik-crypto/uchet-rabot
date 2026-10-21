@@ -18,7 +18,7 @@ import { monthName } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
 import { holdText, myNotifications, myRequests, openRequests, previewText, requestCard, requestLabel } from '../../lib/requests';
 import { myEntries, myMonthSummary } from '../../lib/shift';
-import { storeToday } from '../../lib/today';
+import { storeToday, takenDayNumber } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font, letterSpacing, lineHeight, opacity, radius, size, space, stroke, touch } from '../../theme';
@@ -27,13 +27,6 @@ import { colors, font, letterSpacing, lineHeight, opacity, radius, size, space, 
 type FeedItem = { key: string; red?: boolean; title: string; text?: string | null; onPress: () => void };
 const FEED_SHORT = 5;
 
-/** «N-й день» с даты взятия (по календарю магазина). */
-function dayNumber(takenAt: string | null): number | null {
-  if (!takenAt) return null;
-  const from = Date.parse(takenAt.slice(0, 10));
-  const to = Date.parse(storeToday());
-  return Number.isFinite(from) && Number.isFinite(to) ? Math.max(1, Math.round((to - from) / 86_400_000) + 1) : null;
-}
 
 /** «Добрый день» по времени магазина (Тюмень). */
 function greeting(): string {
@@ -126,7 +119,7 @@ export default function MasterHome() {
   }, [focused, entries, month, autoStart]);
 
   const returned = !!active?.returned_comment;
-  const day = dayNumber(active?.taken_at ?? null);
+  const day = takenDayNumber(active?.taken_at ?? null);
   const sum = month ? formatKop(month.total_kop).replace(/\s?₽$/, '') : '…';
 
   return (
@@ -253,8 +246,9 @@ export default function MasterHome() {
       {/* ---------- Нет заявки на работу ---------- */}
       <View style={styles.extras}>
         <TourTarget id="req.planned">
-          <BigButton title="Работа без заявки" variant="secondary" size="small" onPress={() => router.push('/req/new')} />
+          <BigButton title="Работа без заявки" variant="secondary" size="small" disabled={!!active} onPress={() => router.push('/req/new')} />
         </TourTarget>
+        {active ? <Text style={styles.meta}>«Работа без заявки» — после отправки {requestLabel(active.number)} на проверку.</Text> : null}
         <TourTarget id="req.report">
           <BigButton title="Сообщить руководителю" variant="secondary" size="small" onPress={() => router.push('/req/report')} />
         </TourTarget>

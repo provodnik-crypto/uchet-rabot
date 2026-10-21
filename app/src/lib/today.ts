@@ -16,3 +16,13 @@ export function uuid(): string {
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
   });
 }
+
+/** «N-й день» заявки: с даты взятия по календарю магазина (Тюмень, UTC+5) — взятая ночью не «вчера». */
+export function takenDayNumber(takenAt: string | null | undefined): number | null {
+  if (!takenAt) return null;
+  const t = Date.parse(takenAt);
+  if (!Number.isFinite(t)) return null;
+  const local = new Date(t + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const n = Math.round((Date.parse(storeToday()) - Date.parse(local)) / 86_400_000) + 1;
+  return Number.isFinite(n) ? Math.max(1, n) : null;
+}

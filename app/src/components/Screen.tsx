@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TourScrollProvider } from '../lib/tour';
+import { TourScrollProvider, useScrollBy } from '../lib/tour';
 import { colors, space, stroke } from '../theme';
 import { LoadStatus, toList, type StatusLike } from './LoadStatus';
 
@@ -43,6 +43,32 @@ function useKeyboardInset(ref: React.RefObject<View | null>) {
     };
   }, [ref]);
   return inset;
+}
+
+/**
+ * Поле ввода над клавиатурой: пока поле в фокусе, при появлении клавиатуры (и сразу после фокуса)
+ * экран прокручивается так, чтобы поле было видно. Вернуть ref на обёртку поля и обработчики фокуса.
+ */
+export function useKeepAboveKeyboard() {
+  const ref = useRef<View>(null);
+  const scrollBy = useScrollBy();
+  const focused = useRef(false);
+  useEffect(() => {
+    const sub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => {
+      if (focused.current) setTimeout(() => keepAboveKeyboard(ref.current, scrollBy), 120);
+    });
+    return () => sub.remove();
+  }, [scrollBy]);
+  return {
+    ref,
+    onFocus: () => {
+      focused.current = true;
+      setTimeout(() => focused.current && keepAboveKeyboard(ref.current, scrollBy), 350);
+    },
+    onBlur: () => {
+      focused.current = false;
+    },
+  };
 }
 
 /** Держать элемент над клавиатурой: если он ушёл под неё — прокрутить экран вверх. */

@@ -40,6 +40,15 @@ export function monthName(isoDate: string): string {
 
 // ---------- Главная и сводки ----------
 export type Dashboard = { pending_count: number; month_total_kop: number; month_entries: number };
+/** Работы «ждут приёмки» за период (в суммы не входят до приёмки заявки). */
+export const awaitingTotals = (p: Period) => rpc<{ entries: number; total_kop: number }>('awaiting_totals', { p_from: p.from, p_to: p.to });
+/** Открытые заявки по статусам — для главной. */
+export const requestCounts = () =>
+  rpc<{ waiting: number; in_work: number; review: number; paused: number; contractor: number }>('request_counts');
+/** Строка заявки для карточки по id (без поиска по номеру). */
+export const requestRow = async (id: number) => (await rpc<RequestRow[]>('request_row', { p_id: id }))[0] ?? null;
+/** Название ручной заявки — то, что видит мастер. */
+export const setManualRequestTitle = (id: number, title: string) => rpc<void>('set_manual_request_title', { p_id: id, p_title: title });
 export const managerDashboard = async () => (await rpc<Dashboard[]>('manager_dashboard'))[0];
 
 export type EmployeeRow = { employee_id: number; display_name: string; in_output_chart: boolean; total_kop: number; entries: number; shifts: number };

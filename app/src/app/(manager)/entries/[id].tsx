@@ -25,8 +25,20 @@ import { colors, font, size, space } from '../../../theme';
 import { fetchEntryPhotos, type RemotePhoto } from '../../../lib/workPhotos';
 
 export default function AdminEntryScreen() {
-  const { data } = useLocalSearchParams<{ id: string; data: string }>();
-  const e = JSON.parse(data) as AdminEntry;
+  const { data } = useLocalSearchParams<{ id: string; data?: string }>();
+  // экран открыли без данных работы (например, восстановление после перезапуска) — назад в журнал
+  if (!data) {
+    return (
+      <Screen>
+        <Text>Работа не открыта — вернитесь в журнал работ и выберите её снова.</Text>
+        <BigButton title="Назад" variant="secondary" onPress={() => router.back()} />
+      </Screen>
+    );
+  }
+  return <AdminEntryForm e={JSON.parse(data) as AdminEntry} />;
+}
+
+function AdminEntryForm({ e }: { e: AdminEntry }) {
   const icons = useEmployeeIcons();
   const peopleQ = useFocusQuery(listPerformers, { key: 'performers' });
   const departmentsQ = useFocusQuery(listDepartments, { key: 'departments' });
@@ -142,8 +154,8 @@ export default function AdminEntryScreen() {
         <Field label="Примечание" value={note} onChangeText={setNote} multiline />
       </Card>
       {message ? <Text style={styles.err}>{message}</Text> : null}
-      <BigButton title="Сохранить" loading={busy === 'save'} onPress={save} />
-      <BigButton title="Удалить работу" variant="danger" loading={busy === 'delete'} onPress={remove} />
+      <BigButton title="Сохранить" loading={busy === 'save'} disabled={!!busy} onPress={save} />
+      <BigButton title="Удалить работу" variant="danger" loading={busy === 'delete'} disabled={!!busy} onPress={remove} />
     </Screen>
   );
 }

@@ -7,7 +7,7 @@ import { Icon, type IconName } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
-import { listRequests, managerDashboard, monthName } from '../../lib/manager';
+import { awaitingTotals, managerDashboard, monthName, presetPeriod, requestCounts } from '../../lib/manager';
 import { myNotifications, reviewCount, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
 import { formatKop } from '../../lib/money';
@@ -44,19 +44,17 @@ export default function ManagerHome() {
       ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, text: 'Мастер ждёт решения — подтвердите или отклоните', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
       : []),
     ...(notes?.stale
-      ? [{ key: 'stale', tone: 'orange' as const, title: `В работе дольше ${notes.stale_days ?? 3} раб. дн.: ${notes.stale}`, text: 'Откройте и уточните у мастера, что мешает', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'in_work' } }) }]
+      ? [{ key: 'stale', tone: 'orange' as const, title: `В работе дольше ${notes.stale_days ?? 3} раб. дн.: ${notes.stale}`, text: 'Откройте и уточните у мастера, что мешает', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'stale' } }) }]
       : []),
   ];
   // Счётчики открытых заявок по статусам — для главной плашки «Заявки».
   const countsQ = useFocusQuery(
-    async () => {
-      const rows = await listRequests('', 'open');
-      const n = (st: string) => rows.filter((r) => r.status === st).length;
-      return { waiting: n('waiting'), in_work: n('in_work'), review: n('review') };
-    },
+    requestCounts,
     { key: 'mhome:counts' },
   );
   const { data: counts } = countsQ;
+  const awaitingQ = useFocusQuery(() => awaitingTotals(presetPeriod('month')), { key: 'mhome:awaiting' });
+  const { data: awaiting } = awaitingQ;
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // первый вход на этом телефоне — обучение, после обновлений — «Что нового»
@@ -64,7 +62,7 @@ export default function ManagerHome() {
     if (focused && data) autoStart('manager', false);
   }, [focused, data, autoStart]);
   return (
-    <Screen status={[dashQ, reviewQ, notesQ, countsQ]} frame>
+    <Screen status={[dashQ, reviewQ, notesQ, countsQ, awaitingQ]} frame>
       <View style={styles.top}>
         <View style={styles.flex}>
           <Text style={styles.hello}>{me?.displayName}</Text>
@@ -80,6 +78,11 @@ export default function ManagerHome() {
         <Text style={styles.monthLabel}>Выполнено за {monthName(storeToday())}</Text>
         <Text style={styles.monthSum}>{data ? formatKop(data.month_total_kop) : '…'}</Text>
         {data ? <Text style={styles.monthLabel}>работ с ценой: {data.month_entries}</Text> : null}
+        {awaiting?.entries ? (
+          <Text style={styles.monthLabel}>
+            ждут приёмки: {awaiting.entries} на {formatKop(awaiting.total_kop)} — в сумму не входят, пока заявки не приняты
+          </Text>
+        ) : null}
         {data?.pending_count ? (
           <Pressable accessibilityRole="button" onPress={() => router.push('/pending')} style={styles.warn}>
             <Text style={styles.warnText}>
@@ -103,7 +106,7 @@ export default function ManagerHome() {
             <Text style={styles.reqTitle}>Заявки</Text>
             <Text style={styles.reqSub}>
               {counts
-                ? `Ожидают: ${counts.waiting} · В работе: ${counts.in_work} · На проверке: ${counts.review}`
+                ? `Ожидают: ${counts.waiting} · В работе: ${counts.in_work} · На проверке: ${counts.review}${counts.paused ? ` · На паузе: ${counts.paused}` : ''}${counts.contractor ? ` · У подрядчика: ${counts.contractor}` : ''}`
                 : 'Назначение, приоритет, проверка, план и факт'}
             </Text>
           </View>

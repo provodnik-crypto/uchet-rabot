@@ -23,8 +23,8 @@ import { DueLine } from '../../../components/DueLine';
 export default function RequestsScreen() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<RequestStatusFilter>('open');
-  const params = useLocalSearchParams<{ lifecycle?: LifecycleStatus | 'pause_request' | 'materials' }>();
-  const [lifecycle, setLifecycle] = useState<LifecycleStatus | 'pause_request' | 'materials' | null>(params.lifecycle ?? null);
+  const params = useLocalSearchParams<{ lifecycle?: LifecycleStatus | 'pause_request' | 'materials' | 'stale' }>();
+  const [lifecycle, setLifecycle] = useState<LifecycleStatus | 'pause_request' | 'materials' | 'stale' | null>(params.lifecycle ?? null);
   // кто над какой заявкой работает сейчас
   const nowQ = useFocusQuery(mastersNow, { key: 'masters-now' });
   // порог подсветки «долго в работе» (рабочих дней), настройка магазина
@@ -112,9 +112,10 @@ export default function RequestsScreen() {
           value={lifecycle}
           onChange={setLifecycle}
           options={[
-            ...(Object.keys(lifecycleLabel) as LifecycleStatus[]).map((v) => ({ value: v as LifecycleStatus | 'pause_request' | 'materials', label: lifecycleLabel[v] })),
+            ...(Object.keys(lifecycleLabel) as LifecycleStatus[]).map((v) => ({ value: v as LifecycleStatus | 'pause_request' | 'materials' | 'stale', label: lifecycleLabel[v] })),
             { value: 'pause_request' as const, label: 'Запросы на приостановку' },
             { value: 'materials' as const, label: 'Ждут материалы' },
+            { value: 'stale' as const, label: 'Долго в работе' },
           ]}
         />
         <FilterSelect

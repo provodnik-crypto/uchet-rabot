@@ -203,6 +203,8 @@ export type RequestCard = {
   pause_requested_at?: string | null;
   /** Плановая работа («Работа без заявки»). */
   is_planned?: boolean;
+  /** Мои открытые просьбы по заявке руководителю: закрыть (не нужна), передать подрядчику. */
+  open_asks?: ('close' | 'contractor')[];
   /** Фото результата, приложенные при отправке на проверку. */
   result_photos?: { path: string; thumb_path: string; at: string }[];
   /** Моя заявка «В работе» (если есть) — пока она есть, другую взять нельзя. */

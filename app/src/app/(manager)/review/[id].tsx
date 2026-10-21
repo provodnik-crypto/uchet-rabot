@@ -15,7 +15,7 @@ import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { acceptRequest, markRequestRead, requestCard, returnRequest, requestLabel } from '../../../lib/requests';
+import { acceptRequest, markRequestRead, requestCard, requestLabel, requestMoney, returnRequest } from '../../../lib/requests';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, space } from '../../../theme';
 
@@ -38,7 +38,14 @@ export default function ReviewRequestScreen() {
       setErr('Напишите мастеру, что исправить');
       return;
     }
-    if (kind === 'accept' && !(await confirm('Принять заявку?', 'Работы по ней войдут в суммы мастеров.', 'Принять'))) return;
+    if (kind === 'accept') {
+      // работы без цены войдут в суммы только после оценки — так и пишем
+      const unpriced = await requestMoney(r.id).then((m) => m.unpriced).catch(() => 0);
+      const text = unpriced
+        ? `Работы с ценой войдут в суммы мастеров. Без цены: ${unpriced} — войдут после оценки в «На оценке».`
+        : 'Работы по ней войдут в суммы мастеров.';
+      if (!(await confirm('Принять заявку?', text, 'Принять'))) return;
+    }
     setBusy(kind);
     setErr(null);
     try {

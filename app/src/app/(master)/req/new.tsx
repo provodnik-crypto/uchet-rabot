@@ -7,7 +7,8 @@ import { Card } from '../../../components/Card';
 import { Field } from '../../../components/Field';
 import { Screen } from '../../../components/Screen';
 import { humanError } from '../../../lib/errors';
-import { startPlannedWork } from '../../../lib/requests';
+import { myRequests, requestLabel, startPlannedWork } from '../../../lib/requests';
+import { useFocusQuery } from '../../../lib/useQuery';
 import { stripContacts } from '../../../lib/itsm';
 import { colors, font, space } from '../../../theme';
 
@@ -16,6 +17,9 @@ import { colors, font, space } from '../../../theme';
  * «+ Добавить работу» → «Отправить на проверку». Пока есть другая заявка в работе — сначала отправьте её.
  */
 export default function PlannedWorkScreen() {
+  // одна заявка в работе: пока есть активная, новую плановую не начать
+  const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
+  const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
@@ -44,7 +48,10 @@ export default function PlannedWorkScreen() {
         <Text style={styles.hint}>Без имён, фамилий и телефонов людей.</Text>
       </Card>
       {err ? <Text style={styles.err}>{err}</Text> : null}
-      <BigButton title="Начать работу" size="big" loading={busy} disabled={title.trim().length < 3} onPress={start} />
+      {active ? (
+        <Text style={styles.err}>У вас в работе {requestLabel(active.number)}. Работу без заявки можно начать после её отправки на проверку.</Text>
+      ) : null}
+      <BigButton title="Начать работу" size="big" loading={busy} disabled={title.trim().length < 3 || !!active} onPress={start} />
       <Text style={styles.hint}>Дальше — как с обычной заявкой: «+ Добавить работу», потом «Отправить на проверку».</Text>
     </Screen>
   );

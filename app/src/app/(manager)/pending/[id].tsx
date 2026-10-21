@@ -181,7 +181,7 @@ export default function PendingEntryScreen() {
         <Card style={styles.card}>
           <Field label="Комментарий мастеру" value={comment} onChangeText={setComment} multiline placeholder="Что исправить" />
           <BigButton title="Отклонить" variant="danger" disabled={comment.trim().length < 3} loading={busy} onPress={() => run(() => rejectEntry(data.entry_id, comment))} />
-          <Text style={styles.meta}>Мастер увидит комментарий, сможет исправить работу и отправить её снова.</Text>
+          <Text style={styles.meta}>Работа не войдёт в суммы, мастер увидит комментарий. Если заявка ещё у него в работе — он сможет исправить работу; иначе исправите вы.</Text>
         </Card>
       ) : null}
       </TourTarget>

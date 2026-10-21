@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { requestLabel } from '../../lib/requests';
+import { myRequests, requestLabel } from '../../lib/requests';
 import { Fragment } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
@@ -29,6 +29,9 @@ export default function HistoryScreen() {
     { key: 'history', persist: false },
   );
   const { data, error, loading, reload } = query;
+  // исправить отклонённую работу можно только в своей заявке «В работе»
+  const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
+  const activeNumbers = new Set((mineQ.data ?? []).filter((m) => m.status === 'in_work' && m.responsible).map((m) => m.number));
 
   const shifts: { id: number; rows: MyEntry[] }[] = [];
   for (const r of data?.rows ?? []) {
@@ -61,7 +64,11 @@ export default function HistoryScreen() {
                 extra={<PhotoBadge photos={data?.photos[r.entry_id]} />}
               />
               {r.status === 'rejected' && r.client_uuid ? (
-                <BigButton title="Исправить и отправить снова" onPress={() => router.push({ pathname: '/fix', params: { id: String(r.entry_id) } })} />
+                r.request_number && activeNumbers.has(r.request_number) ? (
+                  <BigButton title="Исправить и отправить снова" onPress={() => router.push({ pathname: '/fix', params: { id: String(r.entry_id) } })} />
+                ) : (
+                  <Text style={styles.note}>Заявка уже не у вас в работе — исправить эту работу может руководитель.</Text>
+                )
               ) : null}
             </Fragment>
           ))}
@@ -74,5 +81,6 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   shift: { gap: space.s10 },
   date: { fontSize: font.title, fontWeight: '800', marginTop: space.s8 },
+  note: { fontSize: font.small, color: colors.secondary },
   empty: { color: colors.muted, fontSize: font.body, textAlign: 'center' },
 });

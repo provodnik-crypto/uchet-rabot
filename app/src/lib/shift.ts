@@ -168,6 +168,8 @@ export const resubmitEntry = (
   quantity: number,
   note: string,
   photos: SubmitEntry['photos'],
+  /** Работа из прайса остаётся из прайса (цена — по прайсу, без ручной оценки). */
+  priceItemId: number | null = null,
 ) =>
   rpc<void>('resubmit_entry', {
     p_entry: entryId,
@@ -175,7 +177,7 @@ export const resubmitEntry = (
     p_unit_id: unitId,
     p_quantity: quantity,
     p_note: note,
-    p_price_item_id: null,
+    p_price_item_id: priceItemId,
     p_photos: photos ?? [],
   });
 
