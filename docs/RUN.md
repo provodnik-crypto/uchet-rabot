@@ -498,3 +498,22 @@ cd app && set -a && . ./.env && set +a && \
 
 **Откат.** Код — обновление с коммита `ec9e83e`. База — `supabase/rollback/20261027000001_money_fixes_down.sql`.
 Данные до этапа: `backups/db_backup_2026-10-22_money.json.gz`.
+
+## Аудит, этап 2: зависающие заявки (28.10.2026)
+* `close_request_core`: закрытие заявки «В работе»/на паузе снимает её с мастера (→ «Ожидает», закрыта, `resume_next`);
+  `set_request_open(false)` через неё. Закрытую нельзя отправить на проверку и от неё отказаться (`is_open` в
+  `send_request_for_review(_photos)`, `refuse_request`); у мастера в карточке закрытой — только просмотр.
+* Загрузка ITSM: `request_import_apply(close_ids)` не закрывает заявки in_work/paused/review; в `request_import_context.missing` —
+  статус, мастер, число работ; в приложении «Закрыть все свободные», у заявок мастеров — «решите в карточке».
+* «Закрыть старые»: `close_old_requests`/`old_open_requests` — без in_work/paused/review; `old_open_skipped` — сколько пропущено.
+* Ручные заявки: «Кому назначена» и «Закрыть заявку» для всех источников (статусы waiting/contractor/in_work/paused).
+* Отключение мастера: `employee_open_requests` (подтверждение со списком), `release_employee_requests(мастер, засчитать)`;
+  страховка — триггер `employees_release` (при `is_active → false` заявки в работе/на паузе → «Ожидает», назначения и
+  участие напарником снимаются).
+* Просьбы мастеров: триггер `requests_stale_asks` закрывает «закрыть/передать подрядчику», если заявка ушла от мастера
+  («Неактуально…»); решить решённую/устаревшую нельзя; нерешённые (new/read) — в счётчике на главной руководителя.
+* Комментарий «что исправить» при передаче заявки другому мастеру оставлен (решение заказчика).
+* Миграция `20261028000001_stuck_requests.sql`, тест `supabase/tests/28_stuck_requests.sql` (15 проверок).
+
+**Откат.** Код — обновление с коммита `c8492c3`. База — `supabase/rollback/20261028000001_stuck_requests_down.sql`.
+Данные до этапа: `backups/db_backup_2026-10-22_stuck.json.gz`.

@@ -10,7 +10,7 @@ import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate, maskDateInput, parseDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { closeOldRequests, formatRegistered, oldOpenRequests, type OldRequest, requestLabel } from '../../../lib/requests';
+import { closeOldRequests, formatRegistered, oldOpenRequests, oldOpenSkipped, type OldRequest, requestLabel } from '../../../lib/requests';
 import { storeToday } from '../../../lib/today';
 import { colors, font, space, stroke } from '../../../theme';
 
@@ -33,6 +33,8 @@ export default function CloseOldScreen() {
   const before = parseDate(text);
   const dateError = !before ? 'Дата в виде ДД.ММ.ГГГГ' : before > storeToday() ? 'Дата не может быть в будущем' : null;
 
+  // заявки у мастеров (в работе, на паузе, на проверке) не закрываются — показываем, сколько пропущено
+  const [skipped, setSkipped] = useState(0);
   useEffect(() => {
     if (dateError || !before) {
       setRows(null);
@@ -41,8 +43,8 @@ export default function CloseOldScreen() {
     }
     let alive = true;
     setLoading(true);
-    oldOpenRequests(before)
-      .then((r) => alive && (setRows(r), setError(null)))
+    Promise.all([oldOpenRequests(before), oldOpenSkipped(before).catch(() => 0)])
+      .then(([r, n]) => alive && (setRows(r), setSkipped(n), setError(null)))
       .catch((e) => alive && setError(humanError(e)))
       .finally(() => alive && setLoading(false));
     return () => {
@@ -94,7 +96,8 @@ export default function CloseOldScreen() {
           maxLength={10}
           error={text.length === 10 ? dateError : null}
         />
-        <Text style={styles.meta}>Закрываются только заявки из ITSM. Работы по ним сохраняются.</Text>
+        <Text style={styles.meta}>Закрываются только заявки из ITSM, которые не у мастеров: «Ожидает», у подрядчика, принятые.</Text>
+        {skipped ? <Text style={styles.meta}>Не закрываются — у мастеров (в работе, на паузе, на проверке): {skipped}. Решите в карточке заявки.</Text> : null}
       </Card>
 
       {error && (rows || dateError) ? <Text style={styles.err}>{error}</Text> : null}

@@ -47,7 +47,17 @@ export async function pickItsmFile(): Promise<ItsmFile | null> {
 }
 
 // ---------- Предпросмотр и загрузка ----------
-export type MissingRequest = { id: number; number: string; operation: string | null; description: string | null; registered_at: string | null };
+export type MissingRequest = {
+  id: number;
+  number: string;
+  operation: string | null;
+  description: string | null;
+  registered_at: string | null;
+  /** Статус, мастер и число работ: заявки у мастеров «Закрыть все» не закрывает. */
+  status?: LifecycleStatus;
+  master?: string | null;
+  works?: number;
+};
 export type ImportContext = {
   today: string;
   first: boolean;
@@ -439,6 +449,14 @@ export const setRequestOpen = (id: number, open: boolean) => rpc<void>('set_requ
 // ---------- Старые заявки: закрыть пачкой ----------
 export type OldRequest = { id: number; number: string; operation: string | null; description: string | null; registered_at: string };
 export const oldOpenRequests = (before: string) => rpc<OldRequest[]>('old_open_requests', { p_before: before });
+/** Открытые заявки сотрудника — перед отключением. */
+export const employeeOpenRequests = (employeeId: number) =>
+  rpc<{ requests: { id: number; number: string; status: LifecycleStatus; awaiting: number }[]; assigned: number }>('employee_open_requests', { p_emp: employeeId });
+/** Снять заявки с сотрудника перед отключением; credit — засчитать ли работы «ждут приёмки» (null — их нет). */
+export const releaseEmployeeRequests = (employeeId: number, credit: boolean | null) =>
+  rpc<number>('release_employee_requests', { p_emp: employeeId, p_credit: credit });
+/** Сколько старых заявок пропущено: они у мастеров (в работе, на паузе, на проверке). */
+export const oldOpenSkipped = (before: string) => rpc<number>('old_open_skipped', { p_before: before });
 export const closeOldRequests = (before: string) => rpc<number>('close_old_requests', { p_before: before });
 
 /** Номер для показа: простой номер ручной заявки — «№ 12», номер ITSM — как есть. */

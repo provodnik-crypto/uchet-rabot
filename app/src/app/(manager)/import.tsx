@@ -10,10 +10,13 @@ import { confirm } from '../../lib/confirm';
 import { formatDate, maskDateInput, parseDate } from '../../lib/dates';
 import { humanError } from '../../lib/errors';
 import { inWindow, recheckDescription, titleFromText, type ItsmFile, type ItsmRow } from '../../lib/itsm';
-import { formatRegistered, formatStoreTime, importApply, importContext, pickItsmFile, type ImportContext } from '../../lib/requests';
+import { formatRegistered, formatStoreTime, importApply, importContext, lifecycleLabel, pickItsmFile, type ImportContext, type MissingRequest } from '../../lib/requests';
 import { colors, font, radius, size, space, stroke } from '../../theme';
 
 type Result = { inserted: number; skipped: number; closed: number; outside: number; errors: number };
+
+/** Заявка у мастера (в работе, на паузе, на проверке) — при загрузке файла её не закрываем. */
+const atMaster = (m: MissingRequest) => m.status === 'in_work' || m.status === 'paused' || m.status === 'review';
 
 export default function ImportScreen() {
   const [file, setFile] = useState<ItsmFile | null>(null);
@@ -239,7 +242,7 @@ export default function ImportScreen() {
             Эти открытые заявки есть в приложении, но их нет в файле — скорее всего, их закрыли в ITSM. Сами они не закроются.
           </Text>
           <View style={styles.row}>
-            <Chip label="Закрыть все" onPress={() => setClose(Object.fromEntries(ctx.missing.map((m) => [m.id, true])))} />
+            <Chip label="Закрыть все свободные" onPress={() => setClose(Object.fromEntries(ctx.missing.filter((m) => !atMaster(m)).map((m) => [m.id, true])))} />
             <Chip label="Оставить все" onPress={() => setClose({})} />
           </View>
           {ctx.missing.map((m) => (
@@ -247,10 +250,17 @@ export default function ImportScreen() {
               <Text style={styles.number}>{m.number}</Text>
               <Text style={styles.body} numberOfLines={2}>{m.operation ?? ''}{m.description ? ` — ${m.description}` : ''}</Text>
               <Text style={styles.meta}>{formatRegistered(m.registered_at)}</Text>
-              <View style={styles.row}>
-                <Chip label="Закрыть" selected={!!close[m.id]} onPress={() => setClose({ ...close, [m.id]: true })} />
-                <Chip label="Оставить" selected={!close[m.id]} onPress={() => setClose({ ...close, [m.id]: false })} />
-              </View>
+              {atMaster(m) ? (
+                <Text style={styles.warn}>
+                  У мастера{m.master ? ` ${m.master}` : ''}: {m.status ? lifecycleLabel[m.status] : ''}
+                  {m.works ? ` · работ: ${m.works}` : ''} — здесь не закрывается. Решите в карточке заявки.
+                </Text>
+              ) : (
+                <View style={styles.row}>
+                  <Chip label="Закрыть" selected={!!close[m.id]} onPress={() => setClose({ ...close, [m.id]: true })} />
+                  <Chip label="Оставить" selected={!close[m.id]} onPress={() => setClose({ ...close, [m.id]: false })} />
+                </View>
+              )}
             </View>
           ))}
         </Card>

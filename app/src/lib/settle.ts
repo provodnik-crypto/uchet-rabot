@@ -1,5 +1,6 @@
 import { Alert, Platform } from 'react-native';
-import { requestCard, settleRequestWorks, type LifecycleStatus, type RequestWork } from './requests';
+import { confirm } from './confirm';
+import { employeeOpenRequests, releaseEmployeeRequests, requestCard, requestLabel, settleRequestWorks, type LifecycleStatus, type RequestWork } from './requests';
 
 /**
  * Перед передачей заявки подрядчику или закрытием: если в ней есть работы «ждут приёмки», руководитель решает —
@@ -31,5 +32,36 @@ export async function settleBeforeLeaving(
   });
   if (choice === null) return false;
   await settleRequestWorks(requestId, choice);
+  return true;
+}
+
+/** Перед отключением мастера: показать его открытые заявки и решить про работы «ждут приёмки». false — отмена. */
+export async function releaseBeforeDeactivate(employeeId: number, name: string): Promise<boolean> {
+  const info = await employeeOpenRequests(employeeId);
+  const awaiting = info.requests.reduce((n, r) => n + r.awaiting, 0);
+  const lines = [
+    info.requests.length ? `В работе у него заявок: ${info.requests.length} (${info.requests.map((r) => requestLabel(r.number)).join(', ')}) — станут свободными.` : null,
+    info.assigned ? `Назначенных ему заявок: ${info.assigned} — назначение снимется.` : null,
+    'Войти он больше не сможет, история сохранится.',
+  ].filter(Boolean);
+  if (!(await confirm(`Отключить ${name}?`, lines.join('\n'), 'Отключить'))) return false;
+  let credit: boolean | null = null;
+  if (awaiting) {
+    credit = await new Promise<boolean | null>((resolve) => {
+      const title = `Его работ ждут приёмки: ${awaiting}`;
+      const message = 'Заявки уйдут от него. Засчитать эти работы ему (войдут в суммы) или не засчитывать?';
+      if (Platform.OS === 'web') {
+        resolve(window.confirm(`${title}\n\n${message}\n\nОК — засчитать, Отмена — не засчитывать`));
+        return;
+      }
+      Alert.alert(title, message, [
+        { text: 'Отмена', style: 'cancel', onPress: () => resolve(null) },
+        { text: 'Не засчитывать', style: 'destructive', onPress: () => resolve(false) },
+        { text: 'Засчитать', onPress: () => resolve(true) },
+      ]);
+    });
+    if (credit === null) return false;
+  }
+  if (info.requests.length || info.assigned) await releaseEmployeeRequests(employeeId, credit);
   return true;
 }

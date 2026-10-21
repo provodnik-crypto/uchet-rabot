@@ -99,11 +99,16 @@ function RequestDetail({ r }: { r: RequestRow }) {
     });
 
   async function toggleOpen() {
-    if (isOpen && !(await confirm('Закрыть заявку?', 'Мастера перестанут видеть её в списке заявок.', 'Закрыть'))) return;
+    const atMaster = card && (card.status === 'in_work' || card.status === 'paused') ? card.responsible_name : null;
+    const text = atMaster
+      ? `Заявка сейчас у мастера ${atMaster} — она будет снята с него, и он сможет взять другую. Мастера перестанут видеть её в списке.`
+      : 'Мастера перестанут видеть её в списке заявок.';
+    if (isOpen && !(await confirm('Закрыть заявку?', text, 'Закрыть'))) return;
     run('open', async () => {
       if (isOpen && !(await settleBeforeLeaving(r.id, 'Закрыть заявку', card))) return;
       await setRequestOpen(r.id, !isOpen);
       setIsOpen(!isOpen);
+      reloadCard();
     });
   }
 
@@ -129,7 +134,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
         </Card>
       ) : null}
 
-      {itsm && isOpen ? (
+      {isOpen && (!card || card.status === 'waiting' || card.status === 'contractor' || card.status === 'in_work' || card.status === 'paused') ? (
         <Card style={styles.card}>
           <Text style={styles.h}>Кому назначена</Text>
           <View style={styles.chips}>
@@ -241,15 +246,13 @@ function RequestDetail({ r }: { r: RequestRow }) {
       {card?.works.length ? <WorksMoney requestId={card.id} works={card.works} /> : null}
       {card ? <RequestFeed requestId={card.id} events={card.events} onSent={reloadCard} /> : null}
 
-      {itsm ? (
-        <BigButton
-          title={isOpen ? 'Закрыть заявку (как в ITSM)' : 'Открыть снова'}
-          variant={isOpen ? 'danger' : 'secondary'}
-          loading={busy === 'open'}
-          disabled={!!busy}
-          onPress={toggleOpen}
-        />
-      ) : null}
+      <BigButton
+        title={isOpen ? (itsm ? 'Закрыть заявку (как в ITSM)' : 'Закрыть заявку') : 'Открыть снова'}
+        variant={isOpen ? 'danger' : 'secondary'}
+        loading={busy === 'open'}
+        disabled={!!busy}
+        onPress={toggleOpen}
+      />
     </Screen>
   );
 }

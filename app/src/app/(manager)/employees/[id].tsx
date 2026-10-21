@@ -16,6 +16,7 @@ import { loginError, normalizeLogin } from '../../../lib/login';
 import { passwordError } from '../../../lib/password';
 import { refreshEmployeeIcons, useEmployeeIcons } from '../../../lib/employeeIcons';
 import { TOOL_ICONS } from '../../../lib/toolIcons';
+import { releaseBeforeDeactivate } from '../../../lib/settle';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, radius, size, space, stroke } from '../../../theme';
 
@@ -172,13 +173,22 @@ export default function EmployeeScreen() {
           title={emp.is_active ? 'Отключить сотрудника' : 'Включить сотрудника'}
           variant={emp.is_active ? 'danger' : 'primary'}
           loading={busy === 'active'}
-          onPress={() =>
+          onPress={async () => {
+            // отключение: подтверждение со списком его заявок; заявки освобождаются, про работы — решение руководителя
+            if (emp.is_active) {
+              try {
+                if (!(await releaseBeforeDeactivate(emp.id, emp.display_name))) return;
+              } catch (e) {
+                setMessage({ ok: false, text: humanError(e) });
+                return;
+              }
+            }
             run(
               'active',
               () => adminUsers({ action: 'set_active', employee_id: emp.id, active: !emp.is_active }),
-              emp.is_active ? 'Сотрудник отключён: войти больше не сможет, история сохранена' : 'Сотрудник включён',
-            )
-          }
+              emp.is_active ? 'Сотрудник отключён: войти больше не сможет, история сохранена, его заявки свободны' : 'Сотрудник включён',
+            );
+          }}
         />
       ) : null}
     </Screen>

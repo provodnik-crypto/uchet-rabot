@@ -85,8 +85,9 @@ export default function RequestCardScreen() {
   // Правило: одна заявка в работе. Пока есть своя активная — другую не взять (смотреть и писать можно).
   const busyWith = r.my_active && r.my_active.id !== r.id ? r.my_active : null;
   const canTake = free && !busyWith;
-  const paused = r.status === 'paused' && r.is_responsible;
-  const working = r.status === 'in_work' && r.is_responsible;
+  // закрытая заявка — только для просмотра
+  const paused = r.status === 'paused' && r.is_responsible && r.is_open;
+  const working = r.status === 'in_work' && r.is_responsible && r.is_open;
   const isMember = r.members.some((m) => m.id === me?.id);
   const works = r.works;
   // отклонённые работы не в счёт: отправить на проверку можно, только если есть другие
