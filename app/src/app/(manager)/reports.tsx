@@ -47,7 +47,9 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
   const open = m.status === 'new' || m.status === 'read';
 
   const ask = m.about_request != null;
-  async function act(action: 'request' | 'reject' | 'contractor') {
+  // просьба закрыть заявку (мастер: «Не могу выполнить» → «Заявка не нужна»)
+  const close = m.kind === 'close';
+  async function act(action: 'request' | 'reject' | 'contractor' | 'close') {
     setBusy(true);
     setErr(null);
     try {
@@ -71,7 +73,7 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
           style={styles.ask}
           onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(m.about_request), number: m.about_number ?? '' } })}
         >
-          Просит передать подрядчику {requestLabel(m.about_number)} →
+          {close ? 'Просит закрыть заявку (не нужна)' : 'Просит передать подрядчику'} {requestLabel(m.about_number)} →
         </Text>
       ) : null}
       <Text style={styles.text}>{ask ? `Причина: ${m.text}` : m.text}</Text>
@@ -82,6 +84,8 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
             ? `Создана заявка ${requestLabel(m.request_number)}`
             : m.status === 'contractor'
               ? `${requestLabel(m.about_number)} передана подрядчику`
+              : m.status === 'closed'
+                ? `${requestLabel(m.about_number)} закрыта`
               : reportStatusText[m.status]}
           {m.answer ? ` · ${m.answer}` : ''}
         </Text>
@@ -93,9 +97,14 @@ function ReportCard({ m, onDone }: { m: MasterReport; onDone: () => void }) {
         </View>
       ) : mode === 'reject' ? (
         <View style={styles.card}>
-          <Field label="Причина — её увидит мастер" value={reason} onChangeText={setReason} multiline placeholder="Например: уже передали подрядчику" />
-          <BigButton title={ask ? 'Не передавать' : 'Отклонить'} variant="danger" loading={busy} disabled={reason.trim().length < 3} onPress={() => act('reject')} />
+          <Field label="Причина — её увидит мастер" value={reason} onChangeText={setReason} multiline placeholder={close ? 'Например: заявка нужна, материалы закажем' : 'Например: уже передали подрядчику'} />
+          <BigButton title={close ? 'Не закрывать' : ask ? 'Не передавать' : 'Отклонить'} variant="danger" loading={busy} disabled={reason.trim().length < 3} onPress={() => act('reject')} />
           <BigButton title="Отмена" variant="secondary" onPress={() => setMode(null)} />
+        </View>
+      ) : close ? (
+        <View style={styles.card}>
+          <BigButton title="Закрыть заявку" loading={busy} onPress={() => act('close')} />
+          <BigButton title="Не закрывать" size="small" variant="secondary" onPress={() => setMode('reject')} />
         </View>
       ) : ask ? (
         <View style={styles.card}>

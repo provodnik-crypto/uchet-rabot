@@ -92,7 +92,9 @@ export default function MasterHome() {
           ? `По вашему сообщению создана заявка ${requestLabel(n.request_number)}`
           : n.status === 'contractor'
             ? 'Заявку передали подрядчику'
-            : 'Руководитель ответил на ваше сообщение',
+            : n.status === 'closed'
+              ? 'Заявку закрыли по вашей просьбе'
+              : 'Руководитель ответил на ваше сообщение',
       text: n.status === 'rejected' ? `Отклонено: ${n.answer ?? '—'}` : n.answer ?? n.text,
       onPress: () => router.push('/req/report'),
     })),

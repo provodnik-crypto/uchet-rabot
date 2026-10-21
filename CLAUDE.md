@@ -98,6 +98,9 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   Мастер: нижнее меню `BottomTabs`, жёлтая шапка `AppHeader`, главная кнопка — `footer` у `Screen`, редкие действия —
   `ActionSheet`. Руководитель — прежняя раскладка. «Передать подрядчику» мастера — просьба `request_contractor`
   в `master_reports` (`about_request`), решает руководитель (`decide_master_report … 'contractor'`).
+* **«Не могу выполнить»** (26.10.2026): `cant_do(заявка, materials|not_needed|contractor, комментарий)`. Нет материалов —
+  `paused/materials` («Ждёт материалы», мастер свободен, продолжить — `resume_request`); не нужна — просьба
+  `master_reports.kind = 'close'`, закрывает только руководитель; подрядчик — `request_contractor`.
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
 * Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).
   После каждого обновления добавить запись в начало `WHATS_NEW` (тексты пишет Claude, заказчик проверяет).

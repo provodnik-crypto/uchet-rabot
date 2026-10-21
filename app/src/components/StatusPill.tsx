@@ -25,6 +25,8 @@ export function requestTone(r: {
   contractor?: boolean | null;
   /** Имя мастера, если заявка в работе у другого. */
   busyName?: string | null;
+  /** Почему приостановлена (materials — «Ждёт материалы»). */
+  hold?: string | null;
 }): { tone: StatusTone; label: string } {
   if (r.status === 'contractor' || (r.contractor && r.status === 'waiting')) return { tone: 'contractor', label: 'Подрядчик' };
   if ((r.status === 'in_work' || r.status === 'paused') && r.returned) return { tone: 'returned', label: 'Вернули' };
@@ -33,7 +35,7 @@ export function requestTone(r: {
     case 'in_work':
       return { tone: 'in_work', label: 'В работе' };
     case 'paused':
-      return { tone: 'paused', label: 'Приостановлена' };
+      return { tone: 'paused', label: r.hold === 'materials' ? 'Ждёт материалы' : 'Приостановлена' };
     case 'review':
       return { tone: 'review', label: 'На проверке' };
     case 'accepted':

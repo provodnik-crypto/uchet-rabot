@@ -319,7 +319,7 @@ export const sendRequestForReviewPhotos = (id: number, comment: string | null, p
 export const startPlannedWork = (title: string, details: string | null) =>
   rpc<{ id: number; number: string }>('start_planned_work', { p_title: title, p_details: details });
 
-export type ReportStatus = 'new' | 'read' | 'request' | 'rejected' | 'contractor';
+export type ReportStatus = 'new' | 'read' | 'request' | 'rejected' | 'contractor' | 'closed';
 export type MasterReport = {
   id: number;
   text: string;
@@ -329,7 +329,9 @@ export type MasterReport = {
   decided_at?: string | null;
   request_id: number | null;
   request_number: string | null;
-  /** Просьба «Передать подрядчику»: о какой заявке. */
+  /** report — «Сообщить руководителю», contractor — передать подрядчику, close — закрыть заявку (не нужна). */
+  kind?: 'report' | 'contractor' | 'close';
+  /** Просьба по заявке: о какой. */
   about_request?: number | null;
   about_number?: string | null;
   unseen?: boolean;
@@ -342,21 +344,23 @@ export const reportStatusText: Record<ReportStatus, string> = {
   request: 'Создана заявка',
   rejected: 'Отклонено',
   contractor: 'Заявку передали подрядчику',
+  closed: 'Заявку закрыли',
 };
 export const createMasterReport = (text: string, photos: unknown[]) => rpc<number>('create_master_report', { p_text: text, p_photos: photos });
 export const myMasterReports = () => rpc<MasterReport[]>('my_master_reports');
 export const markMyReportsSeen = () => rpc<void>('mark_my_reports_seen').catch(() => {});
 export const listMasterReports = (open = true) => rpc<MasterReport[]>('list_master_reports', { p_open: open });
-export const decideMasterReport = (id: number, action: 'read' | 'reject' | 'request' | 'contractor', comment: string | null = null, title: string | null = null) =>
+export const decideMasterReport = (id: number, action: 'read' | 'reject' | 'request' | 'contractor' | 'close', comment: string | null = null, title: string | null = null) =>
   rpc<{ id: number; number: string } | null>('decide_master_report', { p_id: id, p_action: action, p_comment: comment, p_title: title });
 
 // ---------- Одна заявка в работе ----------
-export type HoldReason = 'urgent' | 'returned' | 'pause';
+export type HoldReason = 'urgent' | 'returned' | 'pause' | 'materials';
 /** Подпись приостановки для мастера и руководителя. */
 export function holdText(reason: HoldReason | null | undefined, holdNumber?: string | null): string {
   if (reason === 'urgent') return `Приостановлена из-за срочной${holdNumber ? ` ${requestLabel(holdNumber)}` : ''} — вернётся в работу сама, когда срочную отправят на проверку`;
   if (reason === 'returned') return 'Вернули на доработку — в очереди: станет активной, как только вы отправите текущую';
   if (reason === 'pause') return 'Приостановлена с согласия руководителя';
+  if (reason === 'materials') return 'Ждёт материалы';
   return 'Приостановлена';
 }
 export const requestPause = (id: number, reason: string) => rpc<void>('request_pause', { p_id: id, p_reason: reason });
@@ -364,6 +368,9 @@ export const decidePause = (id: number, approve: boolean, comment: string | null
   rpc<void>('decide_pause', { p_id: id, p_approve: approve, p_comment: comment });
 /** Мастер просит руководителя передать свою заявку подрядчику (уходит в «Сообщения от мастеров»). */
 export const requestContractor = (id: number, reason: string) => rpc<number>('request_contractor', { p_id: id, p_reason: reason });
+/** «Не могу выполнить»: нет материалов (сразу «Ждёт материалы»), заявка не нужна или нужен подрядчик (просьба руководителю). */
+export type CantDoReason = 'materials' | 'not_needed' | 'contractor';
+export const cantDo = (id: number, reason: CantDoReason, comment: string) => rpc<void>('cant_do', { p_id: id, p_reason: reason, p_comment: comment });
 export const resumeRequest = (id: number) => rpc<void>('resume_request', { p_id: id });
 export type MasterNow = {
   employee_id: number;
@@ -403,6 +410,8 @@ export type Notifications = {
   stale_days?: number;
   /** Руководителю: запросов мастеров на приостановку. */
   pause_requests?: number;
+  /** Руководителю: заявок «Ждёт материалы». */
+  materials?: number;
   /** Руководителю: новых сообщений мастеров; мастеру — ответы на его сообщения. */
   reports?: number | { id: number; status: ReportStatus; text: string; answer: string | null; request_number: string | null }[];
 };

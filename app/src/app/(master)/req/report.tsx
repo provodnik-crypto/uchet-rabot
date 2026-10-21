@@ -73,9 +73,9 @@ export default function ReportScreen() {
       {list?.map((m) => (
         <Card key={m.id} style={[styles.card, m.unseen && styles.fresh]}>
           <Text style={styles.meta}>{formatStoreTime(m.created_at)}</Text>
-          <Text style={styles.text}>{m.about_number ? `Просьба передать подрядчику ${requestLabel(m.about_number)}: ${m.text}` : m.text}</Text>
+          <Text style={styles.text}>{m.about_number ? `${m.kind === 'close' ? 'Просьба закрыть' : 'Просьба передать подрядчику'} ${requestLabel(m.about_number)}: ${m.text}` : m.text}</Text>
           <PhotoStrip photos={m.photos as unknown as RemotePhoto[]} size="small" />
-          <Text style={[styles.status, m.status === 'rejected' && styles.bad, (m.status === 'request' || m.status === 'contractor') && styles.good]}>
+          <Text style={[styles.status, m.status === 'rejected' && styles.bad, (m.status === 'request' || m.status === 'contractor' || m.status === 'closed') && styles.good]}>
             {m.status === 'request' && m.request_number ? `Создана заявка ${requestLabel(m.request_number)}` : reportStatusText[m.status]}
           </Text>
           {m.answer ? <Text style={styles.text}>{m.status === 'rejected' ? 'Причина: ' : 'Ответ: '}{m.answer}</Text> : null}

@@ -24,7 +24,8 @@ import {
   markRequestRead,
   refuseRequest,
   requestCard,
-  requestContractor,
+  cantDo,
+  type CantDoReason,
   requestLabel,
   requestPause,
   resumeRequest,
@@ -44,7 +45,7 @@ const workStatus: Record<RequestWork['status'], string> = {
   awaiting: 'Ждёт приёмки',
 };
 
-type Panel = null | 'take' | 'refuse' | 'pause' | 'contractor';
+type Panel = null | 'take' | 'refuse' | 'pause' | 'cant';
 
 /** «N-й день» с даты взятия (по календарю магазина). */
 function dayNumber(takenAt: string | null): number | null {
@@ -95,6 +96,7 @@ export default function RequestCardScreen() {
     returned,
     contractor: r.to_contractor,
     busyName: r.status === 'in_work' && !r.is_responsible && !isMember ? r.responsible_name : null,
+    hold: r.hold_reason,
   });
 
   const addWork = () => router.push({ pathname: '/shift/work', params: { requestId: String(r.id), number: r.number } });
@@ -132,7 +134,7 @@ export default function RequestCardScreen() {
   /** Меню «⋯»: редкие действия по своей заявке в работе. */
   const moreActions: SheetAction[] = [
     ...(r.pause_request ? [] : [{ label: 'Приостановить', hint: 'Запрос руководителю с причиной', onPress: () => setPanel('pause') }]),
-    { label: 'Передать подрядчику', hint: 'Просьба руководителю — он решит', onPress: () => setPanel('contractor') },
+    { label: 'Не могу выполнить', hint: 'Нет материалов, заявка не нужна или нужен подрядчик', onPress: () => setPanel('cant') },
     { label: 'Отказаться от заявки', danger: true, onPress: () => setPanel('refuse') },
   ];
 
@@ -151,7 +153,7 @@ export default function RequestCardScreen() {
           <BigButton title={returned ? 'Исправить и отправить' : 'Отправить на проверку'} size="big" disabled={!works.length} onPress={send} />
         </TourTarget>
       );
-    else if (paused && r.hold_reason === 'pause' && !r.my_active)
+    else if (paused && (r.hold_reason === 'pause' || r.hold_reason === 'materials') && !r.my_active)
       footer = (
         <BigButton
           title="Продолжить"
@@ -185,7 +187,7 @@ export default function RequestCardScreen() {
           right={
             working ? (
               <TourTarget id="card.more">
-                <IconButton icon="more" label="Ещё: приостановить, отказаться, передать подрядчику" onPress={() => setMenu(true)} />
+                <IconButton icon="more" label="Ещё: приостановить, не могу выполнить, отказаться" onPress={() => setMenu(true)} />
               </TourTarget>
             ) : null
           }
@@ -249,7 +251,10 @@ export default function RequestCardScreen() {
       {paused ? (
         <View style={styles.plate}>
           <Text style={styles.plateTitle}>{holdText(r.hold_reason, r.hold_number)}</Text>
-          {r.hold_reason === 'pause' && r.my_active ? (
+          {r.hold_reason === 'materials' ? (
+            <Text style={styles.meta}>Вы свободны — можно брать другие заявки. Пришли материалы — нажмите «Продолжить».</Text>
+          ) : null}
+          {(r.hold_reason === 'pause' || r.hold_reason === 'materials') && r.my_active ? (
             <Text style={styles.meta}>Продолжить можно, когда отправите {requestLabel(r.my_active.number)} на проверку.</Text>
           ) : null}
         </View>
@@ -275,15 +280,11 @@ export default function RequestCardScreen() {
           onCancel={() => setPanel(null)}
         />
       ) : null}
-      {panel === 'contractor' ? (
-        <ReasonPanel
-          label="Почему нужен подрядчик?"
-          placeholder="Например: нужна вышка, нет допуска к работам"
-          hint="Просьба уйдёт руководителю. Пока он не решил, заявка остаётся у вас в работе. Ответ появится на главной."
-          button="Попросить передать подрядчику"
-          run={(t) => requestContractor(r.id, t)}
-          onDone={() => {
-            setMessage('Просьба отправлена руководителю.');
+      {panel === 'cant' ? (
+        <CantDoPanel
+          requestId={r.id}
+          onDone={(msg) => {
+            setMessage(msg);
             done();
           }}
           onCancel={() => setPanel(null)}
@@ -386,7 +387,74 @@ function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; m
   );
 }
 
-/** Действие с обязательной причиной: приостановить, отказаться, передать подрядчику. */
+const CANT_DO: { value: CantDoReason; label: string; hint: string; placeholder: string; done: string }[] = [
+  {
+    value: 'materials',
+    label: 'Нет материалов',
+    hint: 'Заявка сразу встанет «Ждёт материалы», вы сможете брать другие. Пришли материалы — «Продолжить».',
+    placeholder: 'Каких материалов нет, например: краска RAL 9016, 2 л',
+    done: 'Заявка ждёт материалы — можно брать другую.',
+  },
+  {
+    value: 'not_needed',
+    label: 'Заявка не нужна',
+    hint: 'Просьба закрыть уйдёт руководителю — закрывает только он. Пока он не решил, заявка у вас в работе.',
+    placeholder: 'Почему не нужна, например: телевизора нет, заявка старая',
+    done: 'Просьба закрыть заявку отправлена руководителю.',
+  },
+  {
+    value: 'contractor',
+    label: 'Нужен подрядчик',
+    hint: 'Просьба передать подрядчику уйдёт руководителю. Пока он не решил, заявка у вас в работе.',
+    placeholder: 'Почему нужен подрядчик, например: нужна вышка',
+    done: 'Просьба передать подрядчику отправлена руководителю.',
+  },
+];
+
+/** «Не могу выполнить»: причина (обязательно) и комментарий почему (обязательно). Работы и фото не нужны. */
+function CantDoPanel({ requestId, onDone, onCancel }: { requestId: number; onDone: (message: string) => void; onCancel: () => void }) {
+  const [reason, setReason] = useState<CantDoReason | null>(null);
+  const [text, setText] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const opt = CANT_DO.find((o) => o.value === reason);
+  async function go() {
+    if (!opt) return;
+    setSending(true);
+    setErr(null);
+    try {
+      await cantDo(requestId, opt.value, text.trim());
+      onDone(opt.done);
+    } catch (e) {
+      setErr(humanError(e));
+    } finally {
+      setSending(false);
+    }
+  }
+  return (
+    <Section title="Не могу выполнить">
+      <Text style={styles.body}>Причина</Text>
+      <View style={styles.chips}>
+        {CANT_DO.map((o) => (
+          <Chip key={o.value} label={o.label} selected={reason === o.value} onPress={() => setReason(o.value)} />
+        ))}
+      </View>
+      {opt ? (
+        <>
+          <Field label="Почему — обязательно" value={text} onChangeText={setText} multiline placeholder={opt.placeholder} />
+          <Text style={styles.small}>{opt.hint}</Text>
+        </>
+      ) : (
+        <Text style={styles.small}>Выберите причину.</Text>
+      )}
+      {err ? <Text style={styles.red}>{err}</Text> : null}
+      <BigButton title="Отправить" size="mid" loading={sending} disabled={!opt || text.trim().length < 3} onPress={go} />
+      <BigButton title="Отмена" variant="secondary" onPress={onCancel} />
+    </Section>
+  );
+}
+
+/** Действие с обязательной причиной: приостановить, отказаться. */
 function ReasonPanel({
   label,
   placeholder,

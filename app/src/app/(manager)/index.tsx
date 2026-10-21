@@ -37,6 +37,9 @@ export default function ManagerHome() {
     ...(typeof notes?.reports === 'number' && notes.reports
       ? [{ key: 'reports', tone: 'blue' as const, title: `Сообщения от мастеров: ${notes.reports}`, text: 'Работы нет в заявках или просьба передать подрядчику — решите', onPress: () => router.push('/reports') }]
       : []),
+    ...(notes?.materials
+      ? [{ key: 'materials', tone: 'orange' as const, title: `Ждут материалы: ${notes.materials}`, text: 'Мастер не может продолжить — нет материалов. Пришли — «Вернуть в работу»', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'materials' } }) }]
+      : []),
     ...(notes?.pause_requests
       ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, text: 'Мастер ждёт решения — подтвердите или отклоните', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
       : []),
