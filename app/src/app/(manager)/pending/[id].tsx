@@ -12,7 +12,7 @@ import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { pendingQueue, pricePendingEntry, rejectEntry, replaceEntryWithItem } from '../../../lib/manager';
+import { itemPricesForEntry, pendingQueue, pricePendingEntry, rejectEntry, replaceEntryWithItem } from '../../../lib/manager';
 import { formatKop, parseRubToKop } from '../../../lib/money';
 import { formatQuantity, parseQuantity, searchWork, type WorkItem } from '../../../lib/shift';
 import { TourTarget } from '../../../lib/tour';
@@ -34,6 +34,8 @@ export default function PendingEntryScreen() {
   const [comment, setComment] = useState('');
   const [q, setQ] = useState('');
   const [found, setFound] = useState<WorkItem[]>([]);
+  // цены найденных позиций на дату работы: undefined — ещё грузится, null — нет цены
+  const [itemPrices, setItemPrices] = useState<Record<number, number | null>>({});
   const [item, setItem] = useState<WorkItem | null>(null);
   const [qty, setQty] = useState('');
   const [busy, setBusy] = useState(false);
@@ -49,6 +51,18 @@ export default function PendingEntryScreen() {
     const t = setTimeout(() => searchWork(q, null, null, 20).then(setFound).catch(() => setFound([])), 300);
     return () => clearTimeout(t);
   }, [q, mode]);
+
+  useEffect(() => {
+    const ids = found.map((w) => w.id).filter((id) => !(id in itemPrices));
+    if (!ids.length) return;
+    let alive = true;
+    itemPricesForEntry(entryId, ids)
+      .then((p) => alive && setItemPrices((old) => ({ ...old, ...p })))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [found, entryId]);
 
   if (data === null && !loading && !error) {
     return (
@@ -82,6 +96,10 @@ export default function PendingEntryScreen() {
   const priceKop = parseRubToKop(price);
   const qtyNum = Number(data.quantity);
   const sameUnit = item ? item.unit_id === data.unit_id : true;
+  const itemPrice = item ? itemPrices[item.id] : undefined;
+  const replaceQty = item ? (sameUnit ? { value: qtyNum, error: null } : parseQuantity(qty, item.integer_only)) : null;
+  const priceText = (kop: number | null | undefined, unit: string) =>
+    kop === undefined ? 'цена…' : kop === null ? 'нет цены на дату работы' : `${formatKop(kop)} за ${unit}`;
 
   return (
     <Screen>
@@ -148,6 +166,7 @@ export default function PendingEntryScreen() {
               <Pressable key={w.id} style={styles.found} onPress={() => setItem(w)}>
                 <Text style={styles.foundName}>{w.short_name}</Text>
                 <Text style={styles.meta}>{w.category} · {w.unit_code}</Text>
+                <Text style={itemPrices[w.id] === null ? styles.noPrice : styles.foundPrice}>{priceText(itemPrices[w.id], w.unit_code)}</Text>
               </Pressable>
             ))
           )}
@@ -159,9 +178,27 @@ export default function PendingEntryScreen() {
               keyboardType={item.integer_only ? 'number-pad' : 'decimal-pad'}
             />
           ) : null}
+          {item ? (
+            itemPrice === null ? (
+              <Text style={styles.err}>У этой позиции нет цены на {formatDate(data.work_date)} — выберите другую или назначьте цену.</Text>
+            ) : (
+              <View style={styles.preview}>
+                <Text style={styles.meta}>
+                  Цена из прайса на {formatDate(data.work_date)}: {itemPrice === undefined ? '…' : `${formatKop(itemPrice)} за ${item.unit_code}`}
+                </Text>
+                {itemPrice != null && replaceQty?.value ? (
+                  <Text style={styles.total}>
+                    Итого: {formatQuantity(replaceQty.value)} {item.unit_code} × {formatKop(itemPrice)} = {formatKop(Math.max(1, Math.round(replaceQty.value * itemPrice)))}
+                  </Text>
+                ) : !sameUnit ? (
+                  <Text style={styles.meta}>Итог появится, когда введёте объём.</Text>
+                ) : null}
+              </View>
+            )
+          ) : null}
           <BigButton
             title="Заменить"
-            disabled={!item}
+            disabled={!item || itemPrice == null}
             loading={busy}
             onPress={() => {
               if (!item) return;
@@ -173,7 +210,7 @@ export default function PendingEntryScreen() {
               run(() => replaceEntryWithItem(data.entry_id, item.id, null));
             }}
           />
-          <Text style={styles.meta}>Цена подставится из прайса на дату работы.</Text>
+          {!item ? <Text style={styles.meta}>Цена берётся из прайса на дату работы — видна до замены.</Text> : null}
         </Card>
       ) : null}
 
@@ -207,5 +244,8 @@ const styles = StyleSheet.create({
   picked: { backgroundColor: colors.bg, borderRadius: radius.control, padding: space.s12, gap: space.s2 },
   found: { borderTopWidth: stroke.hair, borderTopColor: colors.border, paddingVertical: space.s10, minHeight: touch.big, justifyContent: 'center' },
   foundName: { fontSize: font.body, fontWeight: '600' },
+  foundPrice: { fontSize: font.small, fontWeight: '700' },
+  noPrice: { fontSize: font.small, color: colors.danger },
+  preview: { gap: space.s2 },
   err: { color: colors.danger, fontSize: font.body },
 });

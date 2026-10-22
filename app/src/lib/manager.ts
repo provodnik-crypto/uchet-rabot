@@ -82,6 +82,12 @@ export const pricePendingEntry = (entryId: number, unitPriceKop: number, addToPr
   rpc<void>('price_pending_entry', { p_entry: entryId, p_unit_price_kop: unitPriceKop, p_add_to_price: addToPrice });
 export const replaceEntryWithItem = (entryId: number, itemId: number, quantity: number | null) =>
   rpc<void>('replace_entry_with_item', { p_entry: entryId, p_item: itemId, p_quantity: quantity });
+/** Цены позиций прайса на дату работы (до «Заменить на прайс»), только руководителю. null — нет цены на эту дату. */
+export async function itemPricesForEntry(entryId: number, itemIds: number[]): Promise<Record<number, number | null>> {
+  if (!itemIds.length) return {};
+  const rows = await rpc<{ item_id: number; price_kop: number | null }[]>('item_prices_for_entry', { p_entry: entryId, p_items: itemIds });
+  return Object.fromEntries(rows.map((r) => [r.item_id, r.price_kop]));
+}
 export const rejectEntry = (entryId: number, comment: string) => rpc<void>('reject_entry', { p_entry: entryId, p_comment: comment });
 
 // ---------- Журнал работ ----------
