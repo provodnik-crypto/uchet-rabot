@@ -14,6 +14,7 @@ export default function ManagerLayout() {
       <Stack.Screen name="price/[id]" options={{ title: 'Позиция прайса' }} />
       <Stack.Screen name="pending/index" options={{ title: 'На оценке' }} />
       <Stack.Screen name="pending/[id]" options={{ title: 'Оценка работы' }} />
+      <Stack.Screen name="pending/req/[number]" options={{ title: 'Оценка заявки' }} />
       <Stack.Screen name="entries/index" options={{ title: 'Работы' }} />
       <Stack.Screen name="entries/[id]" options={{ title: 'Правка работы' }} />
       <Stack.Screen name="summary" options={{ title: 'Сводка' }} />

@@ -14,13 +14,25 @@ const plural = (n: number) => (n % 10 === 1 && n % 100 !== 11 ? 'работа' :
  * Работы заявки для руководителя: цена за единицу, сумма работы (цена × количество) и итог по заявке.
  * Цены приходят отдельным запросом (request_money) — мастер их не получает.
  */
-export function WorksMoney({ requestId, works }: { requestId: number; works: RequestWork[] }) {
+export function WorksMoney({
+  requestId,
+  works,
+  title = 'Работы',
+  unpricedHint = true,
+}: {
+  requestId: number;
+  works: RequestWork[];
+  /** Заголовок над списком, к нему добавляется число работ. */
+  title?: string;
+  /** Строка «Без цены: N — итог неполный» (на экране оценки заявки не нужна — работы без цены видны выше). */
+  unpricedHint?: boolean;
+}) {
   const key = works.map((w) => `${w.id}:${w.status}:${w.quantity}`).join(',');
   const { data: money, error } = useFocusQuery(() => requestMoney(requestId), { key: `money:${requestId}:${key}`, persist: false });
   const byId = new Map((money?.works ?? []).map((m) => [m.id, m]));
   if (!works.length) return null;
   return (
-    <Section title={`Работы · ${works.length}`}>
+    <Section title={`${title} · ${works.length}`}>
       {works.map((w, i) => {
         const m = w.id != null ? byId.get(w.id) : undefined;
         const qty = `${formatQuantity(w.quantity)} ${w.unit}`;
@@ -49,7 +61,7 @@ export function WorksMoney({ requestId, works }: { requestId: number; works: Req
         <Text style={styles.totalLabel}>Итого по заявке</Text>
         <Text style={styles.totalSum}>{money ? formatKop(money.total_kop) : error ? '—' : '…'}</Text>
       </View>
-      {money?.unpriced ? (
+      {unpricedHint && money?.unpriced ? (
         <Text style={styles.bad}>
           Без цены: {money.unpriced} {plural(money.unpriced)} — итог неполный. Цену назначьте в «На оценке».
         </Text>
