@@ -60,7 +60,7 @@ select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 
       'price_item_id', (select id from public.price_items where full_name = 'Благоустройство: Малые архитектурные формы: Установка скамеек'),
       'quantity', 2, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'), pg_temp.emp('Михаил')))),
   'requests', jsonb_build_array(jsonb_build_object('request_number', 'RFS261014_0001', 'minutes', 90))));
-select pg_temp.assert((select total_kop || '/' || awaiting from public.my_month_summary()) = '0/1', 'до приёмки в сумме 0, работа ждёт приёмки');
+select pg_temp.assert((select coalesce(total_kop::text, '—') || '/' || awaiting from public.my_month_summary()) = '—/1', 'суммы мастеру нет, работа ждёт приёмки');
 select pg_temp.fails($q$select public.refuse_request(pg_temp.req('RFS261014_0001'), '')$q$, '%почему%', 'отказ без комментария нельзя');
 select public.send_request_for_review(pg_temp.req('RFS261014_0001'), 'Готово');
 select pg_temp.assert((select status from public.requests where number = 'RFS261014_0001') = 'review', 'отправлена: «На проверке»');
@@ -80,9 +80,10 @@ select pg_temp.login_as('boss');
 select public.accept_request(pg_temp.req('RFS261014_0001'));
 select pg_temp.assert((select string_agg(e ->> 'kind', ',' order by n) from jsonb_array_elements(public.request_card(pg_temp.req('RFS261014_0001')) -> 'events') with ordinality t(e, n))
   = 'accept,send,return,send,take', 'история смен статуса (сверху новые)');
+select pg_temp.assert((select total_kop from public.team_rating(public.app_today(), public.app_today()) where employee_id = pg_temp.emp('Николай')) = 58800,
+  'после приёмки — доля поровну (1176 ₽ на двоих)');
 reset role;
 select pg_temp.login_as('kolya');
-select pg_temp.assert((select total_kop from public.my_month_summary()) = 58800, 'после приёмки — доля поровну (1176 ₽ на двоих)');
 select pg_temp.assert(not exists (select 1 from public.open_requests('RFS261014_0001', 'all')), 'принятая не в списке');
 reset role;
 

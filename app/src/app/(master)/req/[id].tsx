@@ -223,7 +223,7 @@ export default function RequestCardScreen() {
               .join(' · ')}
           </Text>
           {!r.is_open ? <Text style={styles.red}>Заявка закрыта</Text> : null}
-          {isMember && !r.is_responsible ? <Text style={styles.meta}>Вы напарник: работы вносит {r.responsible_name}, сумма делится поровну.</Text> : null}
+          {isMember && !r.is_responsible ? <Text style={styles.meta}>Вы напарник: работы вносит {r.responsible_name}, работа засчитывается всем исполнителям.</Text> : null}
         </Section>
       </TourTarget>
 
@@ -404,7 +404,7 @@ function TakePanel({ requestId, meId, onDone, onCancel }: { requestId: number; m
             />
           ))}
       </View>
-      <Text style={styles.small}>Напарники числятся в заявке, сумма по её работам делится поровну. Работы вносите вы.</Text>
+      <Text style={styles.small}>Напарники числятся в заявке, её работы засчитываются всем исполнителям. Работы вносите вы.</Text>
       {err ? <Text style={styles.red}>{err}</Text> : null}
       <BigButton title="Взять" size="big" loading={sending} onPress={take} />
       <BigButton title="Отмена" variant="secondary" onPress={onCancel} />

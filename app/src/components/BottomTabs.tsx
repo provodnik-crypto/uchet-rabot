@@ -5,12 +5,11 @@ import { colors, font, radius, space, tabBar, touch } from '../theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
-type Tab = { path: '/' | '/req' | '/history' | '/team'; label: string; icon: IconName; tour: string };
+type Tab = { path: '/' | '/req' | '/history'; label: string; icon: IconName; tour: string };
 const TABS: Tab[] = [
   { path: '/', label: 'Главная', icon: 'home', tour: 'tab.home' },
   { path: '/req', label: 'Заявки', icon: 'requests', tour: 'home.requests' },
   { path: '/history', label: 'История', icon: 'history', tour: 'home.history' },
-  { path: '/team', label: 'Команда', icon: 'team', tour: 'tab.team' },
 ];
 
 /**

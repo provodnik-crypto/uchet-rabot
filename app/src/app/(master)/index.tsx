@@ -17,7 +17,7 @@ import { useLegacyDraft } from '../../lib/legacyDraft';
 import { monthName } from '../../lib/manager';
 import { formatKop } from '../../lib/money';
 import { holdText, myNotifications, myRequests, openRequests, previewText, requestCard, requestLabel } from '../../lib/requests';
-import { myEntries, myMonthSummary } from '../../lib/shift';
+import { myEntries, myMonthSummary, teamResult } from '../../lib/shift';
 import { storeToday, takenDayNumber } from '../../lib/today';
 import { TourTarget, useTour } from '../../lib/tour';
 import { useFocusQuery } from '../../lib/useQuery';
@@ -39,7 +39,9 @@ export default function MasterHome() {
   const legacy = useLegacyDraft();
   const icons = useEmployeeIcons();
   const entriesQ = useFocusQuery(() => myEntries(14), { key: 'home:entries' });
+  // свои счётчики — только чтобы понять, показывать обучение или «Что нового»; денег мастеру база не отдаёт
   const monthQ = useFocusQuery(myMonthSummary, { key: 'home:month' });
+  const teamQ = useFocusQuery(teamResult, { key: 'home:team' });
   const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
   const notesQ = useFocusQuery(myNotifications, { key: 'home:notes' });
   // тот же список, что во вкладке «Заявки» (общий запас данных)
@@ -120,11 +122,13 @@ export default function MasterHome() {
 
   const returned = !!active?.returned_comment;
   const day = takenDayNumber(active?.taken_at ?? null);
-  const sum = month ? formatKop(month.total_kop).replace(/\s?₽$/, '') : '…';
+  const team = teamQ.data;
+  const sum = team ? formatKop(team.total_kop).replace(/\s?₽$/, '') : '…';
+  const teamMonth = monthName(team?.month ?? storeToday()).split(' ')[0];
 
   return (
     <Screen
-      status={[entriesQ, monthQ, mineQ, notesQ]}
+      status={[entriesQ, monthQ, teamQ, mineQ, notesQ]}
       frame
       tabs
       footer={<BottomTabs />}
@@ -191,28 +195,23 @@ export default function MasterHome() {
         </TourTarget>
       )}
 
-      {/* ---------- Сумма за месяц ---------- */}
+      {/* ---------- Результат команды за месяц: одна сумма на всех, без разбивки по людям ---------- */}
       <TourTarget id="home.month">
-        <Pressable onPress={() => router.push('/team')} accessibilityRole="button" style={({ pressed }) => [styles.month, pressed && styles.pressed]}>
+        <View style={styles.month} accessible accessibilityLabel={`Команда за ${teamMonth}: ${sum} рублей, заявок ${team?.requests ?? 0}, работ ${team?.entries ?? 0}`}>
           <View style={styles.monthRow}>
             <View style={styles.flex}>
-              <Text style={styles.monthLabel}>Мои работы за {monthName(storeToday())}</Text>
-              <Text style={styles.monthSum}>
+              <Text style={styles.monthLabel}>Команда за {teamMonth}</Text>
+              <Text style={styles.monthSum} numberOfLines={1} adjustsFontSizeToFit>
                 {sum} <Text style={styles.rub}>₽</Text>
               </Text>
             </View>
             <View style={styles.monthRight}>
-              <Text style={styles.monthMeta}>Заявок: {month?.requests ?? '…'}</Text>
-              <Text style={styles.monthMeta}>Работ: {month?.entries ?? '…'}</Text>
+              <Text style={styles.monthMeta}>Заявок: {team?.requests ?? '…'}</Text>
+              <Text style={styles.monthMeta}>Работ: {team?.entries ?? '…'}</Text>
             </View>
           </View>
-          {month?.pending || month?.awaiting ? (
-            <Text style={styles.monthNote}>
-              {[month.awaiting ? `ждут приёмки: ${month.awaiting}` : null, month.pending ? `на оценке: ${month.pending}` : null].filter(Boolean).join(' · ')}
-              {' — добавятся позже'}
-            </Text>
-          ) : null}
-        </Pressable>
+          <Text style={styles.monthNote}>Всё, что команда магазина сделала за месяц и руководитель принял.</Text>
+        </View>
       </TourTarget>
 
       {/* ---------- Что нового ---------- */}

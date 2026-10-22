@@ -17,7 +17,6 @@ export default function MasterLayout() {
         <Stack.Screen name="shift/entry" options={{ title: 'Работа' }} />
         <Stack.Screen name="history" options={{ title: 'История', headerShown: false, animation: 'none' }} />
         <Stack.Screen name="fix" options={{ title: 'Исправить работу' }} />
-        <Stack.Screen name="team" options={{ title: 'Команда', headerShown: false, animation: 'none' }} />
         <Stack.Screen name="help" options={{ title: 'Помощь' }} />
         <Stack.Screen name="profile" options={{ title: 'Профиль' }} />
       </Stack>

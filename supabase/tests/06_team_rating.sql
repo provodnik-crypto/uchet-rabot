@@ -1,4 +1,4 @@
--- Рейтинг команды: мастер видит итоги свои и коллег, но не цены и не суммы отдельных работ.
+-- Рейтинг команды: с 30.10.2026 суммы по людям видит только руководитель; мастеру — пусто, своя сумма — null.
 create or replace function pg_temp.emp(p_name text) returns bigint language sql as $$
   select id from public.employees where first_name = p_name or display_name = p_name $$;
 
@@ -25,7 +25,7 @@ select public.submit_shift(jsonb_build_object('client_uuid', (select u from _u),
       'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))),
     jsonb_build_object('department_id', (select id from public.departments where is_default),
       'custom_name', 'Распил МДФ', 'unit_id', 1, 'quantity', 1, 'performer_ids', jsonb_build_array(pg_temp.emp('Николай'))))));
-select pg_temp.assert((select total_kop from public.my_month_summary()) = 0, 'до приёмки заявок сумма 0');
+select pg_temp.assert((select total_kop from public.my_month_summary()) is null, 'мастеру своя сумма не отдаётся');
 select pg_temp.assert((select awaiting from public.my_month_summary()) = 2, 'две работы ждут приёмки заявки');
 select public.send_request_for_review((select id from public.requests where number = 'RFS261011_0002'));
 reset role;
@@ -34,16 +34,20 @@ select public.accept_request((select id from public.requests where number = 'RFS
 select public.accept_request((select id from public.requests where number = 'RFS261011_0002'));
 reset role;
 select pg_temp.login_as('kolya');
-select pg_temp.assert((select total_kop from public.my_month_summary()) = 58800 + 58800, 'моя сумма за месяц: доля 588 + 588 ₽');
+select pg_temp.assert((select total_kop from public.my_month_summary()) is null, 'после приёмки своя сумма мастеру тоже не отдаётся');
 select pg_temp.assert((select requests from public.my_month_summary()) = 2, 'выполнено заявок: 2');
 select pg_temp.assert((select pending from public.my_month_summary()) = 1, 'на оценке: 1, в сумму не входит');
-select pg_temp.assert(
-  (select string_agg(display_name || '=' || total_kop, ',' order by total_kop desc, display_name) from public.team_rating(public.app_today(), public.app_today()) where total_kop > 0)
-  = 'Николай Х.=117600,Михаил М.=58800', 'мастер видит итоги свои и коллег');
-select pg_temp.assert((select count(*) from public.team_rating(public.app_today(), public.app_today())) = 4, 'в рейтинге все 4 мастера, служебный «Не указан» — нет');
-select pg_temp.assert((select sum(total_kop) from public.team_by_month(public.app_today(), public.app_today())) = 176400, 'разбивка по месяцам');
+select pg_temp.assert((select count(*) from public.team_rating(public.app_today(), public.app_today())) = 0, 'мастеру рейтинг пустой');
+select pg_temp.assert((select count(*) from public.team_by_month(public.app_today(), public.app_today())) = 0, 'мастеру суммы по месяцам пустые');
 select pg_temp.assert((select count(*) from public.entry_money) = 0, 'суммы отдельных работ мастеру по-прежнему закрыты');
 select pg_temp.assert((select count(*) from public.price_item_prices) = 0, 'цены прайса мастеру по-прежнему закрыты');
+reset role;
+select pg_temp.login_as('boss');
+select pg_temp.assert(
+  (select string_agg(display_name || '=' || total_kop, ',' order by total_kop desc, display_name) from public.team_rating(public.app_today(), public.app_today()) where total_kop > 0)
+  = 'Николай Х.=117600,Михаил М.=58800', 'руководитель видит суммы мастеров: доля 588 + 588 ₽ и 588 ₽');
+select pg_temp.assert((select count(*) from public.team_rating(public.app_today(), public.app_today())) = 4, 'в рейтинге все 4 мастера, служебный «Не указан» — нет');
+select pg_temp.assert((select sum(total_kop) from public.team_by_month(public.app_today(), public.app_today())) = 176400, 'разбивка по месяцам');
 reset role;
 set local role anon;
 do $$ begin

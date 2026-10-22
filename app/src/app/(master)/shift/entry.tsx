@@ -74,7 +74,7 @@ export default function EntryScreen() {
     Promise.all([listMasters(), listActiveDepartments(), listUnits(), requestId ? requestCard({ id: requestId }).catch(() => null) : null])
       .then(([masters, departments, units, card]) => {
         setRefs({ masters, departments, units });
-        // новая работа: исполнители по умолчанию — вы и напарники заявки (сумма делится между исполнителями)
+        // новая работа: исполнители по умолчанию — вы и напарники заявки (работа засчитывается всем исполнителям)
         if (!editing && !lastPerformers[choiceKey] && me && card) {
           setPerformerIds([...new Set([me.id, ...card.members.map((m) => m.id)])].filter((id) => masters.some((p) => p.id === id)));
         }
@@ -286,7 +286,7 @@ export default function EntryScreen() {
             </View>
           </TourTarget>
           {errors.unit ? <Text style={styles.err}>{errors.unit}</Text> : null}
-          <Text style={styles.meta}>Цену назначит руководитель. До этого работа будет со статусом «На оценке».</Text>
+          <Text style={styles.meta}>Работу вне прайса проверит руководитель. До этого она со статусом «На оценке».</Text>
         </Card>
       ) : (
         <Card style={styles.card}>
@@ -322,7 +322,7 @@ export default function EntryScreen() {
         />
         </TourTarget>
         <TourTarget id="entry.perf" style={styles.card}>
-        <Text style={styles.label}>Исполнители (сумма делится поровну)</Text>
+        <Text style={styles.label}>Исполнители</Text>
         <View style={styles.chips}>
           {masters.map((m) => (
             <Chip

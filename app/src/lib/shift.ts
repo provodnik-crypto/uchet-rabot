@@ -182,10 +182,10 @@ export const resubmitEntry = (
   });
 
 // ---------- Итоги для мастера (без цен отдельных работ) ----------
-export type MyMonthSummary = { total_kop: number; requests: number; entries: number; pending: number; awaiting?: number };
-export type TeamRow = { employee_id: number; display_name: string; total_kop: number; entries: number; requests: number };
-export type TeamMonthRow = { month: string; employee_id: number; display_name: string; total_kop: number };
+/** Свои счётчики за месяц. Сумму в рублях база мастеру не отдаёт (total_kop = null). */
+export type MyMonthSummary = { total_kop: number | null; requests: number; entries: number; pending: number; awaiting?: number };
+/** Итог всей команды магазина за текущий месяц: только принятые работы, без разбивки по людям. */
+export type TeamResult = { month: string; total_kop: number; requests: number; entries: number };
 
 export const myMonthSummary = async () => (await rpc<MyMonthSummary[]>('my_month_summary'))[0];
-export const teamRating = (from: string, to: string) => rpc<TeamRow[]>('team_rating', { p_from: from, p_to: to });
-export const teamByMonth = (from: string, to: string) => rpc<TeamMonthRow[]>('team_by_month', { p_from: from, p_to: to });
+export const teamResult = async () => (await rpc<TeamResult[]>('team_result'))[0];
