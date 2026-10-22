@@ -17,7 +17,7 @@ import { toPayload, uploadAll, type DraftPhoto, type RemotePhoto } from '../../.
 import { colors, font, space, stroke } from '../../../theme';
 
 /**
- * «Сообщить руководителю» — когда работы нет в списке заявок: коротко что случилось и фото.
+ * «Сообщить о поломке» (раньше «Сообщить руководителю») — когда работы нет в списке заявок: коротко что случилось и фото.
  * Заявку создаёт руководитель; ниже — мои сообщения и ответы на них.
  */
 export default function ReportScreen() {

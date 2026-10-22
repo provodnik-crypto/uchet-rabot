@@ -245,11 +245,11 @@ export default function MasterHome() {
       {/* ---------- Нет заявки на работу ---------- */}
       <View style={styles.extras}>
         <TourTarget id="req.planned">
-          <BigButton title="Работа без заявки" variant="secondary" size="small" disabled={!!active} onPress={() => router.push('/req/new')} />
+          <BigButton title="Начать работу без заявки" variant="secondary" size="small" disabled={!!active} onPress={() => router.push('/req/new')} />
         </TourTarget>
-        {active ? <Text style={styles.meta}>«Работа без заявки» — после отправки {requestLabel(active.number)} на проверку.</Text> : null}
+        {active ? <Text style={styles.meta}>Начать работу без заявки можно после отправки {requestLabel(active.number)} на проверку.</Text> : null}
         <TourTarget id="req.report">
-          <BigButton title="Сообщить руководителю" variant="secondary" size="small" onPress={() => router.push('/req/report')} />
+          <BigButton title="Сообщить о поломке" variant="secondary" size="small" onPress={() => router.push('/req/report')} />
         </TourTarget>
       </View>
 

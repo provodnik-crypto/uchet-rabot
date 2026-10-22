@@ -345,7 +345,7 @@ export type MasterReport = {
   decided_at?: string | null;
   request_id: number | null;
   request_number: string | null;
-  /** report — «Сообщить руководителю», contractor — передать подрядчику, close — закрыть заявку (не нужна). */
+  /** report — «Сообщить о поломке», contractor — передать подрядчику, close — закрыть заявку (не нужна). */
   kind?: 'report' | 'contractor' | 'close';
   /** Просьба по заявке: о какой. */
   about_request?: number | null;

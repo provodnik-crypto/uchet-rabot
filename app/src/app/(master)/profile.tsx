@@ -12,7 +12,7 @@ import { useEmployeeIcons } from '../../lib/employeeIcons';
 import { TourTarget } from '../../lib/tour';
 import { colors, font, space, touch } from '../../theme';
 
-/** Профиль мастера: помощь, «Сообщить руководителю», выход, версия. */
+/** Профиль мастера: помощь, «Мои сообщения руководителю», выход, версия. */
 export default function MasterProfile() {
   const { me, signOut } = useAuth();
   const icons = useEmployeeIcons();
@@ -30,7 +30,7 @@ export default function MasterProfile() {
       <TourTarget id="profile.help">
         <Tile title="Помощь" subtitle="Обучение по шагам и «Что нового»" onPress={() => router.push('/help')} />
       </TourTarget>
-      <Tile title="Мои сообщения руководителю" subtitle="Ответы на «Сообщить руководителю»" onPress={() => router.push('/req/report')} />
+      <Tile title="Мои сообщения руководителю" subtitle="Ответы на «Сообщить о поломке»" onPress={() => router.push('/req/report')} />
       <BigButton title="Выйти" variant="secondary" onPress={signOut} />
       <Text style={styles.version}>{appVersionLabel()}</Text>
     </Screen>
