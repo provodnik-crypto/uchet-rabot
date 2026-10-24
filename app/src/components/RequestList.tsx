@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { formatRegistered, myRequests, openRequests, previewText, requestLabel, type OpenRequest } from '../lib/requests';
+import { formatRegistered, myRequests, openRequests, previewText, requestLabel, requestPhotoIds, type OpenRequest } from '../lib/requests';
 import { TourTarget } from '../lib/tour';
 import { useFocusQuery } from '../lib/useQuery';
 import { colors, font, lineHeight, opacity, radius, space, stroke } from '../theme';
@@ -39,6 +39,8 @@ export function RequestList({ q, filter, onFilter, tourId }: Props) {
   useScreenRefresh(reload);
   // моя заявка «В работе»: пока она есть, другие не взять
   const mineQ = useFocusQuery(myRequests, { key: 'home:mine' });
+  // значок 📷 — у заявок с фото от инициатора
+  const photoIds = new Set(useFocusQuery(requestPhotoIds, { key: 'request-photo-ids' }).data ?? []);
   useScreenRefresh(mineQ.reload);
   const active = mineQ.data?.find((m) => m.status === 'in_work' && m.responsible) ?? null;
 
@@ -99,6 +101,7 @@ export function RequestList({ q, filter, onFilter, tourId }: Props) {
               <DueLine dueAt={r.due_at} status={r.status} />
               <Text style={styles.meta}>
                 {[
+                  photoIds.has(r.id) ? '📷 фото' : null,
                   formatRegistered(r.registered_at),
                   r.requester_name,
                   r.member ? 'вы напарник' : null,

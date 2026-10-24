@@ -94,6 +94,53 @@ async function preparePhoto(uri: string, width: number, height: number): Promise
   return { key: uuid(), localUri: main.uri, thumbUri: thumb.uri, width: main.width, height: main.height, size: size ?? undefined };
 }
 
+/**
+ * Картинка из файла Excel (ITSM, столбец «Фото») → сжатое фото, как снятое на телефоне.
+ * Исходные байты пишутся во временный файл только на время сжатия и сразу удаляются.
+ */
+export async function photoFromBytes(bytes: Uint8Array, ext: string): Promise<DraftPhoto> {
+  const { manipulateAsync } = await import('expo-image-manipulator');
+  if (Platform.OS === 'web') {
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: `image/${ext}` }));
+    try {
+      const probe = await manipulateAsync(url, []);
+      return await preparePhoto(url, probe.width, probe.height);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  const fs: typeof import('expo-file-system') = require('expo-file-system');
+  const src = new fs.File(fs.Paths.cache, `itsm-${uuid()}.${ext === 'jpeg' ? 'jpg' : ext}`);
+  src.create();
+  src.write(bytes);
+  try {
+    const probe = await manipulateAsync(src.uri, []);
+    return await preparePhoto(src.uri, probe.width, probe.height);
+  } finally {
+    try {
+      src.delete();
+    } catch {
+      // временный файл в кэше — система всё равно его уберёт
+    }
+  }
+}
+
+/** Удалить с телефона сжатые копии (после загрузки или отмены). */
+export function forgetLocalPhotos(photos: DraftPhoto[]) {
+  if (Platform.OS === 'web') return;
+  const fs: typeof import('expo-file-system') = require('expo-file-system');
+  for (const p of photos)
+    for (const uri of [p.localUri, p.thumbUri]) {
+      if (!uri) continue;
+      try {
+        const f = new fs.File(uri);
+        if (f.exists) f.delete();
+      } catch {
+        // не страшно: это кэш
+      }
+    }
+}
+
 async function readBytes(uri: string): Promise<Uint8Array> {
   if (Platform.OS === 'web' || uri.startsWith('blob:') || uri.startsWith('data:')) {
     return new Uint8Array(await (await fetch(uri)).arrayBuffer());

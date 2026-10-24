@@ -26,7 +26,7 @@ const colIndex = (ref: string) => {
 };
 
 /** Листы книги: имя → строки (массив ячеек). Читается только нужный лист. */
-export function readXlsx(bytes: Uint8Array, preferSheet: string): { sheet: string; rows: Cell[][] } {
+export function readXlsx(bytes: Uint8Array, preferSheet: string): { sheet: string; rows: Cell[][]; sheetPath: string } {
   let files: Record<string, Uint8Array>;
   try {
     files = unzipSync(bytes, {
@@ -47,7 +47,8 @@ export function readXlsx(bytes: Uint8Array, preferSheet: string): { sheet: strin
   const relTag = Array.from(rels.matchAll(/<Relationship\b[^>]*>/g), (m) => m[0]).find((t) => t.includes(`Id="${sheet.rid}"`));
   let target = relTag ? /Target="([^"]*)"/.exec(relTag)?.[1] ?? '' : '';
   target = target.replace(/^\/?xl\//, '').replace(/^\//, '');
-  const sheetXml = files[`xl/${target}`] ?? files['xl/worksheets/sheet1.xml'];
+  const sheetPath = files[`xl/${target}`] ? `xl/${target}` : 'xl/worksheets/sheet1.xml';
+  const sheetXml = files[sheetPath];
   if (!sheetXml) throw new Error('Не удалось прочитать лист с заявками');
 
   const shared = files['xl/sharedStrings.xml']
@@ -76,7 +77,118 @@ export function readXlsx(bytes: Uint8Array, preferSheet: string): { sheet: strin
     }
     rows[rowNum - 1] = Array.from(row, (x) => x ?? null);
   }
-  return { sheet: sheet.name, rows: Array.from(rows, (r) => r ?? []) };
+  return { sheet: sheet.name, rows: Array.from(rows, (r) => r ?? []), sheetPath };
+}
+
+// ---------- Картинки листа ----------
+/** Картинка из файла: строка и столбец (с нуля), байты и формат. */
+export type XlsxImage = { row: number; col: number; bytes: Uint8Array; ext: 'jpeg' | 'png' | 'gif' | 'webp' | 'bmp' };
+const IMAGE_EXT: Record<string, XlsxImage['ext']> = { jpg: 'jpeg', jpeg: 'jpeg', png: 'png', gif: 'gif', webp: 'webp', bmp: 'bmp' };
+
+/** «../media/image1.png» относительно «xl/drawings/drawing1.xml» → «xl/media/image1.png». */
+function resolvePath(base: string, target: string): string {
+  if (target.startsWith('/')) return target.slice(1);
+  const parts = base.split('/').slice(0, -1);
+  for (const seg of target.split('/')) {
+    if (seg === '..') parts.pop();
+    else if (seg && seg !== '.') parts.push(seg);
+  }
+  return parts.join('/');
+}
+const relsPath = (file: string) => file.replace(/([^/]+)$/, '_rels/$1.rels');
+function readRels(files: Record<string, Uint8Array>, file: string): Map<string, string> {
+  const b = files[relsPath(file)];
+  const map = new Map<string, string>();
+  if (!b) return map;
+  for (const m of xmlOf(b).matchAll(/<Relationship\b[^>]*>/g)) {
+    const id = /\bId="([^"]*)"/.exec(m[0])?.[1];
+    const target = /\bTarget="([^"]*)"/.exec(m[0])?.[1];
+    if (id && target && !/TargetMode="External"/.test(m[0])) map.set(id, resolvePath(file, decodeXml(target)));
+  }
+  return map;
+}
+
+/**
+ * Картинки листа: «поверх ячеек» (рисунок привязан к ячейке, xl/drawings) и «в ячейке» (Excel 365, xl/richData).
+ * Строка картинки поверх ячеек — та, где её верхний левый угол. Ссылки на картинки в интернете не читаются.
+ */
+export function readXlsxImages(bytes: Uint8Array, sheetPath: string): XlsxImage[] {
+  let files: Record<string, Uint8Array>;
+  try {
+    files = unzipSync(bytes, {
+      filter: (f) =>
+        f.name === sheetPath ||
+        f.name === relsPath(sheetPath) ||
+        /^xl\/(drawings\/(_rels\/)?[^/]+|richData\/(_rels\/)?[^/]+|metadata\.xml)$/.test(f.name),
+    });
+  } catch {
+    return [];
+  }
+  const found: { row: number; col: number; path: string }[] = [];
+
+  // поверх ячеек
+  const sheetRels = readRels(files, sheetPath);
+  const sheetXml = files[sheetPath] ? xmlOf(files[sheetPath]) : '';
+  for (const d of sheetXml.matchAll(/<drawing\b[^>]*\bid="([^"]*)"/g)) {
+    const drawingPath = sheetRels.get(d[1]);
+    if (!drawingPath || !files[drawingPath]) continue;
+    const drawRels = readRels(files, drawingPath);
+    const xml = xmlOf(files[drawingPath]);
+    for (const a of xml.matchAll(/<(twoCellAnchor|oneCellAnchor)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
+      const from = /<from>([\s\S]*?)<\/from>/.exec(a[2])?.[1] ?? '';
+      const row = Number(/<row>(\d+)<\/row>/.exec(from)?.[1]);
+      const col = Number(/<col>(\d+)<\/col>/.exec(from)?.[1]);
+      const embed = /<blip\b[^>]*\bembed="([^"]*)"/.exec(a[2])?.[1];
+      const path = embed ? drawRels.get(embed) : undefined;
+      if (Number.isFinite(row) && Number.isFinite(col) && path) found.push({ row, col, path });
+    }
+  }
+
+  // в ячейке: <c r="N5" vm="1"> → richData/rdrichvalue.xml (rv № vm−1, первое значение — номер ссылки) → richValueRel.xml
+  const rvXml = files['xl/richData/rdrichvalue.xml'];
+  const relXmlPath = 'xl/richData/richValueRel.xml';
+  if (rvXml && files[relXmlPath]) {
+    const values = Array.from(xmlOf(rvXml).matchAll(/<rv\b[^>]*>([\s\S]*?)<\/rv>/g), (m) => Number(/<v>(\d+)<\/v>/.exec(m[1])?.[1]));
+    const relIds = Array.from(xmlOf(files[relXmlPath]).matchAll(/<rel\b[^>]*\bid="([^"]*)"/g), (m) => m[1]);
+    const richRels = readRels(files, relXmlPath);
+    // metadata.xml: номер vm → номер rich value (обычно совпадает по порядку)
+    let vmToRv: number[] | null = null;
+    if (files['xl/metadata.xml']) {
+      const meta = xmlOf(files['xl/metadata.xml']);
+      const rvbs = Array.from(meta.matchAll(/<rvb\b[^>]*\bi="(\d+)"/g), (m) => Number(m[1]));
+      const vmBlock = /<valueMetadata\b[^>]*>([\s\S]*?)<\/valueMetadata>/.exec(meta)?.[1] ?? '';
+      const vms = Array.from(vmBlock.matchAll(/<rc\b[^>]*\bv="(\d+)"/g), (m) => Number(m[1]));
+      if (rvbs.length && vms.length) vmToRv = vms.map((v) => rvbs[v] ?? v);
+    }
+    for (const rm of sheetXml.matchAll(/<row\b[^>]*?\br="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
+      for (const cm of rm[2].matchAll(/<c\b([^>]*?)(?:\/>|>)/g)) {
+        const vm = Number(/\bvm="(\d+)"/.exec(cm[1])?.[1]);
+        const ref = /\br="([A-Z]+)\d*"/.exec(cm[1])?.[1];
+        if (!vm || !ref) continue;
+        const rvIndex = vmToRv ? vmToRv[vm - 1] : vm - 1;
+        const relIndex = rvIndex == null ? undefined : values[rvIndex];
+        const relId = relIndex == null || Number.isNaN(relIndex) ? undefined : relIds[relIndex];
+        const path = relId ? richRels.get(relId) : undefined;
+        if (path) found.push({ row: Number(rm[1]) - 1, col: colIndex(ref), path });
+      }
+    }
+  }
+  if (!found.length) return [];
+
+  const wanted = new Set(found.map((f) => f.path));
+  let media: Record<string, Uint8Array> = {};
+  try {
+    media = unzipSync(bytes, { filter: (f) => wanted.has(f.name) });
+  } catch {
+    return [];
+  }
+  const out: XlsxImage[] = [];
+  for (const f of found) {
+    const ext = IMAGE_EXT[f.path.split('.').pop()?.toLowerCase() ?? ''];
+    const b = media[f.path];
+    if (ext && b?.length) out.push({ row: f.row, col: f.col, bytes: b, ext });
+  }
+  return out;
 }
 
 // ---------- Столбцы ----------
@@ -92,6 +204,7 @@ const KEEP = {
   group: ['Рабочая группа', 'Ответственный'],
   requester: ['Конечный потребитель'],
   due: ['Время разрешения'],
+  photo: ['Фото', 'Фото заявки', 'Изображение'],
 } as const;
 type Key = keyof typeof KEEP;
 
@@ -104,7 +217,7 @@ const DROP = [
 ];
 const REQUIRED: Key[] = ['number', 'group', 'registered'];
 /** Необязательные, о которых не предупреждаем: в новом шаблоне их нет, название берётся из текста. */
-const QUIET: Key[] = ['operation', 'due'];
+const QUIET: Key[] = ['operation', 'due', 'photo'];
 
 const norm = (s: unknown) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
 
@@ -186,9 +299,27 @@ const NUM_AFTER_KEYWORD = '\\+?\\d[\\d\\s()-]{3,16}\\d';
 const MOBILE = '(?<!\\d)(?:(?:\\+7|8|7)[\\s(-]*|\\(?)\\d{3}[\\s)-]{0,2}\\d{3}[\\s-]?\\d{2}[\\s-]?\\d{2}(?!\\d)';
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+/g;
 
-/** Убирает телефоны (со словами «тел», «т.», «вн», «моб») и почты. */
+/**
+ * Рабочий телефон магазина: 6 цифр, начинается с 031 («031899», «031-899», «031 899»). Его оставляем (решение заказчика 24.10.2026).
+ * Перед ним не буква и не «буква-» — чтобы «MAG-031» и «mag031» не приняли за начало номера.
+ */
+const WORK_PHONE = /(?<![\dA-Za-zА-Яа-яЁё])(?<![A-Za-z]-)031[\s-]?(\d{3})(?![\d])/g;
+const WORK_MARK = '\u0001';
+
+/** Рабочие номера из текста — «031899», без повторов, не больше 3. */
+export function workPhones(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(WORK_PHONE)) {
+    const n = `031${m[1]}`;
+    if (!out.includes(n)) out.push(n);
+  }
+  return out.slice(0, 3);
+}
+
+/** Убирает телефоны (со словами «тел», «т.», «вн», «моб») и почты. Рабочий номер 031xxx остаётся — в виде «031899». */
 export function stripContacts(text: string): string {
-  let s = text.replace(EMAIL, '');
+  const keep: string[] = [];
+  let s = text.replace(EMAIL, '').replace(WORK_PHONE, (_, tail: string) => `${WORK_MARK}${String.fromCharCode(97 + keep.push(`031${tail}`) - 1)}${WORK_MARK}`);
   s = s.replace(new RegExp(`(?<![${L}])${KEYWORD}\\s*[:№.-]?\\s*(${NUM_AFTER_KEYWORD})`, 'gi'), (all, num: string) => {
     const digits = num.replace(/\D/g, '').length;
     return digits >= 5 && digits <= 11 ? PHONE_MARK : all;
@@ -204,7 +335,9 @@ export function stripContacts(text: string): string {
     if (next === s) break;
     s = next;
   }
-  return s.replace(/(\[тел\. удалён\][\s,;]*){2,}/g, `${PHONE_MARK} `);
+  s = s.replace(/(\[тел\. удалён\][\s,;]*){2,}/g, `${PHONE_MARK} `);
+  // без цифр в метке — чтобы правила для других номеров её не трогали
+  return s.replace(new RegExp(`${WORK_MARK}([a-z])${WORK_MARK}`, 'g'), (_, c: string) => keep[c.charCodeAt(0) - 97] ?? '');
 }
 
 const ZERO = '\u0000';
@@ -340,6 +473,10 @@ export type ItsmRow = {
   autoTitle: boolean;
   requester: string | null;
   requesterUnrecognized: boolean;
+  /** Рабочие телефоны инициатора из текста («031899, 031900»), null — нет. */
+  contactPhone: string | null;
+  /** Картинки из столбца «Фото» этой строки (до 3). */
+  photos: XlsxImage[];
   suspects: string[];
   errors: string[];
 };
@@ -350,6 +487,10 @@ export type ItsmFile = {
   unknownColumns: string[]; // пропущены: их нет в списке известных
   missingColumns: string[]; // нет обязательных — файл не загрузить
   absentColumns: string[]; // нет необязательных — поля останутся пустыми
+  /** В файле есть столбец «Фото». */
+  photoColumn: boolean;
+  /** Картинок в столбце «Фото» не прочитано (формат не поддерживается или их больше 3 в строке). */
+  skippedPhotos: number;
 };
 
 const NUMBER_RE = /^(RFS|INC)\d{6}_\d{4}$/;
@@ -381,7 +522,8 @@ export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
   const optionalMissing = (Object.keys(KEEP) as Key[])
     .filter((k) => !REQUIRED.includes(k) && !QUIET.includes(k) && col[k] === undefined)
     .map((k) => KEEP[k].join(' / '));
-  if (missingColumns.length) return { sheet, rows: [], unknownColumns, missingColumns, absentColumns: optionalMissing };
+  const photoColumn = col.photo !== undefined;
+  if (missingColumns.length) return { sheet, rows: [], unknownColumns, missingColumns, absentColumns: optionalMissing, photoColumn, skippedPhotos: 0 };
 
   const get = (r: Cell[], k: Key) => (col[k] === undefined ? null : r[col[k]] ?? null);
   const rows: ItsmRow[] = [];
@@ -398,7 +540,9 @@ export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
     const registeredAt = parseRegistered(get(r, 'registered'));
     if (!registeredAt) errors.push('нет даты регистрации');
     const req = parseRequester(get(r, 'requester'));
-    const { text: description, suspects } = cleanDescription(multiline(get(r, 'description')), req.nameParts);
+    const rawDescription = multiline(get(r, 'description'));
+    const { text: description, suspects } = cleanDescription(rawDescription, req.nameParts);
+    const phones = workPhones(rawDescription);
     rows.push({
       line: i + 1,
       number,
@@ -412,16 +556,37 @@ export function parseItsmRows(sheet: string, table: Cell[][]): ItsmFile {
       autoTitle: col.operation === undefined,
       requester: req.value,
       requesterUnrecognized: !req.recognized,
+      contactPhone: phones.length ? phones.join(', ') : null,
+      photos: [],
       suspects,
       errors,
     });
   }
-  return { sheet, rows, unknownColumns, missingColumns, absentColumns: optionalMissing };
+  return { sheet, rows, unknownColumns, missingColumns, absentColumns: optionalMissing, photoColumn, skippedPhotos: 0, photoCol: col.photo } as ItsmFile & { photoCol?: number };
+}
+
+export const MAX_REQUEST_PHOTOS = 3;
+
+/** Столбец «Фото» есть — картинки этого столбца раздаются по строкам; без столбца файл читается как раньше. */
+export function attachPhotos(file: ItsmFile & { photoCol?: number }, images: XlsxImage[]): ItsmFile {
+  const { photoCol, ...rest } = file;
+  if (photoCol === undefined || !images.length) return rest;
+  const byLine = new Map(rest.rows.map((r) => [r.line - 1, r]));
+  let skipped = 0;
+  for (const img of images) {
+    if (img.col !== photoCol) continue;
+    const row = byLine.get(img.row);
+    if (!row) continue;
+    if (row.photos.length >= MAX_REQUEST_PHOTOS) skipped++;
+    else row.photos.push(img);
+  }
+  return { ...rest, skippedPhotos: skipped };
 }
 
 export function parseItsmFile(bytes: Uint8Array): ItsmFile {
-  const { sheet, rows } = readXlsx(bytes, 'Обращение');
-  return parseItsmRows(sheet, rows);
+  const { sheet, rows, sheetPath } = readXlsx(bytes, 'Обращение');
+  const parsed = parseItsmRows(sheet, rows) as ItsmFile & { photoCol?: number };
+  return attachPhotos(parsed, parsed.photoCol === undefined ? [] : readXlsxImages(bytes, sheetPath));
 }
 
 /** Пересчитать подсветку после правки описания руководителем (телефоны и почты убираются снова). */

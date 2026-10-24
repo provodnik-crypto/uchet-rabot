@@ -36,6 +36,7 @@ import { formatQuantity, listMasters } from '../../../lib/shift';
 import { takenDayNumber } from '../../../lib/today';
 import { ScrollIntoView } from '../../../components/ScrollIntoView';
 import { TourTarget } from '../../../lib/tour';
+import { RequestExtras } from '../../../components/RequestExtras';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, lineHeight, opacity, radius, space, stroke } from '../../../theme';
 
@@ -208,6 +209,7 @@ export default function RequestCardScreen() {
               {r.description || r.subject || 'Без описания'}
             </Text>
           </TourTarget>
+          <RequestExtras requestId={r.id} />
           <Text style={styles.meta}>
             {[r.requester_name, r.registered_at ? formatRegistered(r.registered_at) : null].filter(Boolean).join(' · ')}
           </Text>

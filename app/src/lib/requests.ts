@@ -1,7 +1,8 @@
 // Заявки из ITSM: выбор файла, предпросмотр, загрузка, список для мастера, назначение.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { parseItsmFile, type ItsmFile } from './itsm';
+import { parseItsmFile, type ItsmFile, type ItsmRow } from './itsm';
+import { photoFromBytes, toPayload, uploadAll, type DraftPhoto } from './workPhotos';
 import { supabase } from './supabase';
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -45,6 +46,66 @@ export async function pickItsmFile(): Promise<ItsmFile | null> {
   }
   return parseItsmFile(bytes);
 }
+
+/**
+ * Фото из файла → сжатые копии на телефоне, по номеру заявки. onProgress — «Готовлю фото: 3 из 6».
+ * Картинку, которую телефон не смог открыть, пропускаем и считаем.
+ */
+export async function prepareItsmPhotos(
+  rows: ItsmRow[],
+  onProgress: (text: string | null) => void,
+): Promise<{ photos: Record<string, DraftPhoto[]>; failed: number }> {
+  const todo = rows.filter((r) => r.photos.length);
+  const total = todo.reduce((n, r) => n + r.photos.length, 0);
+  const photos: Record<string, DraftPhoto[]> = {};
+  let done = 0;
+  let failed = 0;
+  for (const r of todo) {
+    for (const img of r.photos) {
+      onProgress(`Готовлю фото из файла: ${done + 1} из ${total}`);
+      try {
+        (photos[r.number] ??= []).push(await photoFromBytes(img.bytes, img.ext));
+      } catch {
+        failed++;
+      }
+      done++;
+    }
+  }
+  onProgress(null);
+  return { photos, failed };
+}
+
+/** Загрузить фото заявок и привязать к заявкам (у которых фото ещё нет). Вернёт, у скольких заявок фото добавлены, и ошибки. */
+export async function uploadItsmPhotos(
+  photos: Record<string, DraftPhoto[]>,
+  onProgress: (text: string | null) => void,
+): Promise<{ requests: number; failed: string[] }> {
+  const numbers = Object.keys(photos).filter((n) => photos[n].length);
+  const has = new Set(numbers.length ? await rpc<string[]>('requests_with_photos', { p_numbers: numbers }) : []);
+  const todo = numbers.filter((n) => !has.has(n));
+  let ok = 0;
+  const failed: string[] = [];
+  for (const [i, n] of todo.entries()) {
+    onProgress(`Загружаю фото заявок: ${i + 1} из ${todo.length}`);
+    try {
+      const uploaded = await uploadAll(photos[n], () => {});
+      if ((await rpc<number>('attach_request_photos', { p_number: n, p_photos: toPayload(uploaded) })) > 0) ok++;
+    } catch {
+      failed.push(n);
+    }
+  }
+  onProgress(null);
+  return { requests: ok, failed };
+}
+
+export const setRequestPhones = (rows: { number: string; phone: string }[]) =>
+  rows.length ? rpc<number>('set_request_phones', { p: rows }) : Promise.resolve(0);
+
+/** Фото из файла и рабочий телефон инициатора — для карточки заявки. */
+export type RequestExtras = { contact_phone: string | null; photos: { path: string; thumb_path: string }[] };
+export const requestExtras = (id: number) => rpc<RequestExtras | null>('request_extras', { p_id: id });
+/** Открытые заявки с фото — значок 📷 в списке. Старая база без функции — пусто. */
+export const requestPhotoIds = () => rpc<number[]>('request_photo_ids').catch((): number[] => []);
 
 // ---------- Предпросмотр и загрузка ----------
 export type MissingRequest = {

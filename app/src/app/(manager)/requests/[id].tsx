@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { RequestFeed } from '../../../components/RequestFeed';
+import { RequestExtras } from '../../../components/RequestExtras';
 import { WorksMoney } from '../../../components/WorksMoney';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
@@ -144,6 +145,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
         <Card style={styles.card}>
           <Text style={styles.meta}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text>
           {r.description ? <Text style={styles.body}>{r.description}</Text> : null}
+          <RequestExtras requestId={r.id} />
           <Text style={styles.meta}>
             {formatRegistered(r.registered_at)} · {r.requester ?? 'заявитель не указан'}
             {r.itsm_status ? ` · ${r.itsm_status}` : ''}

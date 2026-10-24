@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../components/Text';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
@@ -10,10 +10,33 @@ import { confirm } from '../../lib/confirm';
 import { formatDate, maskDateInput, parseDate } from '../../lib/dates';
 import { humanError } from '../../lib/errors';
 import { inWindow, recheckDescription, titleFromText, type ItsmFile, type ItsmRow } from '../../lib/itsm';
-import { formatRegistered, formatStoreTime, importApply, importContext, lifecycleLabel, pickItsmFile, type ImportContext, type MissingRequest } from '../../lib/requests';
-import { colors, font, radius, size, space, stroke } from '../../theme';
+import {
+  formatRegistered,
+  formatStoreTime,
+  importApply,
+  importContext,
+  lifecycleLabel,
+  pickItsmFile,
+  prepareItsmPhotos,
+  setRequestPhones,
+  uploadItsmPhotos,
+  type ImportContext,
+  type MissingRequest,
+} from '../../lib/requests';
+import { forgetLocalPhotos, type DraftPhoto } from '../../lib/workPhotos';
+import { colors, font, radius, size, space, stroke, touch } from '../../theme';
 
-type Result = { inserted: number; skipped: number; closed: number; outside: number; errors: number };
+type Result = {
+  inserted: number;
+  skipped: number;
+  closed: number;
+  outside: number;
+  errors: number;
+  /** Фото добавлены к стольким заявкам; не загрузились — номера. */
+  photoRequests?: number;
+  photoFailed?: string[];
+  phones?: number;
+};
 
 /** Заявка у мастера (в работе, на паузе, на проверке) — при загрузке файла её не закрываем. */
 const atMaster = (m: MissingRequest) => m.status === 'in_work' || m.status === 'paused' || m.status === 'review';
@@ -30,8 +53,15 @@ export default function ImportScreen() {
   const [close, setClose] = useState<Record<number, boolean>>({});
   const [edits, setEdits] = useState<Record<number, { text: string; suspects: string[] }>>({});
   const [editing, setEditing] = useState<number | null>(null);
+  // фото из столбца «Фото»: сжатые копии по номеру заявки; крестик убирает фото из загрузки
+  const [photos, setPhotos] = useState<Record<string, DraftPhoto[]>>({});
+  const [photoFailed, setPhotoFailed] = useState(0);
+  const [progress, setProgress] = useState<string | null>(null);
 
-  function reset() {
+  function reset(keepPhotos = false) {
+    if (!keepPhotos) forgetLocalPhotos(Object.values(photos).flat());
+    setPhotos({});
+    setPhotoFailed(0);
     setFile(null);
     setCtx(null);
     setClose({});
@@ -50,6 +80,11 @@ export default function ImportScreen() {
       if (f.missingColumns.length) throw new Error(`В файле нет столбцов: ${f.missingColumns.join(', ')}`);
       const c = await importContext(Array.from(new Set(f.rows.map((r) => r.number))));
       reset();
+      const prepared = await prepareItsmPhotos(f.rows, setProgress);
+      // байты картинок больше не нужны — освобождаем память
+      for (const r of f.rows) r.photos = [];
+      setPhotos(prepared.photos);
+      setPhotoFailed(prepared.failed);
       setFile(f);
       setCtx(c);
       setFromText(c.window_from ? formatDate(c.window_from) : '');
@@ -57,6 +92,7 @@ export default function ImportScreen() {
     } catch (e) {
       setError(humanError(e));
     } finally {
+      setProgress(null);
       setBusy(false);
     }
   }
@@ -113,23 +149,35 @@ export default function ImportScreen() {
   const noRequester = toLoad.filter((r) => r.requesterUnrecognized);
   const closeIds = Object.entries(close).filter(([, v]) => v).map(([k]) => Number(k));
   const dueUpdates = plan ? plan.existingRows.filter((r) => r.dueAt).map((r) => ({ number: r.number, due_at: r.dueAt! })) : [];
+  // фото и телефоны — у тех, что загружаются сейчас, и у загруженных раньше (если у них ещё нет)
+  const target = plan ? [...toLoad, ...plan.existingRows] : [];
+  const photoRows = target.filter((r) => photos[r.number]?.length);
+  const photoCount = photoRows.reduce((n, r) => n + photos[r.number].length, 0);
+  const phones = target.filter((r) => r.contactPhone).map((r) => ({ number: r.number, phone: r.contactPhone! }));
+  const removePhoto = (number: string, key: string) => {
+    const gone = (photos[number] ?? []).filter((p) => p.key === key);
+    forgetLocalPhotos(gone);
+    setPhotos({ ...photos, [number]: (photos[number] ?? []).filter((p) => p.key !== key) });
+  };
 
   async function upload() {
     if (!file || !ctx || !plan || windowError) return;
-    if (!toLoad.length && !closeIds.length && !dueUpdates.length) {
+    const applyNeeded = toLoad.length > 0 || closeIds.length > 0 || dueUpdates.length > 0;
+    if (!applyNeeded && !photoRows.length && !phones.length) {
       setError('Загружать нечего: новых заявок в выбранном периоде нет и ничего не отмечено «Закрыть».');
       return;
     }
     const ok = await confirm(
       'Загрузить заявки?',
-      `Новых заявок: ${toLoad.length}${dueUpdates.length ? `\nОбновить срок у загруженных раньше: ${dueUpdates.length}` : ''}${closeIds.length ? `\nЗакрыть пропавших: ${closeIds.length}` : ''}`,
+      `Новых заявок: ${toLoad.length}${dueUpdates.length ? `\nОбновить срок у загруженных раньше: ${dueUpdates.length}` : ''}${closeIds.length ? `\nЗакрыть пропавших: ${closeIds.length}` : ''}${photoRows.length ? `\nФото: ${photoCount} у ${photoRows.length} заявок` : ''}`,
       'Загрузить',
     );
     if (!ok) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await importApply({
+      const empty = { import_id: 0, inserted: 0, skipped: 0, closed: 0 };
+      const res = !applyNeeded ? empty : await importApply({
         rows: toLoad.map((r) => ({
           number: r.number,
           store_code: r.storeCode!,
@@ -151,11 +199,27 @@ export default function ImportScreen() {
         outside_rows: withOutside ? 0 : plan.outside.length,
         error_rows: plan.errors.length,
       });
-      setResult({ ...res, outside: withOutside ? 0 : plan.outside.length, errors: plan.errors.length });
+      // заявки уже в базе: телефоны и фото не мешают загрузке — ошибка здесь покажется в итоге
+      const phonesSet = await setRequestPhones(phones).catch(() => 0);
+      const ph = photoRows.length
+        ? await uploadItsmPhotos(Object.fromEntries(photoRows.map((r) => [r.number, photos[r.number]])), setProgress).catch(() => ({
+            requests: 0,
+            failed: photoRows.map((r) => r.number),
+          }))
+        : { requests: 0, failed: [] };
+      setResult({
+        ...res,
+        outside: withOutside ? 0 : plan.outside.length,
+        errors: plan.errors.length,
+        photoRequests: ph.requests,
+        photoFailed: ph.failed,
+        phones: phonesSet,
+      });
       reset();
     } catch (e) {
       setError(humanError(e));
     } finally {
+      setProgress(null);
       setBusy(false);
     }
   }
@@ -170,6 +234,13 @@ export default function ImportScreen() {
             {result.closed ? <Text style={styles.body}>Закрыто пропавших: {result.closed}</Text> : null}
             {result.outside ? <Text style={styles.body}>Не загружены (вне периода): {result.outside}</Text> : null}
             {result.errors ? <Text style={styles.body}>Строк с ошибками: {result.errors}</Text> : null}
+            {result.photoRequests ? <Text style={styles.body}>Фото добавлены к заявкам: {result.photoRequests}</Text> : null}
+            {result.phones ? <Text style={styles.body}>Рабочий телефон записан у заявок: {result.phones}</Text> : null}
+            {result.photoFailed?.length ? (
+              <Text style={styles.warn}>
+                Не загрузились фото у заявок: {result.photoFailed.join(', ')}. Выберите тот же файл ещё раз — догрузятся только они.
+              </Text>
+            ) : null}
             <Text style={styles.meta}>Запись в журнале загрузок сделана. Сам файл нигде не сохранён.</Text>
           </Card>
         ) : null}
@@ -179,6 +250,8 @@ export default function ImportScreen() {
         <Text style={styles.meta}>
           Файл читается только на этом телефоне. В базу попадает очищенный текст: без телефонов, почт, отчеств и фамилий заявителей.
         </Text>
+        <Text style={styles.meta}>Есть столбец «Фото» — картинки из него загрузятся к заявкам. Нет столбца — всё как обычно.</Text>
+        {progress ? <Text style={styles.meta}>{progress}</Text> : null}
         {error ? <Text style={styles.err}>{error}</Text> : null}
         <BigButton title={busy ? 'Читаю файл…' : 'Выбрать файл'} size="big" loading={busy} onPress={choose} />
       </Screen>
@@ -334,6 +407,7 @@ export default function ImportScreen() {
             <View key={r.line} style={styles.missing}>
               <Text style={styles.number}>{r.number}</Text>
               <Text style={styles.meta}>{[r.service, titleOf(r)].filter(Boolean).join(' · ')}</Text>
+              {r.contactPhone ? <Text style={styles.body}>Тел. инициатора: {r.contactPhone}</Text> : null}
               <Text style={styles.body}>{descOf(r).text || '—'}</Text>
               <Text style={styles.meta}>
                 {formatRegistered(r.registeredAt)} · {r.requester ?? 'заявитель не указан'} · магазин {r.storeCode} · {r.status ?? ''}
@@ -344,6 +418,41 @@ export default function ImportScreen() {
         </Card>
       ) : null}
 
+      {file.photoColumn ? (
+        <Card style={styles.card}>
+          <Text style={styles.h}>Фото из файла{photoCount ? `: ${photoCount}` : ''}</Text>
+          <Text style={styles.meta}>
+            Мастер увидит их в карточке заявки. Если на фото человек или лишнее — нажмите ✕, это фото не загрузится.
+            У заявок, где фото уже есть, повторно не загружаются.
+          </Text>
+          {!photoRows.length ? <Text style={styles.body}>В столбце «Фото» для этих заявок картинок нет.</Text> : null}
+          {photoFailed ? <Text style={styles.warn}>Не удалось открыть картинок: {photoFailed} (формат не поддерживается).</Text> : null}
+          {file.skippedPhotos ? <Text style={styles.warn}>Больше 3 фото у заявки — лишние пропущены: {file.skippedPhotos}</Text> : null}
+          {photoRows.map((r) => (
+            <View key={r.line} style={styles.missing}>
+              <Text style={styles.number}>{r.number}</Text>
+              <View style={styles.row}>
+                {photos[r.number].map((p) => (
+                  <View key={p.key}>
+                    <Image source={{ uri: p.thumbUri ?? p.localUri }} style={styles.thumb} />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Не загружать это фото"
+                      hitSlop={space.s8}
+                      onPress={() => removePhoto(r.number, p.key)}
+                      style={styles.remove}
+                    >
+                      <Text style={styles.removeText}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
+        </Card>
+      ) : null}
+
+      {progress ? <Text style={styles.meta}>{progress}</Text> : null}
       {error ? <Text style={styles.err}>{error}</Text> : null}
       <BigButton
         title={`Загрузить${toLoad.length ? ` (${toLoad.length})` : ''}`}
@@ -411,4 +520,17 @@ const styles = StyleSheet.create({
   },
   done: { gap: space.s6, borderWidth: stroke.outline, borderColor: colors.success },
   doneTitle: { fontSize: font.title, fontWeight: '800', color: colors.success },
+  thumb: { width: size.thumbSmall, height: size.thumbSmall, borderRadius: radius.small, backgroundColor: colors.bg },
+  remove: {
+    position: 'absolute',
+    top: -space.s6,
+    right: -space.s6,
+    width: touch.tiny - space.s8,
+    height: touch.tiny - space.s8,
+    borderRadius: radius.round,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeText: { color: colors.white, fontSize: font.small, fontWeight: '800' },
 });
