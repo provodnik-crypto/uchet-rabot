@@ -114,10 +114,17 @@ export const fetchWithTimeout: typeof fetch = async (input, init) => {
   }
 };
 
+/**
+ * Имя, под которым на телефоне хранится вход. По умолчанию оно зависит от адреса сервера —
+ * при переезде на другой сервер все бы вышли из приложения. Поэтому имя постоянное (прежнее).
+ */
+const SESSION_STORAGE_KEY = 'sb-lslqcrcxpvavqqrnayde-auth-token';
+
 export const supabase = createClient(url || 'http://localhost', anonKey || 'missing', {
   auth: {
     // Сессия хранится на устройстве: мастер не вводит пароль каждую смену.
     storage: Platform.OS === 'web' && typeof window === 'undefined' ? undefined : AsyncStorage,
+    storageKey: SESSION_STORAGE_KEY,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
@@ -125,10 +132,51 @@ export const supabase = createClient(url || 'http://localhost', anonKey || 'miss
   global: { fetch: fetchWithTimeout },
 });
 
+/** Кто выдал вход: поле iss в токене (адрес сервера + /auth/v1). */
+function tokenIssuer(token: string): string | null {
+  try {
+    const part = token.split('.')[1] ?? '';
+    const json = globalThis.atob(part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '='));
+    const iss = (JSON.parse(json) as { iss?: unknown }).iss;
+    return typeof iss === 'string' ? iss : null;
+  } catch {
+    return null;
+  }
+}
+
+let adopting: Promise<void> | null = null;
+/**
+ * Переезд сервера: вход, выданный прежним сервером, один раз продлевается на новом — без пароля
+ * (сотрудники и их входы перенесены вместе с базой). Не вышло из-за связи — повторится при следующем
+ * открытии приложения; новый сервер не принял вход — выходим, сотрудник входит своим паролем.
+ */
+export function adoptServer(): Promise<void> {
+  if (!url || !isConfigured) return Promise.resolve();
+  adopting ??= (async () => {
+    const { data } = await supabase.auth.getSession();
+    const s = data.session;
+    if (!s) return;
+    const iss = tokenIssuer(s.access_token);
+    if (!iss || iss.startsWith(url.replace(/\/+$/, ''))) return;
+    const { error } = await supabase.auth.refreshSession();
+    // выходим только если сервер ответил «такого входа нет / недействителен» (не при перегрузке или сбое связи)
+    if (error && error.name === 'AuthApiError' && [400, 401, 403, 404].includes(error.status ?? 0)) {
+      await supabase.auth.signOut({ scope: 'local' });
+    }
+  })()
+    .catch(() => {})
+    .finally(() => {
+      adopting = null;
+    });
+  return adopting;
+}
+
 // Обновлять токен, только пока приложение на экране.
 if (Platform.OS !== 'web') {
   AppState.addEventListener('change', (state) => {
-    if (state === 'active') supabase.auth.startAutoRefresh();
-    else supabase.auth.stopAutoRefresh();
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+      void adoptServer();
+    } else supabase.auth.stopAutoRefresh();
   });
 }

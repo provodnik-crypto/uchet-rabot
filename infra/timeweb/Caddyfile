@@ -1,0 +1,20 @@
+# Защищённый адрес https://{$DOMAIN}: сертификат Let's Encrypt Caddy получает и продлевает сам.
+# Наружу — только то, чем пользуется приложение; /pg/ (SQL для сопровождения) шлюз пускает только с ключом service_role.
+{$DOMAIN} {
+	encode gzip
+
+	@api path /auth/v1/* /rest/v1/* /storage/v1/* /functions/v1/* /pg/*
+	handle @api {
+		reverse_proxy api-gw:8000 {
+			transport http {
+				read_timeout 150s
+			}
+		}
+	}
+
+	handle {
+		respond "uchet-rabot" 200
+	}
+
+	header -server
+}

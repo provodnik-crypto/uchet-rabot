@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { errorKind, humanError } from './errors';
 import { loginToEmail } from './login';
-import { isConfigured, supabase } from './supabase';
+import { adoptServer, isConfigured, supabase } from './supabase';
 import { clearQueryCache, setQueryCacheUser } from './useQuery';
 
 export type Role = 'master' | 'manager';
@@ -88,7 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isConfigured) return;
-    supabase.auth.getSession().then(({ data }) => refreshMe(data.session));
+    // Сначала — продлить вход на новом сервере, если он выдан прежним (переезд сервера).
+    adoptServer().then(() => supabase.auth.getSession().then(({ data }) => refreshMe(data.session)));
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       // Запросы к Supabase внутри этого обработчика блокируют клиент — откладываем.
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') setTimeout(() => refreshMe(s), 0);
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const retry = useCallback(() => {
     setLoading(true);
-    supabase.auth.getSession().then(({ data }) => refreshMe(data.session));
+    adoptServer().then(() => supabase.auth.getSession().then(({ data }) => refreshMe(data.session)));
   }, [refreshMe]);
 
   const signOut = useCallback(async () => {
