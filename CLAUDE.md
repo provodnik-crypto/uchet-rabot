@@ -110,6 +110,9 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
 * **Зависающие заявки** (28.10.2026): закрытие in_work/paused снимает с мастера (`close_request_core`); массовые закрытия
   (ITSM, «старые») не трогают in_work/paused/review; отключение мастера освобождает его заявки (триггер `employees_release`);
   устаревшие просьбы мастеров закрываются триггером `requests_stale_asks`.
+* **✏️ Исправить работу** (01.11.2026): руководитель в `WorksMoney` (✏️ у работы с ценой) → `CorrectWorkSheet` →
+  `admin_correct_entry(работа, объём, цена_коп)`: только эта работа (прайс не меняется), пересчёт `entry_money`/`performer_money`,
+  можно после «Принять». Мастеру не сообщается (в ленту не пишем); история — `entry_corrections`, «Исправлено …» — `request_money.corrected_at`.
 * «Магазин» — не отдел для мастера, а «весь магазин» в фильтрах (`isWholeStore` в `lib/departments.ts`).
 * Обучение: тексты шагов и «Что нового» — `app/src/lib/tours.ts`; элементы помечаются `<TourTarget id=…>` (`lib/tour.tsx`).
   После каждого обновления добавить запись в начало `WHATS_NEW` (тексты пишет Claude, заказчик проверяет).

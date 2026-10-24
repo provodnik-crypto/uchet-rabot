@@ -436,7 +436,8 @@ export const myNotifications = () => rpc<Notifications>('my_notifications');
 // ---------- Руководитель ----------
 /** Цены и суммы работ заявки — только руководителю (мастеру база не отдаёт). */
 export type RequestMoney = {
-  works: { id: number; unit_price_kop: number | null; total_kop: number | null }[];
+  /** corrected_at — когда руководитель последний раз исправил объём или цену (✏️). */
+  works: { id: number; unit_price_kop: number | null; total_kop: number | null; corrected_at?: string | null }[];
   /** Итог по работам с ценой, кроме отклонённых. */
   total_kop: number;
   /** Работ без цены (вне прайса, ждут оценки). */

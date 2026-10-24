@@ -71,7 +71,7 @@ export default function ReviewRequestScreen() {
         {r.taken_at ? ` · с ${formatDate(r.taken_at.slice(0, 10))}` : ''}
       </Text>
 
-      <WorksMoney requestId={r.id} works={r.works} />
+      <WorksMoney requestId={r.id} works={r.works} onChanged={reload} />
 
       {r.result_photos?.length ? (
         <Card style={styles.card}>

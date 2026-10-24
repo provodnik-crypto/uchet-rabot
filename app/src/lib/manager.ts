@@ -88,6 +88,9 @@ export async function itemPricesForEntry(entryId: number, itemIds: number[]): Pr
   const rows = await rpc<{ item_id: number; price_kop: number | null }[]>('item_prices_for_entry', { p_entry: entryId, p_items: itemIds });
   return Object.fromEntries(rows.map((r) => [r.item_id, r.price_kop]));
 }
+/** ✏️ Исправить объём и цену оценённой работы (только эта работа, прайс не меняется; мастер не видит). */
+export const adminCorrectEntry = (entryId: number, quantity: number, unitPriceKop: number) =>
+  rpc<void>('admin_correct_entry', { p_entry: entryId, p_quantity: quantity, p_unit_price_kop: unitPriceKop });
 export const rejectEntry = (entryId: number, comment: string) => rpc<void>('reject_entry', { p_entry: entryId, p_comment: comment });
 
 // ---------- Журнал работ ----------

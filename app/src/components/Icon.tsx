@@ -91,6 +91,7 @@ const shapes = {
       <Rect x={14} y={14} width={7} height={7} rx={1} />
     </>
   ),
+  edit: <Path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
   logout: <Path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4" />,
 };
 

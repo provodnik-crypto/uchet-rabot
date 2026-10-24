@@ -64,7 +64,7 @@ export default function PendingRequestScreen() {
 
       {r && done.length ? (
         <View style={styles.done}>
-          <WorksMoney requestId={r.id} works={done} title="Оценено" unpricedHint={false} />
+          <WorksMoney requestId={r.id} works={done} title="Оценено" unpricedHint={false} onChanged={reload} />
         </View>
       ) : null}
       {!r ? <Text style={styles.meta}>Заявка не загрузилась — потяните вниз, чтобы обновить.</Text> : null}

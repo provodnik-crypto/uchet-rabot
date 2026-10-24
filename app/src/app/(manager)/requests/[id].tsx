@@ -282,7 +282,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
       </Card>
       </TourTarget>
 
-      {card?.works.length ? <WorksMoney requestId={card.id} works={card.works} /> : null}
+      {card?.works.length ? <WorksMoney requestId={card.id} works={card.works} onChanged={reloadCard} /> : null}
       {card ? <RequestFeed requestId={card.id} events={card.events} onSent={reloadCard} /> : null}
 
       <BigButton
