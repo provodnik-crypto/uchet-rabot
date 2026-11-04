@@ -119,6 +119,10 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
 * **✏️ Исправить работу** (01.11.2026): руководитель в `WorksMoney` (✏️ у работы с ценой) → `CorrectWorkSheet` →
   `admin_correct_entry(работа, объём, цена_коп)`: только эта работа (прайс не меняется), пересчёт `entry_money`/`performer_money`,
   можно после «Принять». Мастеру не сообщается (в ленту не пишем); история — `entry_corrections`, «Исправлено …» — `request_money.corrected_at`.
+* **Название и фото заявки** (04.11.2026): ✏️ `RequestTitle` → `set_request_title` (руководитель — любую; мастер — свою,
+  пока не на проверке; `title_edited_by/at`); импорт ITSM название не перезаписывает. Фото к заявке — `add_request_photos`
+  (руководитель; мастер — своя «В работе»), удалить — `delete_request_photo` (загрузивший или руководитель), блок — `RequestExtras`;
+  фото при создании — `attachCreatedPhotos`. Тест — `supabase/tests/34_request_title_photos.sql`.
 * **Переезд на свой сервер Timeweb** (готовится, 24.10.2026): `infra/timeweb` (install/migrate/make-bundle, закрытие старого
   `old-close.sql`), порядок и откат — `docs/RUN.md`. Вход на телефоне хранится под постоянным именем (`SESSION_STORAGE_KEY`),
   чужой вход продлевается на новом сервере (`adoptServer`). Обновление со сменой адреса — только `eas update --clear-cache`.

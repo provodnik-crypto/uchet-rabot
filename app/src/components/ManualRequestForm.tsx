@@ -3,7 +3,9 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { humanError } from '../lib/errors';
 import { stripContacts } from '../lib/itsm';
-import { createManualRequest } from '../lib/requests';
+import { attachCreatedPhotos, createManualRequest } from '../lib/requests';
+import type { DraftPhoto } from '../lib/workPhotos';
+import { PhotoPicker } from './PhotoPicker';
 import { listMasters } from '../lib/shift';
 import { useFocusQuery } from '../lib/useQuery';
 import { colors, font, space } from '../theme';
@@ -21,6 +23,8 @@ export function ManualRequestForm({ manager, onCreated }: { manager: boolean; on
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [assignee, setAssignee] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<DraftPhoto[]>([]);
+  const [progress, setProgress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -30,11 +34,13 @@ export function ManualRequestForm({ manager, onCreated }: { manager: boolean; on
     try {
       // телефоны и почты в тексте заявки не храним
       const r = await createManualRequest(stripContacts(title).trim(), stripContacts(details).trim() || null, assignee);
+      await attachCreatedPhotos(r.id, r.number, photos, setProgress);
       onCreated(r);
     } catch (e) {
       setErr(humanError(e));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -49,6 +55,8 @@ export function ManualRequestForm({ manager, onCreated }: { manager: boolean; on
         placeholder="Отдел, ряд, что сломано"
         maxLength={1000}
       />
+      <Text style={styles.label}>Фото (необязательно)</Text>
+      <PhotoPicker photos={photos} onChange={setPhotos} buttons />
       {manager ? (
         <>
           <Text style={styles.label}>Назначить сразу (необязательно)</Text>
@@ -64,6 +72,7 @@ export function ManualRequestForm({ manager, onCreated }: { manager: boolean; on
         Номер заявки (№ 1, № 2…) присвоится автоматически, по порядку.{' '}
         {manager ? 'Заявка будет «Ожидает» — мастера увидят её в списке.' : 'Заявка сразу станет «В работе» у вас.'} Без имён и телефонов людей.
       </Text>
+      {progress ? <Text style={styles.hint}>{progress}</Text> : null}
       {err ? <Text style={styles.err}>{err}</Text> : null}
       <BigButton title="Создать заявку" size="big" loading={busy} disabled={title.trim().length < 3} onPress={create} />
     </Card>

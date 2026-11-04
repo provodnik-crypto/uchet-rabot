@@ -1,8 +1,9 @@
 // Заявки из ITSM: выбор файла, предпросмотр, загрузка, список для мастера, назначение.
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { parseItsmFile, type ItsmFile, type ItsmRow } from './itsm';
-import { photoFromBytes, toPayload, uploadAll, type DraftPhoto } from './workPhotos';
+import { forgetLocalPhotos, photoFromBytes, toPayload, uploadAll, type DraftPhoto } from './workPhotos';
+import { humanError } from './errors';
 import { supabase } from './supabase';
 
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
@@ -102,8 +103,41 @@ export const setRequestPhones = (rows: { number: string; phone: string }[]) =>
   rows.length ? rpc<number>('set_request_phones', { p: rows }) : Promise.resolve(0);
 
 /** Фото из файла и рабочий телефон инициатора — для карточки заявки. */
-export type RequestExtras = { contact_phone: string | null; photos: { path: string; thumb_path: string }[] };
+export type RequestExtras = {
+  contact_phone: string | null;
+  /** Можно добавить фото: руководитель или мастер, у которого заявка в работе. */
+  can_add?: boolean;
+  photos: { id?: number; path: string; thumb_path: string; can_delete?: boolean }[];
+};
 export const requestExtras = (id: number) => rpc<RequestExtras | null>('request_extras', { p_id: id });
+
+/** Фото к заявке (к уже имеющимся): загрузить в хранилище, затем записать. Вернёт, сколько фото у заявки. */
+export async function addRequestPhotos(requestId: number, photos: DraftPhoto[], onProgress: (text: string | null) => void = () => {}) {
+  return attachRequestPhotos(requestId, await uploadAll(photos, onProgress));
+}
+/** Записать уже загруженные фото к заявке. */
+export const attachRequestPhotos = (requestId: number, uploaded: DraftPhoto[]) =>
+  rpc<number>('add_request_photos', { p_id: requestId, p_photos: toPayload(uploaded) });
+/**
+ * Фото с формы новой заявки — сразу после создания. Заявка уже есть, поэтому при ошибке не роняем создание:
+ * говорим, что фото можно добавить в карточке («Добавить фото»).
+ */
+export async function attachCreatedPhotos(requestId: number, number: string, photos: DraftPhoto[], onProgress: (text: string | null) => void) {
+  if (!photos.length) return;
+  try {
+    await addRequestPhotos(requestId, photos, onProgress);
+    forgetLocalPhotos(photos);
+  } catch (e) {
+    Alert.alert(
+      `${requestLabel(number)} создана, фото не сохранились`,
+      `${humanError(e)}. Откройте заявку и нажмите «Добавить фото».`,
+    );
+  }
+}
+/** Удалить фото заявки: своё или (руководитель) любое. */
+export const deleteRequestPhoto = (photoId: number) => rpc<void>('delete_request_photo', { p_photo_id: photoId });
+/** Изменить название заявки: пустое нельзя, лишние пробелы убирает сервер. */
+export const setRequestTitle = (id: number, title: string) => rpc<void>('set_request_title', { p_id: id, p_title: title });
 /** Открытые заявки с фото — значок 📷 в списке. Старая база без функции — пусто. */
 export const requestPhotoIds = () => rpc<number[]>('request_photo_ids').catch((): number[] => []);
 
@@ -264,6 +298,9 @@ export type RequestCard = {
   pause_requested_at?: string | null;
   /** Плановая работа («Работа без заявки»). */
   is_planned?: boolean;
+  /** Можно изменить название (руководитель — любую, мастер — свою, пока не на проверке). */
+  can_edit_title?: boolean;
+  title_edited_at?: string | null;
   /** Мои открытые просьбы по заявке руководителю: закрыть (не нужна), передать подрядчику. */
   open_asks?: ('close' | 'contractor')[];
   /** Фото результата, приложенные при отправке на проверку. */

@@ -64,12 +64,23 @@ export async function pickPhoto(source: 'camera' | 'library'): Promise<DraftPhot
       const res = await ImagePicker.requestCameraPermissionsAsync();
       if (!res.granted) {
         if (!res.canAskAgain) deniedForever('камере');
+        else Alert.alert('Нет доступа к камере', 'Без него снять фото нельзя. Можно выбрать готовое фото из галереи.');
         return null;
       }
     }
   }
   const options = { mediaTypes: ['images'] as ImagePickerMediaTypes, quality: 1, exif: false, allowsEditing: false };
-  const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+  let result: import('expo-image-picker').ImagePickerResult;
+  try {
+    result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+  } catch (e) {
+    // галерея: на части телефонов система спрашивает доступ к фото — при отказе объясняем, где включить
+    if (/permission|разреш/i.test(String((e as Error)?.message ?? e))) {
+      deniedForever(source === 'camera' ? 'камере' : 'фото');
+      return null;
+    }
+    throw e;
+  }
   if (result.canceled || !result.assets?.[0]) return null;
   const a = result.assets[0];
   return preparePhoto(a.uri, a.width, a.height);

@@ -5,6 +5,7 @@ import { humanError } from '../lib/errors';
 import { MAX_PHOTOS, pickPhoto, signedUrls, type DraftPhoto } from '../lib/workPhotos';
 import { colors, font, iconSize, opacity, radius, space, stroke, touch } from '../theme';
 import { ActionSheet } from './ActionSheet';
+import { BigButton } from './BigButton';
 import { Icon } from './Icon';
 import { PhotoViewer } from './PhotoViewer';
 
@@ -15,10 +16,12 @@ type Props = {
   hint?: boolean;
   /** Хотя бы одно фото обязательно (фото результата при отправке на проверку). */
   required?: boolean;
+  /** Две кнопки «Сделать фото» и «Выбрать из галереи» под миниатюрами вместо клетки «Снять». */
+  buttons?: boolean;
 };
 
 /** Фото сеткой по 3 в ряд: «Снять» (камера или галерея), до 3 фото, миниатюры с удалением. */
-export function PhotoPicker({ photos, onChange, hint, required }: Props) {
+export function PhotoPicker({ photos, onChange, hint, required, buttons }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
@@ -77,7 +80,7 @@ export function PhotoPicker({ photos, onChange, hint, required }: Props) {
             </View>
           );
         })}
-        {photos.length < MAX_PHOTOS ? (
+        {photos.length < MAX_PHOTOS && !buttons ? (
           <Pressable
             onPress={choose}
             disabled={busy}
@@ -90,6 +93,18 @@ export function PhotoPicker({ photos, onChange, hint, required }: Props) {
           </Pressable>
         ) : null}
       </View>
+      {buttons && photos.length < MAX_PHOTOS ? (
+        <View style={styles.buttons}>
+          {Platform.OS !== 'web' ? (
+            <View style={styles.flex}>
+              <BigButton title={busy ? 'Сжимаем…' : 'Сделать фото'} variant="secondary" disabled={busy} onPress={() => add('camera')} />
+            </View>
+          ) : null}
+          <View style={styles.flex}>
+            <BigButton title="Выбрать из галереи" variant="secondary" disabled={busy} onPress={() => add('library')} />
+          </View>
+        </View>
+      ) : null}
       <Text style={styles.meta}>
         Не снимайте людей и документы.{' '}
         {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}.` : required ? `Нужно хотя бы одно фото, всего до ${MAX_PHOTOS}.` : hint ? 'С фото руководитель оценит быстрее.' : `До ${MAX_PHOTOS} фото, необязательно.`}
@@ -120,6 +135,8 @@ function useSignedThumbs(photos: DraftPhoto[]) {
 const styles = StyleSheet.create({
   wrap: { gap: space.s8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
+  buttons: { flexDirection: 'row', gap: space.s8 },
+  flex: { flex: 1 },
   thumbBox: { position: 'relative' },
   thumb: { borderRadius: radius.small, backgroundColor: colors.border },
   remove: {

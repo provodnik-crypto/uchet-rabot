@@ -66,7 +66,7 @@ export default function ReviewRequestScreen() {
       <Text style={styles.number}>{requestLabel(r.number)}</Text>
       {r.operation ? <Text style={styles.op}>{r.operation}</Text> : null}
       {r.description ? <Text style={styles.body}>{r.description}</Text> : null}
-      <RequestExtras requestId={r.id} />
+      <RequestExtras requestId={r.id} manage={false} />
       <Text style={styles.meta}>
         Взял {r.responsible_name}
         {r.members.length ? ` · напарники: ${r.members.map((m) => m.name).join(', ')}` : ''}

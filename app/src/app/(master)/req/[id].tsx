@@ -37,6 +37,7 @@ import { takenDayNumber } from '../../../lib/today';
 import { ScrollIntoView } from '../../../components/ScrollIntoView';
 import { TourTarget } from '../../../lib/tour';
 import { RequestExtras } from '../../../components/RequestExtras';
+import { RequestTitle } from '../../../components/RequestTitle';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { colors, font, lineHeight, opacity, radius, space, stroke } from '../../../theme';
 
@@ -202,11 +203,12 @@ export default function RequestCardScreen() {
           <View style={styles.pills}>
             <StatusPill tone={tone.tone} label={day && tone.tone === 'in_work' ? `В работе · ${day}-й день` : tone.label} />
             <PriorityPill priority={r.priority} />
-            {r.operation || r.service ? <StatusPill tone="waiting" label={r.operation || r.service || ''} /> : null}
+            {r.service ? <StatusPill tone="waiting" label={r.service} /> : null}
           </View>
+          <RequestTitle requestId={r.id} title={r.operation} canEdit={!!r.can_edit_title} onSaved={reload} />
           <TourTarget id="card.text">
             <Text style={styles.text} selectable>
-              {r.description || r.subject || 'Без описания'}
+              {r.description || (r.subject !== r.operation ? r.subject : null) || (r.operation ? '' : 'Без описания')}
             </Text>
           </TourTarget>
           <RequestExtras requestId={r.id} />

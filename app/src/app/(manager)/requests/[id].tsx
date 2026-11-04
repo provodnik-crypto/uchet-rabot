@@ -8,13 +8,14 @@ import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
 import { RequestFeed } from '../../../components/RequestFeed';
 import { RequestExtras } from '../../../components/RequestExtras';
+import { RequestTitle } from '../../../components/RequestTitle';
 import { WorksMoney } from '../../../components/WorksMoney';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
 import { humanError } from '../../../lib/errors';
-import { requestRow, setManualRequestTitle, updateRequest, type RequestRow } from '../../../lib/manager';
+import { requestRow, updateRequest, type RequestRow } from '../../../lib/manager';
 import {
   assignRequest,
   formatRegistered,
@@ -77,8 +78,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
     setBusy('save');
     setMessage(null);
     try {
-      if (r.source === 'manual') await setManualRequestTitle(r.id, subject.trim());
-      else await updateRequest(r.id, { subject: subject.trim() || null });
+      await updateRequest(r.id, { subject: subject.trim() || null });
       router.back();
     } catch (e) {
       setMessage(humanError(e));
@@ -141,19 +141,31 @@ function RequestDetail({ r }: { r: RequestRow }) {
         {r.carries ? ` · переносов: ${r.carries}` : ''}
       </Text>
 
-      {itsm ? (
-        <Card style={styles.card}>
-          <Text style={styles.meta}>{[r.service, r.operation].filter(Boolean).join(' · ')}</Text>
-          {r.description ? <Text style={styles.body}>{r.description}</Text> : null}
-          <RequestExtras requestId={r.id} />
-          <Text style={styles.meta}>
-            {formatRegistered(r.registered_at)} · {r.requester ?? 'заявитель не указан'}
-            {r.itsm_status ? ` · ${r.itsm_status}` : ''}
-          </Text>
-          <DueLine dueAt={r.due_at} status={r.status} isOpen={isOpen} />
-          {!isOpen ? <Text style={styles.closed}>Закрыта</Text> : null}
-        </Card>
-      ) : null}
+      <Card style={styles.card}>
+        <RequestTitle
+          requestId={r.id}
+          title={card ? card.operation : r.operation}
+          canEdit={!!card?.can_edit_title}
+          onSaved={(t) => {
+            // «Тема (для себя)» совпадала с названием — сервер поменял и её
+            if (subject.trim() === ((card ? card.operation : r.operation) ?? '').trim()) setSubject(t);
+            reloadCard();
+          }}
+        />
+        {itsm && r.service ? <Text style={styles.meta}>{r.service}</Text> : null}
+        {(card ? card.description : r.description) ? <Text style={styles.body}>{card ? card.description : r.description}</Text> : null}
+        <RequestExtras requestId={r.id} />
+        {itsm ? (
+          <>
+            <Text style={styles.meta}>
+              {formatRegistered(r.registered_at)} · {r.requester ?? 'заявитель не указан'}
+              {r.itsm_status ? ` · ${r.itsm_status}` : ''}
+            </Text>
+            <DueLine dueAt={r.due_at} status={r.status} isOpen={isOpen} />
+            {!isOpen ? <Text style={styles.closed}>Закрыта</Text> : null}
+          </>
+        ) : null}
+      </Card>
 
       {isOpen && (!card || card.status === 'waiting' || card.status === 'contractor' || card.status === 'in_work' || card.status === 'paused') ? (
         <Card style={styles.card}>
@@ -176,17 +188,21 @@ function RequestDetail({ r }: { r: RequestRow }) {
         </Card>
       ) : null}
 
-      <Card style={styles.card}>
-        <Field
-          label={itsm ? 'Тема (для себя)' : 'Название заявки'}
-          value={subject}
-          onChangeText={setSubject}
-          multiline
-          hint={itsm ? 'Мастер видит текст заявки из ITSM. Без имён, фамилий и телефонов.' : 'Это название видит мастер. Без имён, фамилий и телефонов.'}
-        />
-      </Card>
+      {itsm ? (
+        <>
+          <Card style={styles.card}>
+            <Field
+              label="Тема (для себя)"
+              value={subject}
+              onChangeText={setSubject}
+              multiline
+              hint="Мастер видит текст заявки из ITSM. Без имён, фамилий и телефонов."
+            />
+          </Card>
+          <BigButton title="Сохранить" loading={busy === 'save'} disabled={!!busy} onPress={save} />
+        </>
+      ) : null}
       {message ? <Text style={styles.err}>{message}</Text> : null}
-      <BigButton title="Сохранить" loading={busy === 'save'} disabled={!!busy} onPress={save} />
 
       <TourTarget id="rdetail.state">
       <Card style={styles.card}>
