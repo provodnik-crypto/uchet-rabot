@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
       call<ReportData['employees']>('report_by_employee'),
       call<ReportData['months']>('report_by_month'),
       call<ReportData['monthEmployees']>('report_month_employee'),
-      call<ReportData['rows']>('report_rows'),
+      // report_rows_v2 — с пометкой помощника; база без неё (откат) — прежняя report_rows
+      call<ReportData['rows']>('report_rows_v2').catch(() => call<ReportData['rows']>('report_rows')),
       call<ReportData['works']>('report_by_work'),
     ]);
     const sheets = buildReport({ from, to, totals: totals[0], employees, months, monthEmployees, rows, works });

@@ -123,6 +123,10 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   пока не на проверке; `title_edited_by/at`); импорт ITSM название не перезаписывает. Фото к заявке — `add_request_photos`
   (руководитель; мастер — своя «В работе»), удалить — `delete_request_photo` (загрузивший или руководитель), блок — `RequestExtras`;
   фото при создании — `attachCreatedPhotos`. Тест — `supabase/tests/34_request_title_photos.sql`.
+* **Помощники по позициям** (05.11.2026): основной исполнитель работы — автор её дня (`shifts.author_id`), помощники —
+  остальные `entry_performers`; доля поровну внутри позиции (`recompute_performer_money`). Мастер — «Помощники» в форме
+  работы (по умолчанию никого) и при отправке (`WorkHelpers`: `set_work_helpers`, «Разделить» — `split_my_work`);
+  руководитель — на проверке до «Принять». Excel — `report_rows_v2.helper` → «помощь по заявке № …». Тест — `35_work_helpers.sql`.
 * **Переезд на свой сервер Timeweb** (готовится, 24.10.2026): `infra/timeweb` (install/migrate/make-bundle, закрытие старого
   `old-close.sql`), порядок и откат — `docs/RUN.md`. Вход на телефоне хранится под постоянным именем (`SESSION_STORAGE_KEY`),
   чужой вход продлевается на новом сервере (`adoptServer`). Обновление со сменой адреса — только `eas update --clear-cache`.

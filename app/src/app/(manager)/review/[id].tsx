@@ -11,6 +11,7 @@ import type { RemotePhoto } from '../../../lib/workPhotos';
 import { RequestFeed } from '../../../components/RequestFeed';
 import { RequestExtras } from '../../../components/RequestExtras';
 import { WorksMoney } from '../../../components/WorksMoney';
+import { WorkHelpers } from '../../../components/WorkHelpers';
 import { Screen } from '../../../components/Screen';
 import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
@@ -74,6 +75,22 @@ export default function ReviewRequestScreen() {
       </Text>
 
       <WorksMoney requestId={r.id} works={r.works} onChanged={reload} />
+      {r.works.some((w) => w.status !== 'rejected') ? (
+        <Card style={styles.card}>
+          <Text style={styles.label}>Кто помогал — по позициям</Text>
+          <WorkHelpers
+            works={r.works.filter((w) => w.status !== 'rejected')}
+            mainId={r.responsible_id}
+            mode="manager"
+            editable={r.status !== 'accepted'}
+            onChanged={reload}
+          />
+          <Text style={styles.meta}>
+            Позиция с помощниками делится поровну между основным исполнителем и помощниками, без помощников — целиком основному.
+            {r.status !== 'accepted' ? ' Исправить можно до «Принять».' : ''}
+          </Text>
+        </Card>
+      ) : null}
 
       {r.result_photos?.length ? (
         <Card style={styles.card}>

@@ -134,6 +134,14 @@ export async function attachCreatedPhotos(requestId: number, number: string, pho
     );
   }
 }
+/** Помощники позиции (без основного исполнителя). Пусто — вся позиция основному. Доля — поровну внутри позиции. */
+export const setWorkHelpers = (entryId: number, helperIds: number[]) =>
+  rpc<void>('set_work_helpers', { p_entry: entryId, p_helper_ids: helperIds });
+/** Разделить строку: quantity уходит в новую строку того же вида без помощников. */
+export const splitMyWork = (entryId: number, quantity: number) => rpc<number>('split_my_work', { p_entry: entryId, p_quantity: quantity });
+/** Помощники работы: исполнители, кроме основного. */
+export const workHelperIds = (w: RequestWork, mainId: number | null | undefined) =>
+  (w.performer_ids ?? []).filter((id) => id !== (w.main_id ?? mainId));
 /** Удалить фото заявки: своё или (руководитель) любое. */
 export const deleteRequestPhoto = (photoId: number) => rpc<void>('delete_request_photo', { p_photo_id: photoId });
 /** Изменить название заявки: пустое нельзя, лишние пробелы убирает сервер. */
@@ -261,6 +269,8 @@ export type RequestWork = {
   performers: string | null;
   /** client_uuid смены, в которой внесена работа. */
   shift_uuid?: string;
+  /** Основной исполнитель (кто внёс работу); остальные исполнители — помощники. */
+  main_id?: number;
 };
 export type RequestCard = {
   id: number;

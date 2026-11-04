@@ -4,14 +4,13 @@ import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../../../components/AppHeader';
 import { BigButton } from '../../../../components/BigButton';
 import { PhotoPicker } from '../../../../components/PhotoPicker';
+import { WorkHelpers } from '../../../../components/WorkHelpers';
 import { Screen, useKeepAboveKeyboard } from '../../../../components/Screen';
 import { Section } from '../../../../components/Section';
 import { StateView } from '../../../../components/StateView';
 import { Text, TextInput } from '../../../../components/Text';
-import { formatDate } from '../../../../lib/dates';
 import { humanError } from '../../../../lib/errors';
 import { requestCard, requestLabel, sendRequestForReviewPhotos } from '../../../../lib/requests';
-import { formatQuantity } from '../../../../lib/shift';
 import { TourTarget } from '../../../../lib/tour';
 import { useFocusQuery } from '../../../../lib/useQuery';
 import { toPayload, uploadAll, type DraftPhoto } from '../../../../lib/workPhotos';
@@ -85,23 +84,14 @@ export default function SendRequestScreen() {
         </>
       }
     >
-      <Section title="1 · Проверьте работы">
-        {works.map((w, i) => (
-          <View key={w.id ?? i} style={[styles.row, i > 0 && styles.line]}>
-            <View style={styles.flex}>
-              <Text style={styles.body}>{w.name}</Text>
-              <Text style={styles.meta}>
-                {formatDate(w.work_date)}
-                {w.performers ? ` · ${w.performers}` : ''}
-              </Text>
-            </View>
-            <Text style={styles.qty}>
-              {formatQuantity(w.quantity)} {w.unit}
-            </Text>
-          </View>
-        ))}
+      <Section title="1 · Проверьте работы и помощников">
+        <WorkHelpers works={works} mainId={r.responsible_id} mode="master" editable onChanged={reload} />
         {!works.length ? <Text style={styles.err}>Работ нет — вернитесь и нажмите «+ Добавить работу».</Text> : null}
-        {works.length ? <Text style={styles.meta}>Что-то не так — вернитесь в заявку и нажмите на работу.</Text> : null}
+        {works.length ? (
+          <Text style={styles.meta}>
+            Кто помогал — «Помощники» у позиции, по умолчанию вся работа ваша. Помогали на часть объёма — «Разделить». Остальное — в заявке, нажав на работу.
+          </Text>
+        ) : null}
       </Section>
 
       <TourTarget id="send.photo">

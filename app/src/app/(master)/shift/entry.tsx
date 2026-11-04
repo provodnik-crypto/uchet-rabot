@@ -12,7 +12,7 @@ import { Screen } from '../../../components/Screen';
 import { SelectField } from '../../../components/SelectField';
 import { StateView } from '../../../components/StateView';
 import { useAuth } from '../../../lib/auth';
-import { addRequestWork, requestCard, type RequestWork } from '../../../lib/requests';
+import { addRequestWork, type RequestWork } from '../../../lib/requests';
 import { uuid } from '../../../lib/today';
 import { humanError } from '../../../lib/errors';
 import { useEmployeeIcons } from '../../../lib/employeeIcons';
@@ -49,11 +49,9 @@ type Params = {
 type PriceChoice = { id: number; name: string; category: string; unitId: number; unitCode: string; integerOnly: boolean };
 
 /**
- * Отдел и исполнители последней работы — подставляются в следующую (пока приложение открыто).
- * Исполнители помнятся отдельно для каждой заявки и мастера: из заявки А в заявку Б и к другому мастеру
- * на общем телефоне они не переезжают. Отдел — последний у этого мастера.
+ * Отдел последней работы — подставляется в следующую (пока приложение открыто), свой у каждого мастера.
+ * Помощники по умолчанию не подставляются (05.11.2026): без помощников вся позиция — основному исполнителю.
  */
-const lastPerformers: Record<string, number[]> = {};
 const lastDepartment: Record<number, number> = {};
 
 export default function EntryScreen() {
@@ -71,13 +69,9 @@ export default function EntryScreen() {
   const [refsError, setRefsError] = useState<string | null>(null);
   const loadRefs = () => {
     setRefsError(null);
-    Promise.all([listMasters(), listActiveDepartments(), listUnits(), requestId ? requestCard({ id: requestId }).catch(() => null) : null])
-      .then(([masters, departments, units, card]) => {
+    Promise.all([listMasters(), listActiveDepartments(), listUnits()])
+      .then(([masters, departments, units]) => {
         setRefs({ masters, departments, units });
-        // новая работа: исполнители по умолчанию — вы и напарники заявки (работа засчитывается всем исполнителям)
-        if (!editing && !lastPerformers[choiceKey] && me && card) {
-          setPerformerIds([...new Set([me.id, ...card.members.map((m) => m.id)])].filter((id) => masters.some((p) => p.id === id)));
-        }
       })
       .catch((e) => setRefsError(humanError(e)));
   };
@@ -105,9 +99,10 @@ export default function EntryScreen() {
   const [customName, setCustomName] = useState(editing?.custom ? editing.name : params.custom ? (params.name ?? '') : '');
   const [unitId, setUnitId] = useState<number | null>(editing && !editing.price_item_id ? (editing.unit_id ?? null) : null);
   const [quantity, setQuantity] = useState(editing ? formatQuantity(editing.quantity) : '');
-  const choiceKey = `${me?.id ?? 0}:${requestId}`;
   const [departmentId, setDepartmentId] = useState<number | null>(editing?.department_id ?? (me ? lastDepartment[me.id] : undefined) ?? null);
-  const [performerIds, setPerformerIds] = useState<number[]>(editing?.performer_ids ?? lastPerformers[choiceKey] ?? (me ? [me.id] : []));
+  // основной исполнитель — вы; помощники — остальные исполнители позиции (по умолчанию нет)
+  const mainId = editing?.main_id ?? me?.id;
+  const [helperIds, setHelperIds] = useState<number[]>((editing?.performer_ids ?? []).filter((id) => id !== mainId));
   // одно нажатие «Добавить работу» — один ключ: повтор после обрыва связи не создаёт дубль
   const clientKey = useRef(uuid());
   const saving = useRef(false);
@@ -176,8 +171,8 @@ export default function EntryScreen() {
     );
   }
 
-  function togglePerformer(id: number) {
-    setPerformerIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  function toggleHelper(id: number) {
+    setHelperIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
   }
 
   async function save() {
@@ -187,7 +182,7 @@ export default function EntryScreen() {
       unit: isCustom && !unit ? 'Выберите единицу' : null,
       quantity: unitCode ? qty.error : null,
       department: departmentId ? null : 'Выберите отдел',
-      performers: performerIds.length ? null : 'Выберите хотя бы одного исполнителя',
+      performers: mainId ? null : 'Войдите в приложение заново',
     };
     setErrors(e);
     if (Object.values(e).some(Boolean)) return;
@@ -207,13 +202,12 @@ export default function EntryScreen() {
           ...(priceChoice ? { price_item_id: priceChoice.id } : { custom_name: customName.trim().replace(/\s+/g, ' '), unit_id: unit!.id }),
           quantity: qty.value ?? Number(quantity.replace(',', '.')),
           note: note.trim() || null,
-          performer_ids: performerIds,
+          performer_ids: [mainId!, ...helperIds.filter((id) => id !== mainId)],
           photos: toPayload(photos),
           client_key: clientKey.current,
         },
         editId,
       );
-      lastPerformers[choiceKey] = performerIds;
       if (me) lastDepartment[me.id] = departmentId!;
       // назад в карточку заявки (из выбора работы — через два экрана)
       if (editId) router.back();
@@ -322,18 +316,25 @@ export default function EntryScreen() {
         />
         </TourTarget>
         <TourTarget id="entry.perf" style={styles.card}>
-        <Text style={styles.label}>Исполнители</Text>
+        <Text style={styles.label}>Помощники (необязательно)</Text>
         <View style={styles.chips}>
-          {masters.map((m) => (
-            <Chip
-              key={m.id}
-              label={m.id === me?.id ? `${m.display_name} (я)` : m.display_name}
-              selected={performerIds.includes(m.id)}
-              onPress={() => togglePerformer(m.id)}
-              left={<Avatar name={m.display_name} icon={icons[m.id]} size={size.check} />}
-            />
-          ))}
+          {masters
+            .filter((m) => m.id !== mainId)
+            .map((m) => (
+              <Chip
+                key={m.id}
+                label={m.display_name}
+                selected={helperIds.includes(m.id)}
+                onPress={() => toggleHelper(m.id)}
+                left={<Avatar name={m.display_name} icon={icons[m.id]} size={size.check} />}
+              />
+            ))}
         </View>
+        <Text style={styles.meta}>
+          {helperIds.length
+            ? `Позиция засчитается вам и помощникам поровну (на ${helperIds.length + 1}).`
+            : 'Без помощников вся позиция — ваша. Помогали только на часть — внесите эту часть отдельной строкой.'}
+        </Text>
         </TourTarget>
         {errors.performers ? <Text style={styles.err}>{errors.performers}</Text> : null}
       </Card>

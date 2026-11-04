@@ -21,6 +21,8 @@ export type ReportData = {
     performer_count: number;
     performer_name: string;
     note: string | null;
+    /** Помогал по заявке (не основной исполнитель). Старая база без report_rows_v2 — нет поля. */
+    helper?: boolean;
   }[];
   works: { category: string; name: string; unit_code: string; quantity: number; entries: number; total_kop: number }[];
 };
@@ -161,6 +163,7 @@ export function buildReport(d: ReportData): Sheet[] {
       h('Примечание'),
       h('Исполнитель'),
       h('Доля'),
+      h('Участие'),
     ],
   ];
   for (const r of d.rows) {
@@ -177,6 +180,7 @@ export function buildReport(d: ReportData): Sheet[] {
       r.note,
       r.performer_name,
       shareLabel(r.performer_count),
+      r.helper && r.request_number ? `помощь по заявке № ${r.request_number}` : null,
     ]);
   }
   const lastRow3 = s3.length - 1;
@@ -185,9 +189,9 @@ export function buildReport(d: ReportData): Sheet[] {
   const sheet3: Sheet = {
     name: 'Основной подсчет',
     rows: s3,
-    widths: [12, 14, 17, 50, 14, 9, 15, 16, 28, 16, 7],
+    widths: [12, 14, 17, 50, 14, 9, 15, 16, 28, 16, 7, 26],
     freezeRows: 1,
-    autoFilter: { r1: 0, c1: 0, r2: Math.max(lastRow3, 1), c2: 10 },
+    autoFilter: { r1: 0, c1: 0, r2: Math.max(lastRow3, 1), c2: 11 },
   };
 
   // ---------- 4. По видам работ ----------
