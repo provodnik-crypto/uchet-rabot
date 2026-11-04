@@ -673,7 +673,7 @@ cd app && set -a && . ./.env && set +a && \
   (`report_totals`, `report_by_month`, `report_by_work`) — считают стоимость работ, а не доли.
 * Excel (`supabase/functions/excel-report`): «Основной подсчет» — столбец «Участие»: «помощь по заявке № …» у помощника
   (в т. ч. у напарников в старых работах — подпись, суммы прежние). Функция опубликована.
-* Миграция `20261105000001_work_helpers.sql` (только добавляет), тест `supabase/tests/35_work_helpers.sql` (18 проверок).
+* Миграция `20261105000001_work_helpers.sql` (только добавляет), тест `supabase/tests/35_work_helpers.sql` (16 проверок).
 
 **Откат.** Код — обновление с коммита `fadfed4`, функция Excel — опубликовать с этого коммита.
 База — `supabase/rollback/20261105000001_work_helpers_down.sql`. Данные до этапа: `backups/db_backup_2026-11-04_helpers.json.gz`.
