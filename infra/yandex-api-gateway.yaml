@@ -1,0 +1,20 @@
+openapi: 3.0.0
+info:
+  title: uchet-rabot-proxy
+  version: 1.0.0
+# Посредник в России: всё, что приходит на адрес шлюза, передаётся на основной сервер Supabase как есть.
+paths:
+  /{path+}:
+    x-yc-apigateway-any-method:
+      parameters:
+        - name: path
+          in: path
+          required: false
+          schema:
+            type: string
+      x-yc-apigateway-integration:
+        type: http
+        url: https://lslqcrcxpvavqqrnayde.supabase.co/{path}
+        timeouts:
+          connect: 5
+          read: 60

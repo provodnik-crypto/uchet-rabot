@@ -1,0 +1,55 @@
+import { router } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Text';
+import { BigButton } from '../../../components/BigButton';
+import { Card } from '../../../components/Card';
+import { Screen } from '../../../components/Screen';
+import { StateView } from '../../../components/StateView';
+import { Avatar } from '../../../components/Avatar';
+import { listEmployees, roleLabel } from '../../../lib/employees';
+import { useEmployeeIcons } from '../../../lib/employeeIcons';
+import { useFocusQuery } from '../../../lib/useQuery';
+import { colors, font, space, touch } from '../../../theme';
+
+export default function EmployeesScreen() {
+  const query = useFocusQuery(listEmployees, { key: 'employees' });
+  const { data, error, loading, reload } = query;
+  const icons = useEmployeeIcons();
+  return (
+    <Screen status={query}>
+      <BigButton title="+ Добавить сотрудника" onPress={() => router.push('/employees/new')} />
+      {!data ? <StateView loading={loading} error={error} onRetry={reload} /> : null}
+      {data?.map((e) => (
+        <Card key={e.id} onPress={() => router.push({ pathname: '/employees/[id]', params: { id: String(e.id) } })}>
+          <View style={styles.person}>
+            <Avatar name={e.display_name} icon={icons[e.id]} size={touch.mid} />
+            <View style={styles.flex}>
+              <Text style={[styles.name, !e.is_active && styles.off]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {e.display_name}
+              </Text>
+              <Text style={styles.role}>{roleLabel[e.role]}</Text>
+              <Text style={styles.sub}>
+            {!e.is_active
+              ? 'Отключён'
+              : e.role === 'service'
+                ? 'Для работ без исполнителя, входа нет'
+                : e.has_account
+                  ? `Логин: ${e.login}`
+                  : 'Нет учётной записи'}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ))}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  person: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
+  flex: { flex: 1 },
+  name: { fontSize: font.body, fontWeight: '700' },
+  off: { color: colors.muted, textDecorationLine: 'line-through' },
+  role: { fontSize: font.small, color: colors.muted },
+  sub: { fontSize: font.small, color: colors.muted, marginTop: space.s4 },
+});

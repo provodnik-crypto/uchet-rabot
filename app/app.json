@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Учёт работ",
+    "slug": "repair-work",
+    "scheme": "uchetrabot",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F2F2F2",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ru.uchetrabot.app"
+    },
+    "android": {
+      "package": "ru.uchetrabot.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FDC300",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Чтобы приложить фото выполненной работы из галереи.",
+          "cameraPermission": "Чтобы сфотографировать выполненную работу. Фото увидят только руководитель и исполнители.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "owner": "provodnik-cryptos-team",
+    "updates": {
+      "url": "https://u.expo.dev/9fed87c8-aaab-4af8-a7a8-8029e510d75e"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9fed87c8-aaab-4af8-a7a8-8029e510d75e"
+      }
+    },
+    "runtimeVersion": "3"
+  }
+}
