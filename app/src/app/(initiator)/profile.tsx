@@ -1,99 +1,115 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AppHeader } from '../../components/AppHeader';
+import { Avatar } from '../../components/Avatar';
 import { BigButton } from '../../components/BigButton';
 import { Card } from '../../components/Card';
 import { Field } from '../../components/Field';
-import { Screen, useScreenRefresh } from '../../components/Screen';
+import { Screen } from '../../components/Screen';
+import { Section } from '../../components/Section';
 import { SelectField } from '../../components/SelectField';
 import { Text } from '../../components/Text';
+import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
+import { listDepartments } from '../../lib/departments';
 import { humanError } from '../../lib/errors';
 import { initiatorProfile, setMyDepartment, setMyMobile, type InitiatorProfileInfo } from '../../lib/initiators';
-import { listDepartments } from '../../lib/departments';
 import { useFocusQuery } from '../../lib/useQuery';
-import { colors, font, space } from '../../theme';
+import { colors, font, space, touch } from '../../theme';
 
 const GRADE_LABEL: Record<number, string> = { 1: 'Сотрудник', 2: 'Менеджер отдела', 3: 'Руководитель сектора' };
 
-/** Профиль инициатора: отдел (можно сменить/создать), свой мобильный, выход. */
-export default function InitiatorProfileScreen() {
-  const { signOut } = useAuth();
-  const q = useFocusQuery(initiatorProfile, { key: 'init:profile', persist: false });
-  useScreenRefresh(q.reload);
-  const deptQ = useFocusQuery(listDepartments, { key: 'init:departments' });
-  const [me, setMe] = useState<InitiatorProfileInfo | null>(null);
+/** Профиль инициатора — по образцу профиля мастера: кто я, мой отдел, мобильный, выход. */
+export default function InitiatorProfile() {
+  const { me, signOut } = useAuth();
+  const q = useFocusQuery(initiatorProfile, { key: 'init:profile' });
+  const deptsQ = useFocusQuery(listDepartments, { key: 'init:departments' });
+  const profile: InitiatorProfileInfo | null = q.data ?? null;
+  const [deptId, setDeptId] = useState<number | null>(null);
   const [mobile, setMobile] = useState('');
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (q.data) {
-      setMe(q.data);
-      setMobile(q.data.mobile ?? '');
+    if (!profile) return;
+    setDeptId(profile.department_id ?? null);
+    setMobile(profile.mobile ?? '');
+  }, [profile]);
+
+  const depts = deptsQ.data ?? [];
+
+  async function save() {
+    if (!deptId) {
+      setError('Выберите отдел');
+      return;
     }
-  }, [q.data]);
-
-  const departments = deptQ.data ?? [];
-  const deptOptions = departments.filter((d) => d.is_active).map((d) => ({ value: d.id, label: d.name }));
-
-  async function save(deptId?: number) {
+    setSaving(true);
     setError(null);
-    setBusy(true);
+    setSaved(false);
     try {
-      if (deptId && deptId !== me?.department_id) {
-        await setMyDepartment(deptId);
-        if (me) setMe({ ...me, department_id: deptId, department_name: departments.find((d) => d.id === deptId)?.name ?? null });
-      }
-      const m = mobile.trim() || null;
-      if (m !== (me?.mobile ?? null)) {
-        await setMyMobile(m);
-        if (me) setMe({ ...me, mobile: m });
-      }
+      if (deptId !== (profile?.department_id ?? null)) await setMyDepartment(deptId);
+      if ((mobile.trim() || null) !== (profile?.mobile ?? null)) await setMyMobile(mobile.trim() || null);
+      setSaved(true);
+      await q.reload();
     } catch (e) {
       setError(humanError(e));
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   }
 
   return (
-    <Screen header={<AppHeader title="Профиль" back />} status={q} footer={undefined}>
-      <Card style={styles.card}>
-        <Text style={styles.name}>{me?.display_name ?? '…'}</Text>
-        {me?.grade ? <Text style={styles.grade}>{GRADE_LABEL[me.grade] ?? ''}</Text> : null}
-        {me?.work_phone ? <Text style={styles.grade}>Рабочий: {me.work_phone}</Text> : null}
+    <Screen
+      header={<AppHeader title="Профиль" back />}
+      footer={<BigButton title={saving ? 'Сохраняю…' : 'Сохранить'} onPress={save} loading={saving} disabled={saving} />}
+    >
+      <Section>
+        <View style={styles.row}>
+          {me ? <Avatar name={me.displayName} size={touch.big} dark /> : null}
+          <View style={styles.flex}>
+            <Text style={styles.name}>{me?.displayName ?? profile?.display_name}</Text>
+            <Text style={styles.meta}>
+              Инициатор{profile?.grade ? ` · ${GRADE_LABEL[profile.grade]}` : ''} · {me?.login}
+            </Text>
+          </View>
+        </View>
+      </Section>
 
+      <Card>
         <SelectField
           label="Мой отдел"
-          value={me?.department_id ?? null}
-          options={deptOptions}
-          onChange={(id) => save(id)}
+          value={deptId}
+          options={depts.filter((d) => d.is_active).map((d) => ({ value: d.id, label: d.name }))}
+          onChange={setDeptId}
           placeholder="Выберите отдел"
         />
-        <Text style={styles.note}>Своего отдела нет в списке? Добавить его можно при создании заявки.</Text>
-
         <Field
           label="Мой мобильный"
           value={mobile}
-          onChangeText={setMobile}
+          onChangeText={(t) => {
+            setMobile(t);
+            setSaved(false);
+          }}
           keyboardType="phone-pad"
-          placeholder="+7 9xx xxx-xx-xx"
+          placeholder="+7…"
           hint="Видит только руководитель. Рабочие телефоны 031XXX вписывает руководитель."
         />
-        <BigButton title="Сохранить" onPress={() => save()} loading={busy} disabled={busy} />
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {saved ? <Text style={styles.meta}>Сохранено.</Text> : null}
       </Card>
+
       <BigButton title="Выйти" variant="secondary" onPress={signOut} />
+      <Text style={styles.version}>{appVersionLabel()}</Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: space.s12 },
-  name: { fontSize: font.lead, fontWeight: '700' },
-  grade: { fontSize: font.small, color: colors.muted, marginTop: -space.s8 },
-  row: { gap: space.s8 },
-  note: { fontSize: font.small, color: colors.muted },
-  error: { color: colors.danger, fontSize: font.body },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.s12 },
+  flex: { flex: 1, gap: space.s2 },
+  name: { fontSize: font.header, fontWeight: '700' },
+  meta: { fontSize: font.small, color: colors.secondary },
+  error: { fontSize: font.small, color: colors.danger, marginTop: space.s2 },
+  version: { fontSize: font.caption, color: colors.muted, textAlign: 'center' },
 });

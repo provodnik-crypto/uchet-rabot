@@ -70,7 +70,7 @@ export default function InitiatorRequestsScreen() {
         <AppHeader
           title="Заявки"
           large
-          right={<IconButton icon="user" label="Профиль" onPress={() => router.push('/profile')} />}
+          right={<IconButton icon="user" label="Профиль: отдел и выход" round onPress={() => router.push('/profile')} />}
         >
           <TourTarget id="ihome.scope">
             <Segmented<Scope>

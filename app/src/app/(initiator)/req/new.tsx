@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { AppHeader } from '../../../components/AppHeader';
@@ -13,7 +13,7 @@ import { SelectField } from '../../../components/SelectField';
 import { StatusPill } from '../../../components/StatusPill';
 import { Text } from '../../../components/Text';
 import { humanError } from '../../../lib/errors';
-import { addDepartmentByName, createInitiatorRequest, WORK_CATEGORIES } from '../../../lib/initiators';
+import { addDepartmentByName, createInitiatorRequest, initiatorProfile, WORK_CATEGORIES } from '../../../lib/initiators';
 import { cleanDepartmentName, listDepartments, type Department } from '../../../lib/departments';
 import { parseDate } from '../../../lib/dates';
 import { useFocusQuery } from '../../../lib/useQuery';
@@ -39,6 +39,19 @@ export default function NewInitiatorRequestScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
+
+  // Отдел из учётки — подставляем сразу (руководитель задал при регистрации).
+  useEffect(() => {
+    let on = true;
+    initiatorProfile()
+      .then((p) => {
+        if (on && p?.department_id) setDeptId((cur) => cur ?? p.department_id ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      on = false;
+    };
+  }, []);
 
   const departments = deptQ.data ?? [];
   const deptOptions = useMemo(
@@ -76,10 +89,26 @@ export default function NewInitiatorRequestScreen() {
     setError(null);
     setBusy(true);
     try {
-      if (photos.some((p) => !p.path)) setProgress('Загружаю фото…');
-      await uploadPhotos(photos, (p) => setPhotos((prev) => prev.map((x) => (x.key === p.key ? p : x))), (done, total) =>
-        setProgress(`Загружаю фото… ${done} из ${total}`),
-      );
+      // Результат загрузки собираем в свою карту: массив `photos` в замыкании устаревает после setPhotos.
+      const uploaded = new Map<string, DraftPhoto>();
+      if (photos.some((p) => !p.path)) {
+        setProgress('Загружаю фото…');
+        try {
+          await uploadPhotos(
+            photos,
+            (p) => {
+              uploaded.set(p.key, p);
+              setPhotos((prev) => prev.map((x) => (x.key === p.key ? p : x)));
+            },
+            (done, total) => setProgress(`Загружаю фото… ${done} из ${total}`),
+          );
+        } catch {
+          setBusy(false);
+          setProgress('');
+          setError('Не удалось загрузить фото — проверьте интернет и нажмите «Отправить» ещё раз');
+          return;
+        }
+      }
       setProgress('Отправляю заявку…');
       const due = dueMode === 'date' ? parseDate(dueText) : null;
       const res = await createInitiatorRequest({
@@ -91,7 +120,7 @@ export default function NewInitiatorRequestScreen() {
         urgent: dueMode === 'urgent',
         urgentReason: dueMode === 'urgent' ? urgentReason.trim() : null,
         materials: materials.trim() || null,
-        photos: toPayload(photos),
+        photos: toPayload(photos.map((p) => uploaded.get(p.key) ?? p)),
       });
       forgetLocalPhotos(photos);
       setBusy(false);
