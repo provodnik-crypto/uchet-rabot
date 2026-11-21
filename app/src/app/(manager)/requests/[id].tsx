@@ -51,7 +51,10 @@ const GRADE_TEXT: Record<number, string> = { 1: 'сотрудник', 2: 'мен
 /** Заявка, поданная инициатором из магазина: кто подал, отдел, телефоны, место, материалы. */
 function InitiatorInfo({ requestId, dueAt }: { requestId: number; dueAt: string | null }) {
   const { data, error, loading, reload } = useFocusQuery(
-    () => supabase.rpc('request_initiator_info', { p_id: requestId }).then((r) => r.data as InitiatorInfoRow | null),
+    async () => {
+      const r = await supabase.rpc('request_initiator_info', { p_id: requestId });
+      return r.data as InitiatorInfoRow | null;
+    },
     { key: `initinfo:${requestId}`, persist: false },
   );
   if (error) {

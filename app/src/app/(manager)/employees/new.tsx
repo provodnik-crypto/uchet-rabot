@@ -20,9 +20,9 @@ import { colors, font, space } from '../../../theme';
 type Role = 'master' | 'manager' | 'initiator';
 
 const GRADES = [
-  { value: 1, label: 'Сотрудник' },
-  { value: 2, label: 'Менеджер отдела' },
-  { value: 3, label: 'Руководитель сектора' },
+  { value: '1', label: 'Сотрудник' },
+  { value: '2', label: 'Менеджер отдела' },
+  { value: '3', label: 'Руководитель сектора' },
 ];
 
 export default function NewEmployeeScreen() {
@@ -32,7 +32,7 @@ export default function NewEmployeeScreen() {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   // поля инициатора
-  const [grade, setGrade] = useState(1);
+  const [grade, setGrade] = useState('1');
   const [ldap, setLdap] = useState('');
   const [deptId, setDeptId] = useState<number | null>(null);
   const [workPhone, setWorkPhone] = useState('');
@@ -77,7 +77,7 @@ export default function NewEmployeeScreen() {
       ldap: /^\d{3,20}$/.test(ldap.trim()) ? null : 'LDAP: от 3 до 20 цифр',
       dept: deptId ? null : 'Выберите отдел',
       phone:
-        grade >= 2 && !/^031\d{3}$/.test(workPhone.trim())
+        Number(grade) >= 2 && !/^031\d{3}$/.test(workPhone.trim())
           ? 'Рабочий телефон 031XXX обязателен'
           : null,
     };
@@ -90,10 +90,10 @@ export default function NewEmployeeScreen() {
         action: 'add_initiator',
         first_name: name.trim(),
         last_initial: initial.trim() || null,
-        grade,
+        grade: Number(grade),
         ldap: ldap.trim(),
         department_id: deptId!,
-        work_phone: grade >= 2 ? workPhone.trim() : null,
+        work_phone: Number(grade) >= 2 ? workPhone.trim() : null,
       });
       router.back();
     } catch (err) {
@@ -129,7 +129,7 @@ export default function NewEmployeeScreen() {
               Инициатор подаёт заявки из магазина (продавцы, менеджеры, руководители секторов). Пароль он придумает сам при первом входе по LDAP.
             </Text>
             <Text style={styles.label}>Кто это</Text>
-            <Segmented options={GRADES.map((g) => ({ value: g.value, label: g.label }))} value={grade} onChange={setGrade} />
+            <Segmented options={GRADES} value={grade} onChange={setGrade} />
             <SelectField
               label="Отдел"
               value={deptId}
@@ -147,7 +147,7 @@ export default function NewEmployeeScreen() {
               error={errors.ldap}
               hint="Инициатор введёт его при первом входе и сам придумает пароль. Передайте номер лично."
             />
-            {grade >= 2 ? (
+            {Number(grade) >= 2 ? (
               <Field
                 label="Рабочий телефон"
                 value={workPhone}

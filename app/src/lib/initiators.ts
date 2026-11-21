@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { LifecycleStatus } from './requests';
 
 /** Этап «Инициаторы»: заявки из магазина, минуя ITSM. RPC на сервере — 20261121000002_initiators.sql. */
 
@@ -12,7 +13,7 @@ export type InitiatorRequest = {
   number: string;
   subject: string;
   operation: string;
-  status: string;
+  status: LifecycleStatus;
   priority: number;
   place: string | null;
   due_date: string | null;
@@ -64,7 +65,7 @@ export type NewInitiatorRequest = {
   urgentReason?: string | null;
   materials?: string | null;
   /** Уже загруженные в storage фото (uploadPhotos + toPayload из lib/workPhotos). */
-  photos: { path: string; thumb_path: string }[];
+  photos: Array<{ path?: string; thumb_path?: string }>;
 };
 
 export async function createInitiatorRequest(input: NewInitiatorRequest): Promise<{ id: number; number: string }> {

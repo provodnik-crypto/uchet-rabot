@@ -170,7 +170,7 @@ export type RequestRow = {
   state: 'open' | 'done' | null;
   carries: number;
   since: string | null;
-  source: 'manual' | 'itsm';
+  source: 'manual' | 'itsm' | 'initiator';
   service: string | null;
   operation: string | null;
   description: string | null;

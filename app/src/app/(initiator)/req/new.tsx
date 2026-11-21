@@ -159,7 +159,7 @@ export default function NewInitiatorRequestScreen() {
 
       <View>
         <Text style={styles.label}>Фото *</Text>
-        <PhotoPicker photos={photos} onChange={setPhotos} required hint="Сфотографируйте, что нужно сделать и где это стоит" />
+        <PhotoPicker photos={photos} onChange={setPhotos} required />
       </View>
 
       <View style={styles.due}>
