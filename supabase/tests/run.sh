@@ -5,13 +5,35 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(dirname "$here")"
 work="$(mktemp -d)"
-bin="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
-trap '"$bin/pg_ctl" -D "$work/data" -m immediate stop >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
+# Windows: portable PostgreSQL (initdb/pg_ctl/psql) кладётся в tools\pg; на Linux — пакеты дистрибутива.
+bin="${PG_BIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1 || true)}"
+win="$(uname -s | grep -qi mingw && echo yes || echo no)"
+if [ "$win" = yes ]; then # у Windows-python stdout в cp1251 — SQL с «м²» падает без UTF-8
+  export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
+fi
+if [ "$win" = yes ] && [ -z "$bin" ]; then bin="$(cygpath -m "$LOCALAPPDATA/../../tools/pg/bin" 2>/dev/null || true)"; fi
+if [ "$win" = yes ]; then # у PostgreSQL для Windows нет unix-сокетов — слушаем локальный TCP
+  host=127.0.0.1; listen="-c listen_addresses=127.0.0.1"
+else
+  host="$work"; listen="-c listen_addresses="
+fi
+trap 'rm -rf "$work"' EXIT
 
 run_pg() { if [ "$(id -u)" = 0 ]; then chown -R postgres "$work"; su postgres -c "$*"; else bash -c "$*"; fi; }
 run_pg "'$bin/initdb' -D '$work/data' -U postgres -A trust >/dev/null"
-run_pg "'$bin/pg_ctl' -D '$work/data' -o '-k $work -p 54329 -c listen_addresses=' -l '$work/log' start >/dev/null"
-psql_cmd=(psql -h "$work" -p 54329 -U postgres -d postgres -v ON_ERROR_STOP=1 -q -X -t)
+if [ "$win" = yes ]; then
+  # pg_ctl start в Git Bash не взлетает — запускаем postgres сами и ждём готовности
+  wdata="$(cygpath -m "$work/data")"
+  "$bin/postgres" -D "$wdata" -p 54329 -c listen_addresses=127.0.0.1 > "$work/log" 2>&1 < /dev/null &
+  echo $! > "$work/pid"
+  for i in $(seq 1 30); do
+    if echo 'select 1' | psql -h "$host" -p 54329 -U postgres -d postgres -q >/dev/null 2>&1; then break; fi
+    sleep 1
+  done
+else
+  run_pg "'$bin/pg_ctl' -D '$work/data' -o '-k $work -p 54329 $listen' -l '$work/log' start >/dev/null"
+fi
+psql_cmd=(psql -h "$host" -p 54329 -U postgres -d postgres -v ON_ERROR_STOP=1 -q -X -t)
 
 "${psql_cmd[@]}" -f "$here/supabase_stub.sql"
 for f in "$root"/migrations/*.sql; do "${psql_cmd[@]}" -f "$f"; done
