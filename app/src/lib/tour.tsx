@@ -25,7 +25,7 @@ type TourApi = {
   active: Active | null;
   start: (id: TourId) => void;
   /** Главный экран: при первом входе — обучение, после обновления — «Что нового». */
-  autoStart: (role: 'master' | 'manager', existingUser: boolean) => void;
+  autoStart: (role: 'master' | 'manager' | 'initiator', existingUser: boolean) => void;
   showWhatsNew: (entry?: WhatsNew) => void;
   register: (id: string, reg: Reg) => () => void;
 };
@@ -39,9 +39,10 @@ export const TourScrollProvider = ScrollCtx.Provider;
 export const useScrollBy = () => useContext(ScrollCtx);
 
 const key = (userId: number, what: string) => `tour-v1:${userId}:${what}`;
-const FIRST: Record<'master' | 'manager', TourId> = {
+const FIRST: Record<'master' | 'manager' | 'initiator', TourId> = {
   master: 'first',
   manager: 'mfirst',
+  initiator: 'ifirst',
 };
 
 export function TourProvider({ children }: { children: ReactNode }) {
@@ -85,13 +86,13 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const showWhatsNew = useCallback((entry?: WhatsNew) => setNews(entry ?? WHATS_NEW[0] ?? null), []);
 
   const autoStart = useCallback(
-    async (role: 'master' | 'manager', existingUser: boolean) => {
+    async (role: 'master' | 'manager' | 'initiator', existingUser: boolean) => {
       if (!me || autoDone.current === me.id) return;
       autoDone.current = me.id;
       try {
         const first = FIRST[role];
         // последняя запись, где для этой роли что-то есть (обновление только для руководителя мастеру не показываем)
-        const entry = WHATS_NEW.find((w) => w[role].length > 0);
+        const entry = WHATS_NEW.find((w) => (w[role]?.length ?? 0) > 0);
         const latest = entry?.id;
         const [done, seen] = await Promise.all([AsyncStorage.getItem(key(me.id, first)), AsyncStorage.getItem(key(me.id, 'whats-new'))]);
         if (!done && !existingUser) {
@@ -126,7 +127,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     <TourCtx.Provider value={api}>
       {children}
       {active ? <TourOverlay active={active} registry={registry} setActive={setActive} finish={finish} /> : null}
-      <WhatsNewModal entry={news} role={me?.role === 'manager' ? 'manager' : 'master'} onClose={() => setNews(null)} />
+      <WhatsNewModal entry={news} role={me?.role ?? 'master'} onClose={() => setNews(null)} />
     </TourCtx.Provider>
   );
 }
@@ -309,9 +310,9 @@ function TourOverlay({
 
 // ---------- «Что нового» ----------
 
-function WhatsNewModal({ entry, role, onClose }: { entry: WhatsNew | null; role: 'master' | 'manager'; onClose: () => void }) {
+function WhatsNewModal({ entry, role, onClose }: { entry: WhatsNew | null; role: 'master' | 'manager' | 'initiator'; onClose: () => void }) {
   if (!entry) return null;
-  const items = role === 'manager' ? entry.manager : entry.master;
+  const items = entry[role] ?? [];
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>

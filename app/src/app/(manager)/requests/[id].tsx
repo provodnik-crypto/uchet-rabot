@@ -28,11 +28,70 @@ import {
   setRequestResponsible,
   type Priority, requestLabel, decidePause, holdText, resumeRequest } from '../../../lib/requests';
 import { listMasters } from '../../../lib/shift';
+import { supabase } from '../../../lib/supabase';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { TourTarget } from '../../../lib/tour';
 import { colors, font, radius, space, stroke } from '../../../theme';
 import { DueLine } from '../../../components/DueLine';
 import { settleBeforeLeaving } from '../../../lib/settle';
+
+type InitiatorInfoRow = {
+  creator_name: string | null;
+  creator_grade: number | null;
+  creator_work_phone: string | null;
+  creator_mobile: string | null;
+  department_name: string | null;
+  place: string | null;
+  materials: string | null;
+  urgent_reason: string | null;
+};
+
+const GRADE_TEXT: Record<number, string> = { 1: 'сотрудник', 2: 'менеджер отдела', 3: 'руководитель сектора' };
+
+/** Заявка, поданная инициатором из магазина: кто подал, отдел, телефоны, место, материалы. */
+function InitiatorInfo({ requestId, dueAt }: { requestId: number; dueAt: string | null }) {
+  const { data, error, loading, reload } = useFocusQuery(
+    () => supabase.rpc('request_initiator_info', { p_id: requestId }).then((r) => r.data as InitiatorInfoRow | null),
+    { key: `initinfo:${requestId}`, persist: false },
+  );
+  if (error) {
+    return (
+      <Card style={styles.card}>
+        <Text style={styles.hint}>Не удалось загрузить данные заявки из магазина</Text>
+      </Card>
+    );
+  }
+  if (!data && loading) {
+    return (
+      <Card style={styles.card}>
+        <Text style={styles.hint}>Загружаю…</Text>
+      </Card>
+    );
+  }
+  if (!data) return null;
+  const lines: string[] = [];
+  if (data.creator_name) {
+    lines.push(`Подал: ${data.creator_name}${data.creator_grade ? ` (${GRADE_TEXT[data.creator_grade] ?? ''})` : ''}`);
+  }
+  if (data.department_name) lines.push(`Отдел: ${data.department_name}`);
+  if (data.place) lines.push(`Где: ${data.place}`);
+  if (dueAt) lines.push(`Желаемая дата: ${formatDate(dueAt)}`);
+  if (data.creator_work_phone) lines.push(`Рабочий: ${data.creator_work_phone}`);
+  if (data.creator_mobile) lines.push(`Мобильный: ${data.creator_mobile}`);
+  if (data.urgent_reason) lines.push(`Почему срочно: ${data.urgent_reason}`);
+  if (data.materials) lines.push(`Материалы: ${data.materials}`);
+  return (
+    <Card style={styles.card}>
+      <Text style={styles.h}>Заявка из магазина</Text>
+      {lines.map((t) => (
+        <Text key={t} style={styles.body}>
+          {t}
+        </Text>
+      ))}
+      <Text style={styles.hint}>Рабочий телефон 031XXX и мобильный видите только вы. Мастеру они не показываются.</Text>
+    </Card>
+  );
+}
 
 
 /** Открывается из списка (данные строки в параметрах) или по номеру — из уведомлений на главной. */
@@ -166,6 +225,8 @@ function RequestDetail({ r }: { r: RequestRow }) {
           </>
         ) : null}
       </Card>
+
+      {r.source === 'initiator' ? <InitiatorInfo requestId={r.id} dueAt={r.due_at} /> : null}
 
       {isOpen && (!card || card.status === 'waiting' || card.status === 'contractor' || card.status === 'in_work' || card.status === 'paused') ? (
         <Card style={styles.card}>

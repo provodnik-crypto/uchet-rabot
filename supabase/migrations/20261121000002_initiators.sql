@@ -339,6 +339,27 @@ end $$;
 revoke all on function public.set_my_mobile(text) from public, anon;
 grant execute on function public.set_my_mobile(text) to authenticated;
 
+-- ---------- Карточка заявки: доп. поля заявки инициатора (к ответу request_card клиент добавляет сам;
+-- саму request_card не трогаем — её уже расширяли другие миграции) ----------
+create function public.request_extra_fields(p_id bigint) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if public.current_employee_id() is null then raise exception 'Нет доступа'; end if;
+  return (
+    select jsonb_build_object(
+      'id', r.id,
+      'place', r.place, 'materials', r.materials, 'urgent_reason', r.urgent_reason,
+      'due_at', r.due_at,
+      'department_name', d.name,
+      'creator_name', cr.display_name)
+    from requests r
+    left join departments d on d.id = r.department_id
+    left join employees cr on cr.id = r.created_by
+    where r.id = p_id);
+end $$;
+revoke all on function public.request_extra_fields(bigint) from public, anon;
+grant execute on function public.request_extra_fields(bigint) to authenticated;
+
 -- ---------- Вход в приложение: whoami узнаёт инициатора (current_employee_id() НЕ трогаем) ----------
 create or replace function public.whoami()
 returns table (id bigint, display_name text, role public.employee_role, login text)

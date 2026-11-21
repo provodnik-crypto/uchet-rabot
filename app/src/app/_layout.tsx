@@ -83,12 +83,16 @@ function RootStack() {
     <Stack screenOptions={{ ...header, headerShown: false }}>
       <Stack.Protected guard={!session || !!accessError}>
         <Stack.Screen name="login" />
+        <Stack.Screen name="claim" />
       </Stack.Protected>
       <Stack.Protected guard={!accessError && me?.role === 'master'}>
         <Stack.Screen name="(master)" />
       </Stack.Protected>
       <Stack.Protected guard={!accessError && me?.role === 'manager'}>
         <Stack.Screen name="(manager)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!accessError && me?.role === 'initiator'}>
+        <Stack.Screen name="(initiator)" />
       </Stack.Protected>
     </Stack>
   );
