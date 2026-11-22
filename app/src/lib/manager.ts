@@ -39,7 +39,7 @@ export function monthName(isoDate: string): string {
 }
 
 // ---------- Главная и сводки ----------
-export type Dashboard = { pending_count: number; month_total_kop: number; month_entries: number };
+export type Dashboard = { pending_count: number; month_total_kop: number; month_entries: number; month_requests: number };
 /** Работы «ждут приёмки» за период (в суммы не входят до приёмки заявки). */
 export const awaitingTotals = (p: Period) => rpc<{ entries: number; total_kop: number }>('awaiting_totals', { p_from: p.from, p_to: p.to });
 /** Открытые заявки по статусам — для главной. */
@@ -65,7 +65,9 @@ export type RatingSummary = {
 };
 export const managerRatingSummary = async () => (await rpc<RatingSummary[]>('manager_rating_summary'))[0];
 
-export type EmployeeRow = { employee_id: number; display_name: string; in_output_chart: boolean; total_kop: number; entries: number; shifts: number };
+export type EmployeeRow = { employee_id: number; display_name: string; in_output_chart: boolean; total_kop: number; entries: number; shifts: number;
+  /** Личный рейтинг мастера: средняя оценка его заявок инициаторами за период (null — оценок нет). */
+  rating: number | null; rating_count: number };
 export type MonthRow = { month: string; total_kop: number; entries: number };
 export type Totals = { total_kop: number; entries: number; pending: number; rejected: number };
 

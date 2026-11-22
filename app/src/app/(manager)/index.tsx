@@ -112,7 +112,7 @@ export default function ManagerHome() {
       >
         <Text style={styles.monthLabel}>Выполнено за {monthName(storeToday())}</Text>
         <Text style={styles.monthSum}>{data ? formatKop(data.month_total_kop) : '…'}</Text>
-        {data ? <Text style={styles.monthLabel}>работ с ценой: {data.month_entries}</Text> : null}
+        {data ? <Text style={styles.monthLabel}>заявок за месяц: {data.month_requests}</Text> : null}
         {awaiting?.entries ? (
           <Text style={styles.monthLabel}>
             ждут приёмки: {awaiting.entries} на {formatKop(awaiting.total_kop)} — в сумму не входят, пока заявки не приняты
@@ -129,8 +129,8 @@ export default function ManagerHome() {
         {ratings && ratings.count > 0 ? (
           <View style={styles.warn}>
             <Text style={styles.warnText}>
-              <Text style={styles.warnStrong}>Оценки: ★ {ratings.avg?.toFixed(1).replace('.', ',')} из 5</Text>
-              {' · '}{ratings.count} {pluralRatings(ratings.count)}
+              <Text style={styles.warnStrong}>Рейтинг команды: ★ {ratings.avg?.toFixed(1).replace('.', ',')} из 5</Text>
+              {' · '}{ratings.count} {pluralRatings(ratings.count)} за месяц
               {ratings.prev_count > 0 && ratings.prev_avg != null ? ` (в прошлом месяце ★ ${ratings.prev_avg.toFixed(1).replace('.', ',')})` : ''}
             </Text>
             <Icon name="chevronRight" size={iconSize.small} color={colors.white} />

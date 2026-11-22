@@ -62,6 +62,7 @@ export default function SummaryScreen() {
                 <View style={styles.flex}>
                   <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                     {e.display_name}
+                    {e.rating != null ? ` · ★ ${e.rating.toFixed(1).replace('.', ',')}` : ''}
                   </Text>
                   <Text style={styles.empSum} numberOfLines={1}>
                     {formatKop(e.total_kop)}
@@ -73,6 +74,7 @@ export default function SummaryScreen() {
               </View>
               <Text style={styles.meta}>
                 работ: {e.entries} · смен: {e.shifts} · в среднем за смену: {formatKop(Math.round(e.total_kop / Math.max(1, e.shifts)))}
+                {e.rating != null ? ` · личный рейтинг: ★ ${e.rating.toFixed(1).replace('.', ',')} (${e.rating_count} ${e.rating_count === 1 ? 'оценка' : e.rating_count < 5 ? 'оценки' : 'оценок'})` : ''}
               </Text>
               {!e.in_output_chart ? <Text style={styles.meta}>Служебная запись: работы без исполнителя, в диаграмму выработки не входит</Text> : null}
             </Card>
