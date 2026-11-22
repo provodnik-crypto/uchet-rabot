@@ -1,5 +1,5 @@
 import { router, useIsFocused } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Card } from '../../components/Card';
@@ -35,25 +35,44 @@ export default function ManagerHome() {
   const { data } = dashQ;
   const { data: review } = reviewQ;
   const { data: notes } = notesQ;
+  // Частые «Новое по заявке …» сворачиваются в одну строку; редкое важное — всегда на виду.
+  const [showAllNews, setShowAllNews] = useState(false);
+  const allUnread = notes?.unread ?? [];
+  const news = allUnread.filter((n) => !n.refused);
+  const refusedNews = allUnread.filter((n) => n.refused);
   const notices: Notice[] = [
-    ...(notes?.unread ?? []).map((n) => ({
+    ...(showAllNews
+      ? [
+          ...news.map((n) => ({
+            key: `u${n.id}`,
+            tone: 'blue' as const,
+            title: `Новое по заявке ${requestLabel(n.number)}`,
+            text: `Сообщений и событий: ${n.count}`,
+            onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
+          })),
+          { key: 'news-fold', tone: 'blue' as const, title: 'Свернуть', onPress: () => setShowAllNews(false) },
+        ]
+      : news.length
+        ? [{ key: 'news', tone: 'blue' as const, title: `Новое по заявкам: ${news.length}`, text: 'Нажмите, чтобы показать', onPress: () => setShowAllNews(true) }]
+        : []),
+    ...refusedNews.map((n) => ({
       key: `u${n.id}`,
-      tone: n.refused ? ('red' as const) : ('blue' as const),
-      title: n.refused ? `Отказ от заявки ${requestLabel(n.number)}` : `Новое по заявке ${requestLabel(n.number)}`,
+      tone: 'red' as const,
+      title: `Отказ от заявки ${requestLabel(n.number)}`,
       text: `Сообщений и событий: ${n.count}`,
       onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
     })),
     ...(typeof notes?.reports === 'number' && notes.reports
-      ? [{ key: 'reports', tone: 'blue' as const, title: `Сообщения от мастеров: ${notes.reports}`, text: 'Работы нет в заявках или просьба передать подрядчику — решите', onPress: () => router.push('/reports') }]
+      ? [{ key: 'reports', tone: 'blue' as const, title: `Сообщения от мастеров: ${notes.reports}`, onPress: () => router.push('/reports') }]
       : []),
     ...(notes?.materials
-      ? [{ key: 'materials', tone: 'orange' as const, title: `Ждут материалы: ${notes.materials}`, text: 'Мастер не может продолжить — нет материалов. Пришли — «Вернуть в работу»', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'materials' } }) }]
+      ? [{ key: 'materials', tone: 'orange' as const, title: `Ждут материалы: ${notes.materials}`, onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'materials' } }) }]
       : []),
     ...(notes?.pause_requests
-      ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, text: 'Мастер ждёт решения — подтвердите или отклоните', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
+      ? [{ key: 'pause', tone: 'orange' as const, title: `Запросы на приостановку: ${notes.pause_requests}`, onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'pause_request' } }) }]
       : []),
     ...(notes?.stale
-      ? [{ key: 'stale', tone: 'orange' as const, title: `В работе дольше ${notes.stale_days ?? 3} раб. дн.: ${notes.stale}`, text: 'Откройте и уточните у мастера, что мешает', onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'stale' } }) }]
+      ? [{ key: 'stale', tone: 'orange' as const, title: `В работе дольше ${notes.stale_days ?? 3} раб. дн.: ${notes.stale}`, onPress: () => router.push({ pathname: '/requests', params: { lifecycle: 'stale' } }) }]
       : []),
   ];
   // Счётчики открытых заявок по статусам — для главной плашки «Заявки».
