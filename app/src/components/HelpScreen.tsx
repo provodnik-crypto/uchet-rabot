@@ -25,6 +25,11 @@ export function HelpScreen({ role }: { role: 'master' | 'manager' }) {
           <Text style={styles.meta}>{t.about}</Text>
         </Card>
       ))}
+      <Text style={styles.section}>Написать разработчику</Text>
+      <Card style={styles.card} onPress={() => router.push('/feedback-form')}>
+        <Text style={styles.title}>Написать разработчику</Text>
+        <Text style={styles.meta}>Нашли ошибку или есть идея — напишите, сообщение увидит только разработчик.</Text>
+      </Card>
       <Text style={styles.section}>Что нового</Text>
       {WHATS_NEW.filter((w) => (role === 'manager' ? w.manager : w.master).length > 0).map((w) => (
         <Card key={w.id} style={styles.card} onPress={() => showWhatsNew(w)}>

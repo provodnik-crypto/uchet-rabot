@@ -182,6 +182,12 @@ export default function ManagerHome() {
         <ListRow title="Отделы" subtitle="список для выбора мастером" icon="grid" href="/departments" last />
       </Card>
       <Card style={styles.list}>
+        <ListRow
+          title={notes?.feedback ? `Обратная связь: ${notes.feedback} новых` : 'Обратная связь'}
+          subtitle="сообщения пользователей"
+          icon="doc"
+          href="/feedback"
+        />
         <ListRow tourId="mhome.help" title="Помощь" subtitle="обучение по шагам и «Что нового»" icon="doc" href="/help" last />
       </Card>
 

@@ -18,6 +18,7 @@ export default function MasterLayout() {
         <Stack.Screen name="history" options={{ title: 'История', headerShown: false, animation: 'none' }} />
         <Stack.Screen name="fix" options={{ title: 'Исправить работу' }} />
         <Stack.Screen name="help" options={{ title: 'Помощь' }} />
+        <Stack.Screen name="feedback-form" options={{ title: 'Написать разработчику' }} />
         <Stack.Screen name="profile" options={{ title: 'Профиль' }} />
       </Stack>
     </DraftProvider>

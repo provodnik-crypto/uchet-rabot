@@ -550,6 +550,8 @@ export type Notifications = {
   materials?: number;
   /** Руководителю: новых сообщений мастеров; мастеру — ответы на его сообщения. */
   reports?: number | { id: number; status: ReportStatus; text: string; answer: string | null; request_number: string | null }[];
+  /** Разработчику (логин 60133303): непрочитанных сообщений обратной связи. */
+  feedback?: number;
 };
 export const myNotifications = () => rpc<Notifications>('my_notifications');
 

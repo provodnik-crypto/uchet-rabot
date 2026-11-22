@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { AppHeader } from '../../components/AppHeader';
 import { Avatar } from '../../components/Avatar';
 import { BigButton } from '../../components/BigButton';
@@ -99,6 +100,11 @@ export default function InitiatorProfile() {
         {saved ? <Text style={styles.meta}>Сохранено.</Text> : null}
       </Card>
 
+      <Card style={styles.fb} onPress={() => router.push('/feedback-form')}>
+        <Text style={styles.fbTitle}>Написать разработчику</Text>
+        <Text style={styles.meta}>Нашли ошибку или есть идея — напишите, сообщение увидит только разработчик.</Text>
+      </Card>
+
       <BigButton title="Выйти" variant="secondary" onPress={signOut} />
       <Text style={styles.version}>{appVersionLabel()}</Text>
     </Screen>
@@ -111,5 +117,7 @@ const styles = StyleSheet.create({
   name: { fontSize: font.header, fontWeight: '700' },
   meta: { fontSize: font.small, color: colors.secondary },
   error: { fontSize: font.small, color: colors.danger, marginTop: space.s2 },
+  fb: { gap: space.s4 },
+  fbTitle: { fontSize: font.body, fontWeight: '700' },
   version: { fontSize: font.caption, color: colors.muted, textAlign: 'center' },
 });
