@@ -27,6 +27,12 @@ alter table public.requests add column materials text check (materials is null o
 alter table public.requests add column urgent_reason text check (urgent_reason is null or length(trim(urgent_reason)) between 1 and 200);
 grant select (department_id, place, materials, urgent_reason) on public.requests to authenticated;
 
+-- Констрейнт source из 20261013000001 не знал 'initiator' — на проде каждая отправка падала 23514
+-- (замечено живым тестом 22.11, на проде исправлено тем же SQL + notify pgrst_ddl_watch).
+alter table public.requests drop constraint requests_source_check;
+alter table public.requests add constraint requests_source_check
+  check (source in ('manual', 'itsm', 'initiator'));
+
 -- ---------- Мобильный телефон инициатора (персональные данные: вне прямого доступа) ----------
 create table public.initiator_contacts (
   employee_id bigint primary key references public.employees (id) on delete cascade,
@@ -85,15 +91,26 @@ end $$;
 
 -- ---------- Доступ инициатора к заявкам: свои + заявки своего отдела ----------
 -- Раньше политика пускала всех вошедших ко всем заявкам (мастер/руководитель читают колонками и RPC).
--- Для инициаторов сужаем; мастер/руководитель видят всё как раньше (current_employee_id не пустой).
+-- ВАЖНО: проверка инициатора — в security definer функции: в самой политике нельзя обращаться
+-- к employees.user_id (колонка не выдана authenticated → «permission denied for table employees»
+-- у ЛЮБОГО прямого чтения requests). Мастер/руководитель видят всё как раньше.
+create function public.initiator_request_visible(p_id bigint) returns boolean
+language plpgsql stable security definer set search_path = public as $$
+declare
+  me bigint := public.current_initiator_id();
+  my_dept smallint;
+begin
+  if me is null then return false; end if;
+  select department_id into my_dept from employees where id = me;
+  return exists (select 1 from requests r where r.id = p_id and r.created_by = me)
+      or (my_dept is not null and exists (select 1 from requests r where r.id = p_id and r.department_id = my_dept));
+end $$;
+revoke all on function public.initiator_request_visible(bigint) from public, anon;
+grant execute on function public.initiator_request_visible(bigint) to authenticated;
+
 drop policy requests_select on public.requests;
 create policy requests_select on public.requests for select to authenticated using (
-  public.current_employee_id() is not null
-  or exists (
-    select 1 from employees me
-    where me.user_id = auth.uid() and me.is_active and me.role = 'initiator'
-      and (requests.created_by = me.id
-           or (me.department_id is not null and requests.department_id = me.department_id)))
+  public.current_employee_id() is not null or public.initiator_request_visible(requests.id)
 );
 
 -- ---------- Фото заявки: инициатор видит фото заявок (как мастер) и грузит в свою папку ----------
@@ -359,6 +376,22 @@ begin
 end $$;
 revoke all on function public.request_extra_fields(bigint) from public, anon;
 grant execute on function public.request_extra_fields(bigint) to authenticated;
+
+-- ---------- Поиск: нормализация без зависимости от локали ----------
+-- lower() фолдит кириллицу только в локали с кириллическим ctype; на машине тестов локаль C.
+-- Явно опускаем кириллицу через translate — результат одинаков в любой локали
+-- (на проде значения совпадают со старой функцией, пересчёт search_text не нужен).
+create or replace function public.normalize_search(t text) returns text
+language sql immutable parallel safe as $$
+  select lower(
+    replace(
+      replace(
+        translate(coalesce(t, ''),
+          'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ',
+          'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'),
+      'ё', 'е'),
+    'Ё', 'Е'))
+$$;
 
 -- ---------- Вход в приложение: whoami узнаёт инициатора (current_employee_id() НЕ трогаем) ----------
 create or replace function public.whoami()

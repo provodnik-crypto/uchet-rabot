@@ -13,6 +13,12 @@ language sql stable security definer set search_path = public as $$
   where e.user_id = auth.uid() and e.is_active and e.role in ('master', 'manager')
 $$;
 
+-- ---------- Поиск: возврат старой normalize_search ----------
+create or replace function public.normalize_search(t text) returns text
+language sql immutable parallel safe as $$
+  select lower(replace(replace(coalesce(t, ''), 'ё', 'е'), 'Ё', 'Е'))
+$$;
+
 -- ---------- Функции ----------
 drop function if exists
   public.request_initiator_info(bigint),
@@ -27,7 +33,8 @@ drop function if exists
   public.assert_clean_text(text, text),
   public.require_initiator(),
   public.is_initiator(),
-  public.current_initiator_id();
+  public.current_initiator_id(),
+  public.initiator_request_visible(bigint);
 
 -- ---------- Фото и хранилище: как было ----------
 create or replace function public.can_see_extra_photo(p_name text) returns boolean
@@ -51,6 +58,10 @@ create policy requests_select on public.requests for select to authenticated usi
 -- ---------- Таблицы ----------
 drop table if exists public.claim_attempts;
 drop table if exists public.initiator_contacts;
+
+-- ---------- Констрейнт source: как было ----------
+alter table public.requests drop constraint if exists requests_source_check;
+alter table public.requests add constraint requests_source_check check (source in ('manual', 'itsm'));
 
 -- ---------- Колонки ----------
 alter table public.requests
