@@ -13,7 +13,7 @@ import { initiatorPendingRatings, initiatorRequests, type InitiatorRequest } fro
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font, radius, space, stroke, touch } from '../../theme';
 
-type Scope = 'my' | 'department';
+type Scope = 'my' | 'department' | 'history';
 
 /** «21.11 14:05» — время подачи, как на бумажном шаблоне. */
 function when(iso: string): string {
@@ -51,7 +51,12 @@ function Row({ r }: { r: InitiatorRequest }) {
 /** Вкладка «Заявки»: переключатель «Мои» / «Отдел», самая старая сверху. */
 export default function InitiatorRequestsScreen() {
   const [scope, setScope] = useState<Scope>('my');
-  const q = useFocusQuery(() => initiatorRequests(scope), { key: `init:list:${scope}` });
+  const [historyScope, setHistoryScope] = useState<'my' | 'department' | 'all'>('department');
+  const isHistory = scope === 'history';
+  const rpcScope: 'my' | 'department' | 'all' = isHistory ? historyScope : scope;
+  const q = useFocusQuery(() => initiatorRequests(rpcScope, isHistory), {
+    key: `init:list:${rpcScope}:${isHistory}`,
+  });
   useScreenRefresh(q.reload);
   const list = q.data ?? [];
   const pending = useFocusQuery(() => initiatorPendingRatings(), { key: 'init:pending' });
@@ -78,11 +83,23 @@ export default function InitiatorRequestsScreen() {
               options={[
                 { value: 'my', label: 'Мои' },
                 { value: 'department', label: 'Отдел' },
+                { value: 'history', label: 'История' },
               ]}
               value={scope}
               onChange={setScope}
             />
           </TourTarget>
+          {isHistory ? (
+            <Segmented<'my' | 'department' | 'all'>
+              options={[
+                { value: 'my', label: 'Мои' },
+                { value: 'department', label: 'Отдел' },
+                { value: 'all', label: 'Все заявки' },
+              ]}
+              value={historyScope}
+              onChange={setHistoryScope}
+            />
+          ) : null}
         </AppHeader>
       }
     >
@@ -100,9 +117,11 @@ export default function InitiatorRequestsScreen() {
       ))}
       {list.length === 0 && !q.loading && !q.error ? (
         <Text style={styles.empty}>
-          {scope === 'my'
-            ? 'Пока нет ваших заявок. Нажмите «+ Новая заявка».'
-            : 'В вашем отделе пока нет заявок.'}
+          {isHistory
+            ? 'Отработанных заявок пока нет.'
+            : scope === 'my'
+              ? 'Пока нет ваших заявок. Нажмите «+ Новая заявка».'
+              : 'В вашем отделе пока нет заявок.'}
         </Text>
       ) : null}
       <View style={styles.list}>
