@@ -4,23 +4,18 @@ import { router } from 'expo-router';
 import { AppHeader } from '../../../components/AppHeader';
 import { BigButton } from '../../../components/BigButton';
 import { Chip } from '../../../components/Chip';
-import { DateField, todayText } from '../../../components/DateField';
 import { Field } from '../../../components/Field';
 import { PhotoPicker } from '../../../components/PhotoPicker';
 import { Screen } from '../../../components/Screen';
-import { Segmented } from '../../../components/Segmented';
 import { SelectField } from '../../../components/SelectField';
 import { StatusPill } from '../../../components/StatusPill';
 import { Text } from '../../../components/Text';
 import { humanError } from '../../../lib/errors';
 import { addDepartmentByName, createInitiatorRequest, initiatorProfile, WORK_CATEGORIES } from '../../../lib/initiators';
 import { cleanDepartmentName, listDepartments, type Department } from '../../../lib/departments';
-import { parseDate } from '../../../lib/dates';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { uploadPhotos, forgetLocalPhotos, toPayload, type DraftPhoto } from '../../../lib/workPhotos';
 import { colors, font, space } from '../../../theme';
-
-type DueMode = 'plan' | 'date' | 'urgent';
 
 /** Экран «Новая заявка»: тот же состав сведений, что в бумажном шаблоне, но коротко и с фото. */
 export default function NewInitiatorRequestScreen() {
@@ -30,8 +25,7 @@ export default function NewInitiatorRequestScreen() {
   const [deptId, setDeptId] = useState<number | null>(null);
   const [place, setPlace] = useState('');
   const [photos, setPhotos] = useState<DraftPhoto[]>([]);
-  const [dueMode, setDueMode] = useState<DueMode>('plan');
-  const [dueText, setDueText] = useState(todayText());
+  const [urgent, setUrgent] = useState(false);
   const [urgentReason, setUrgentReason] = useState('');
   const [materials, setMaterials] = useState('');
   const [newDept, setNewDept] = useState('');
@@ -84,8 +78,7 @@ export default function NewInitiatorRequestScreen() {
     if (!deptId) return setError('Выберите отдел');
     if (!place.trim()) return setError('Укажите, где именно: аллея, подиум, бокс');
     if (photos.filter((p) => p.path || p.localUri).length < 1) return setError('Добавьте фото — без него заявку не принять');
-    if (dueMode === 'urgent' && !urgentReason.trim()) return setError('Укажите, почему это срочно');
-    if (dueMode === 'date' && !parseDate(dueText)) return setError('Дата: ДД.ММ.ГГГГ');
+    if (urgent && !urgentReason.trim()) return setError('Укажите, почему это срочно');
     setError(null);
     setBusy(true);
     try {
@@ -110,15 +103,14 @@ export default function NewInitiatorRequestScreen() {
         }
       }
       setProgress('Отправляю заявку…');
-      const due = dueMode === 'date' ? parseDate(dueText) : null;
       const res = await createInitiatorRequest({
         category,
         description: description.trim(),
         departmentId: deptId,
         place: place.trim(),
-        due,
-        urgent: dueMode === 'urgent',
-        urgentReason: dueMode === 'urgent' ? urgentReason.trim() : null,
+        due: null,
+        urgent: urgent,
+        urgentReason: urgent ? urgentReason.trim() : null,
         materials: materials.trim() || null,
         photos: toPayload(photos.map((p) => uploaded.get(p.key) ?? p)),
       });
@@ -192,29 +184,21 @@ export default function NewInitiatorRequestScreen() {
       </View>
 
       <View style={styles.due}>
-        <Text style={styles.label}>Срок</Text>
-        <Segmented<DueMode>
-          options={[
-            { value: 'plan', label: 'Планово' },
-            { value: 'date', label: 'К дате' },
-            { value: 'urgent', label: 'Срочно' },
-          ]}
-          value={dueMode}
-          onChange={setDueMode}
-        />
-        {dueMode === 'date' ? <DateField label="Желаемая дата" value={dueText} onChange={setDueText} quick={false} hint="" /> : null}
-        {dueMode === 'urgent' ? (
-          <View style={styles.urgent}>
-            <StatusPill tone="urgent" label="Если горит — звоните 031 833" />
-            <Field
-              label="Почему срочно *"
-              value={urgentReason}
-              onChangeText={setUrgentReason}
-              maxLength={200}
-              placeholder="Безопасность / монетизация / другое"
-            />
-          </View>
-        ) : null}
+        <View style={styles.urgentRow}>
+          <Chip label="Срочно" selected={urgent} onPress={() => setUrgent((u) => !u)} />
+          {urgent ? <StatusPill tone="urgent" label="Если горит — звоните 031 833" /> : null}
+        </View>
+        {urgent ? (
+          <Field
+            label="Почему срочно *"
+            value={urgentReason}
+            onChangeText={setUrgentReason}
+            maxLength={200}
+            placeholder="Безопасность / монетизация / другое"
+          />
+        ) : (
+          <Text style={styles.hint}>Срок назначит руководитель (МВСО)</Text>
+        )}
       </View>
 
       <Field
@@ -238,6 +222,7 @@ const styles = StyleSheet.create({
   newDept: { gap: space.s8 },
   link: { fontSize: font.small, color: colors.secondary, fontWeight: '600' },
   due: { gap: space.s8 },
+  urgentRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   urgent: { gap: space.s8 },
   deptLine: { fontSize: font.small, color: colors.muted, textAlign: 'center' },
   error: { color: colors.danger, fontSize: font.body },
