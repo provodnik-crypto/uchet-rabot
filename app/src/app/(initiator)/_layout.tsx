@@ -8,7 +8,7 @@ export default function InitiatorLayout() {
       <Stack.Screen name="index" options={{ title: 'Заявки', headerShown: false, animation: 'none' }} />
       <Stack.Screen name="req/new" options={{ title: 'Новая заявка', headerShown: false }} />
       <Stack.Screen name="req/[id]" options={{ title: 'Заявка', headerShown: false }} />
-      <Stack.Screen name="profile" options={{ title: 'Профиль' }} />
+      <Stack.Screen name="profile" options={{ title: 'Профиль', headerShown: false }} />
       <Stack.Screen name="feedback-form" options={{ title: 'Написать разработчику' }} />
     </Stack>
   );
