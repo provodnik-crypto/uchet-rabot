@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   gap: { width: space.s8 },
   title: { fontSize: font.title, fontWeight: '700' },
   h1: { fontSize: font.h1, fontWeight: '700', paddingRight: touch.icon + space.s8 },
-  bigRight: { position: 'absolute', right: space.s12 },
+  bigRight: { position: 'absolute', right: space.s12, zIndex: 10, elevation: 10 },
   subtitle: { fontSize: font.caption },
   icon: { width: touch.min, height: touch.min, alignItems: 'center', justifyContent: 'center' },
   round: {
