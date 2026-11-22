@@ -1,10 +1,17 @@
 -- Вход под пользователем: как PostgREST подставляет токен.
-create or replace function pg_temp.login_as(p_login text) returns void language plpgsql as $$
+-- uid_of — security definer: чтение employees.user_id не выдано authenticated, а login_as
+-- вызывается и внутри транзакции, где роль уже authenticated (повторные входы в сценарии).
+create or replace function pg_temp.uid_of(p_login text) returns uuid language plpgsql security definer as $$
 declare uid uuid;
 begin
   select user_id into uid from public.employees where login = p_login;
   if uid is null then raise exception 'нет пользователя %', p_login; end if;
-  perform set_config('request.jwt.claims', json_build_object('sub', uid, 'role', 'authenticated')::text, true);
+  return uid;
+end $$;
+
+create or replace function pg_temp.login_as(p_login text) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub', pg_temp.uid_of(p_login), 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
 end $$;
 

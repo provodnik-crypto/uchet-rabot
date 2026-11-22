@@ -30,6 +30,10 @@ export type InitiatorCard = Omit<InitiatorRequest, 'created_at' | 'due_date'> & 
   registered_at: string;
   due_at: string | null;
   photos: { path: string; thumb_path: string }[];
+  /** Этап «Оценки»: свою выполненную заявку можно оценить (1–5 + комментарий). */
+  can_rate?: boolean;
+  rating_score?: number | null;
+  rating_comment?: string | null;
 };
 
 export type InitiatorProfileInfo = {
@@ -112,5 +116,24 @@ export async function addDepartmentByName(name: string): Promise<number> {
 
 export async function setMyMobile(mobile: string | null): Promise<void> {
   const { error } = await supabase.rpc('set_my_mobile', { p_mobile: mobile });
+  if (error) throw error;
+}
+
+/** ---------- Этап «Оценки»: свои выполненные заявки без оценки (плашка + шлюз) ---------- */
+
+export type PendingRating = { id: number; number: string; subject: string };
+
+export async function initiatorPendingRatings(): Promise<PendingRating[]> {
+  const { data, error } = await supabase.rpc('initiator_pending_ratings');
+  if (error) throw error;
+  return (data ?? []) as PendingRating[];
+}
+
+export async function submitInitiatorRating(requestId: number, score: number, comment: string | null): Promise<void> {
+  const { error } = await supabase.rpc('submit_initiator_rating', {
+    p_request_id: requestId,
+    p_score: score,
+    p_comment: comment,
+  });
   if (error) throw error;
 }

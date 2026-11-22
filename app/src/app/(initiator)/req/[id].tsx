@@ -4,12 +4,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppHeader } from '../../../components/AppHeader';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
+import { Chip } from '../../../components/Chip';
+import { Field } from '../../../components/Field';
 import { LoadStatus } from '../../../components/LoadStatus';
 import { PhotoStrip } from '../../../components/PhotoStrip';
 import { Screen, useScreenRefresh } from '../../../components/Screen';
 import { PriorityPill, requestTone, StatusPill } from '../../../components/StatusPill';
 import { Text } from '../../../components/Text';
-import { cancelInitiatorRequest, initiatorRequestCard } from '../../../lib/initiators';
+import {
+  cancelInitiatorRequest,
+  initiatorRequestCard,
+  submitInitiatorRating,
+} from '../../../lib/initiators';
 import { humanError } from '../../../lib/errors';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
@@ -24,6 +30,10 @@ export default function InitiatorRequestScreen() {
   useScreenRefresh(q.reload);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [score, setScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [sendingRating, setSendingRating] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
   const r = q.data;
 
   async function cancel() {
@@ -37,6 +47,20 @@ export default function InitiatorRequestScreen() {
     } catch (e) {
       setError(humanError(e));
       setBusy(false);
+    }
+  }
+
+  async function sendRating() {
+    if (!r || !score) return;
+    setSendingRating(true);
+    setRatingError(null);
+    try {
+      await submitInitiatorRating(r.id, score, ratingComment.trim() || null);
+      await q.reload();
+    } catch (e) {
+      setRatingError(humanError(e));
+    } finally {
+      setSendingRating(false);
     }
   }
 
@@ -85,6 +109,37 @@ export default function InitiatorRequestScreen() {
           {!r.can_cancel && r.status === 'waiting' ? (
             <Text style={styles.note}>Отменить можно только через руководителя — заявку уже взяли в работу.</Text>
           ) : null}
+          {r.can_rate ? (
+            <Card style={styles.rateCard}>
+              <Text style={styles.rateTitle}>Как прошло? Поставьте оценку</Text>
+              <View style={styles.stars}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Chip key={n} label={'★'.repeat(n)} selected={score >= n} onPress={() => setScore(n)} />
+                ))}
+              </View>
+              <Field
+                label="Комментарий (по желанию)"
+                value={ratingComment}
+                onChangeText={setRatingComment}
+                multiline
+                maxLength={300}
+                placeholder="Что понравилось, что поправить"
+              />
+              {ratingError ? <Text style={styles.error}>{ratingError}</Text> : null}
+              <BigButton
+                title="Отправить оценку"
+                onPress={sendRating}
+                loading={sendingRating}
+                disabled={!score || sendingRating}
+              />
+              <Text style={styles.note}>Оценку и комментарий видит только руководитель, мастер их не видит.</Text>
+            </Card>
+          ) : null}
+          {r.rating_score ? (
+            <Text style={styles.line}>
+              Оценка: <Text style={styles.strong}>{'★'.repeat(r.rating_score)}{'☆'.repeat(5 - r.rating_score)}</Text>
+            </Text>
+          ) : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </Card>
       ) : null}
@@ -100,4 +155,7 @@ const styles = StyleSheet.create({
   strong: { fontWeight: '700' },
   note: { fontSize: font.small, color: colors.muted },
   error: { color: colors.danger, fontSize: font.body },
+  rateCard: { gap: space.s12 },
+  rateTitle: { fontSize: font.lead, fontWeight: '700' },
+  stars: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
 });

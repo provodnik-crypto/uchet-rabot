@@ -29,10 +29,13 @@ declare
   base text;
   n int := 1;
 begin
+  -- upper()/lower() в локали C не фолдят кириллицу — нормализуем кириллицу явно (translate).
   new.first_name := trim(new.first_name);
-  new.last_initial := nullif(upper(trim(coalesce(new.last_initial, ''))), '');
+  new.last_initial := nullif(upper(translate(trim(coalesce(new.last_initial, '')),
+    'абвгдеёжзийклмнопрстуфхцчшщъыьэюя', 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')), '');
   if new.role <> 'service' then
-    new.first_name := upper(left(new.first_name, 1)) || substr(new.first_name, 2);
+    new.first_name := upper(translate(left(new.first_name, 1), 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя',
+      'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ')) || substr(new.first_name, 2);
   end if;
   base := new.first_name || coalesce(' ' || new.last_initial || '.', '');
   new.display_name := base;

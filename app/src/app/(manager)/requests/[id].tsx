@@ -44,6 +44,9 @@ type InitiatorInfoRow = {
   place: string | null;
   materials: string | null;
   urgent_reason: string | null;
+  rating_score: number | null;
+  rating_comment: string | null;
+  rated_at: string | null;
 };
 
 const GRADE_TEXT: Record<number, string> = { 1: 'сотрудник', 2: 'менеджер отдела', 3: 'руководитель сектора' };
@@ -91,6 +94,16 @@ function InitiatorInfo({ requestId, dueAt }: { requestId: number; dueAt: string 
           {t}
         </Text>
       ))}
+      {data.rating_score ? (
+        <View>
+          <Text style={styles.body}>
+            Оценка: <Text style={styles.closed}>{'★'.repeat(data.rating_score)}{'☆'.repeat(5 - data.rating_score)}</Text>
+          </Text>
+          {data.rating_comment ? <Text style={styles.body}>Комментарий: {data.rating_comment}</Text> : null}
+        </View>
+      ) : (
+        <Text style={styles.hint}>Оценки ещё нет — появится, когда инициатор оценит.</Text>
+      )}
       <Text style={styles.hint}>Рабочий телефон 031XXX и мобильный видите только вы. Мастеру они не показываются.</Text>
     </Card>
   );

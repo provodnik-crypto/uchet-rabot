@@ -56,7 +56,7 @@ for t in "$here"/[0-9]*.sql; do
   # так тест 36 «проходил» ложно, пока констрейнт source не знал 'initiator').
   out=$( { cat "$here/helpers.sql"; echo "$legacy"; echo "$pre"; cat "$t"; } | "${psql_cmd[@]}" 2>&1 ) || true
   rc=$(printf '%s' "$out" | grep -c 'ПРОВАЛ' || true)
-  err=$(printf '%s' "$out" | grep -c '^psql.*ERROR' || true)
+  err=$(printf '%s' "$out" | grep -c '^psql.*ERROR\|^ERROR' || true)
   printf '%s\n' "$out" | sed -n "s/^.*NOTICE:  /  /p; /ERROR\|ПРОВАЛ/p"
   if [ "${rc:-0}" -gt 0 ] || [ "${err:-0}" -gt 0 ]; then
     echo "FAIL: $(basename "$t")"

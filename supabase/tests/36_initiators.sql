@@ -7,27 +7,29 @@ create or replace function pg_temp.photo(p_n int) returns jsonb language sql as 
                             'thumb_path', auth.uid() || '/' || md5('h' || p_n)::uuid || '_t.jpg') $$;
 
 begin;
-select pg_temp.login_as('boss');
 insert into public.departments (name) values ('ТестОтдел Инициаторов') on conflict do nothing;
-insert into public.employees (first_name, last_initial, role, grade, department_id, ldap_code)
-select 'Ольга', 'П.', 'initiator', 1, d.id, '777123' from public.departments d
-where d.name = 'ТестОтдел Инициаторов'
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-000000077723', '777123@uchet.local'),
+  ('00000000-0000-0000-0000-000000088845', '888456@uchet.local')
+on conflict do nothing;
+insert into public.employees (first_name, last_initial, role, grade, department_id, ldap_code, login, user_id)
+select 'Ольга', 'П', 'initiator', 1, d.id, '777123', '777123', '00000000-0000-0000-0000-000000077723'
+from public.departments d where d.name = 'ТестОтдел Инициаторов'
 on conflict (ldap_code) do nothing;
-insert into public.employees (first_name, last_initial, role, grade, department_id, ldap_code)
-select 'Павел', 'С.', 'initiator', 2, d.id, '888456', '031999' from public.departments d
-where d.name = 'ТестОтдел Инициаторов'
+insert into public.employees (first_name, last_initial, role, grade, department_id, ldap_code, work_phone, login, user_id)
+select 'Павел', 'С', 'initiator', 2, d.id, '888456', '031999', '888456', '00000000-0000-0000-0000-000000088845'
+from public.departments d where d.name = 'ТестОтдел Инициаторов'
 on conflict (ldap_code) do nothing;
 -- служебная заявка ITSM (department_id пустой) — инициаторы её видеть не должны
 insert into public.requests (number, source, store_id, operation, subject, registered_at, status, priority)
-values ('ITSM-INIT-TEST', 'itsm', public.default_store_id(), 'Ремонт', 'Служебная заявка вне отделов',
+values ('INC777777_0001', 'itsm', public.default_store_id(), 'Ремонт', 'Служебная заявка вне отделов',
         (now() at time zone public.app_timezone()), 'waiting', 3)
 on conflict (number) do nothing;
-reset role;
 
 create temp table _e on commit drop as select id, ldap_code, department_id from public.employees
   where ldap_code in ('777123', '888456');
-create temp table _r on commit drop as select id, number, subject, source from public.requests
-  where number = 'ITSM-INIT-TEST' or source = 'initiator';
+create temp view _r as select id, number, subject, source, status, priority, is_open from public.requests
+  where number = 'INC777777_0001' or source = 'initiator';
 create function pg_temp.init(p_ldap text) returns bigint language sql as $$
   select id from _e where ldap_code = p_ldap $$;
 create function pg_temp.rid(p_subj text) returns bigint language sql as $$
@@ -36,9 +38,7 @@ grant all on _e, _r to authenticated;
 grant execute on all functions in schema pg_temp to authenticated;
 
 -- whoami: инициатор входит, роль видна
-select pg_temp.login_as('boss');
-select set_config('request.jwt.claims', format('{"sub":"%s"}',
-  (select user_id from public.employees where id = pg_temp.init('777123'))), true);
+select pg_temp.login_as('777123');
 select pg_temp.assert((public.whoami()).role = 'initiator', 'whoami узнаёт инициатора');
 select pg_temp.assert(public.is_initiator() and public.current_employee_id() is null,
   'инициатор не проходит как мастер/руководитель');
@@ -63,15 +63,14 @@ select pg_temp.err(format('select public.create_initiator_request(''Демонт
 select pg_temp.assert((select count(*) from _r where source = 'initiator') = 2, 'обе заявки в списке');
 select pg_temp.assert((select status from _r where subject like 'Собрать%') = 'waiting', 'статус waiting');
 select pg_temp.assert((select priority from _r where subject like 'Стеллаж%') = 1, 'срочно — приоритет 1');
-select pg_temp.assert((select count(*) from public.extra_photos x join _r r on r.id = x.owner_id
-  where x.owner_kind = 'request') = 3, 'фото прикреплены к заявкам');
-select pg_temp.assert((select request_unread from public.list_requests('', 100, 'all', null, null, null)
-  join _r r on r.id = list_requests.id limit 0) is null, 'list_requests не мешает');
-
+select pg_temp.assert((
+  (select coalesce(jsonb_array_length(card -> 'photos'), 0) from public.initiator_request_card((select id from _r where subject like 'Собрать%')) card)
++ (select coalesce(jsonb_array_length(card -> 'photos'), 0) from public.initiator_request_card((select id from _r where subject like 'Стеллаж%')) card)
+  ) = 3, 'фото прикреплены к заявкам');
 -- RLS: свои + отдел видны, чужой отдел и ITSM — нет
 select pg_temp.assert((select count(*) from public.requests where source = 'initiator') = 2,
   'инициатор видит свои и заявки отдела');
-select pg_temp.assert((select count(*) from public.requests where number = 'ITSM-INIT-TEST') = 0,
+select pg_temp.assert((select count(*) from public.requests where number = 'INC777777_0001') = 0,
   'служебные заявки без отдела инициатору не видны');
 
 -- списки и карточка (42804-регрессия: типы RETURNS TABLE должны совпадать тип-в-тип)
@@ -89,18 +88,14 @@ select pg_temp.assert((select public.initiator_request_card((select id from _r w
   'карточка отдаёт заявку');
 
 -- отмена: чужую нельзя, свою waiting можно, повторно нельзя
-select pg_temp.login_as('boss');
-select set_config('request.jwt.claims', format('{"sub":"%s"}',
-  (select user_id from public.employees where id = pg_temp.init('888456'))), true);
-select pg_temp.assert(pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%''))'))
+select pg_temp.login_as('888456');
+select pg_temp.assert(pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%%''))'))
   like '%только свою%', 'чужую заявку отменить нельзя');
-select pg_temp.login_as('boss');
-select set_config('request.jwt.claims', format('{"sub":"%s"}',
-  (select user_id from public.employees where id = pg_temp.init('777123'))), true);
-select pg_temp.assert(pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%''))'))
+select pg_temp.login_as('777123');
+select pg_temp.assert(pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%%''))'))
   is null, 'свою waiting заявку отменить можно');
-select pg_temp.assert(pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%''))'))
-  like '%уже взяли%' or pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%''))'))
+select pg_temp.assert(pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%%''))'))
+  like '%уже взяли%' or pg_temp.err(format('select public.cancel_initiator_request((select id from _r where subject like ''Собрать%%''))'))
   like '%об отмене%', 'повторная отмена невозможна');
 select pg_temp.assert((select is_open from _r where subject like 'Собрать%') = false, 'отменённая закрыта');
 
@@ -111,11 +106,11 @@ select pg_temp.assert((public.request_extra_fields((select id from _r where subj
 select pg_temp.assert((public.request_extra_fields((select id from _r where subject like 'Стеллаж%')) ->> 'urgent_reason')
   = 'Безопасность, острый угол', 'персонал видит причину срочности');
 select pg_temp.assert((public.request_extra_fields((select id from _r where subject like 'Стеллаж%')) ->> 'creator_name')
-  like 'Павел С%', 'персонал видит «Имя П.»');
-select pg_temp.err(format('select public.request_initiator_info((select id from _r where subject like ''Стеллаж%''))'));
+  like 'Ольга П%', 'персонал видит «Имя П.»');
+select pg_temp.err(format('select public.request_initiator_info((select id from _r where subject like ''Стеллаж%%''))'));
 
 -- заявка инициатора доходит до мастера: взять можно как обычную
-select pg_temp.err(format('select public.take_request((select id from _r where subject like ''Стеллаж%''), null)'));
+select pg_temp.err(format('select public.take_request((select id from _r where subject like ''Стеллаж%%''), null)'));
 select pg_temp.assert((select status from _r where subject like 'Стеллаж%') = 'in_work', 'мастер взял заявку инициатора');
 reset role;
 commit;

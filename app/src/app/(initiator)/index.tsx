@@ -9,7 +9,7 @@ import { Segmented } from '../../components/Segmented';
 import { PriorityPill, requestTone, StatusPill } from '../../components/StatusPill';
 import { Text } from '../../components/Text';
 import { TourTarget, useTour } from '../../lib/tour';
-import { initiatorRequests, type InitiatorRequest } from '../../lib/initiators';
+import { initiatorPendingRatings, initiatorRequests, type InitiatorRequest } from '../../lib/initiators';
 import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font, radius, space, stroke, touch } from '../../theme';
 
@@ -54,6 +54,8 @@ export default function InitiatorRequestsScreen() {
   const q = useFocusQuery(() => initiatorRequests(scope), { key: `init:list:${scope}` });
   useScreenRefresh(q.reload);
   const list = q.data ?? [];
+  const pending = useFocusQuery(() => initiatorPendingRatings(), { key: 'init:pending' });
+  const pendingList = pending.data ?? [];
   const { autoStart } = useTour();
   useFocusEffect(useCallback(() => void autoStart('initiator', false), [autoStart]));
 
@@ -84,6 +86,18 @@ export default function InitiatorRequestsScreen() {
         </AppHeader>
       }
     >
+      {pendingList.map((p) => (
+        <Pressable
+          key={p.id}
+          accessibilityRole="button"
+          accessibilityLabel={`Оценить заявку № ${p.number}`}
+          onPress={() => router.push(`/req/${p.id}`)}
+          style={({ pressed }) => [styles.ratePlaque, pressed && { opacity: 0.8 }]}
+        >
+          <Text style={styles.rateText}>Оцените заявку № {p.number}</Text>
+          <Text style={styles.rateHint}>«+ Новая заявка» откроется после оценки</Text>
+        </Pressable>
+      ))}
       {list.length === 0 && !q.loading && !q.error ? (
         <Text style={styles.empty}>
           {scope === 'my'
@@ -116,4 +130,12 @@ const styles = StyleSheet.create({
   pills: { flexDirection: 'row', alignItems: 'center', gap: space.s6 },
   meta: { fontSize: font.small, color: colors.muted },
   empty: { fontSize: font.body, color: colors.muted, textAlign: 'center', paddingVertical: space.s24 },
+  ratePlaque: {
+    backgroundColor: colors.brand,
+    borderRadius: radius.card,
+    padding: space.s12,
+    gap: space.s4,
+  },
+  rateText: { fontSize: font.body, fontWeight: '700' },
+  rateHint: { fontSize: font.small },
 });
