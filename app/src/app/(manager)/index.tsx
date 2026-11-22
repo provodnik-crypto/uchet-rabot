@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   hello: { fontSize: font.title, fontWeight: '700' },
   sub: { fontSize: font.caption, color: colors.secondary },
   round: { width: touch.icon, height: touch.icon, borderRadius: radius.round, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
-  month: { gap: space.s4, backgroundColor: colors.black, paddingHorizontal: space.s16, paddingVertical: space.s14 },
+  month: { gap: space.s4, backgroundColor: colors.black, borderRadius: radius.card, paddingHorizontal: space.s16, paddingVertical: space.s14 },
   monthLabel: { fontSize: font.small, color: colors.onDarkMuted },
   monthSum: { fontSize: font.sum, fontWeight: '800', color: colors.brand },
   warn: { marginTop: space.s6, minHeight: touch.small, borderRadius: radius.small, backgroundColor: colors.darkPanel, paddingHorizontal: space.s12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.s8 },
