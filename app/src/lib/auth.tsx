@@ -6,7 +6,7 @@ import { loginToEmail } from './login';
 import { adoptServer, isConfigured, supabase } from './supabase';
 import { clearQueryCache, setQueryCacheUser } from './useQuery';
 
-export type Role = 'master' | 'manager';
+export type Role = 'master' | 'manager' | 'initiator';
 
 export type Me = { id: number; displayName: string; role: Role; login: string | null };
 

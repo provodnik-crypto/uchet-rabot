@@ -24,6 +24,7 @@ import {
   markRequestRead,
   refuseRequest,
   requestCard,
+  requestExtraFields,
   cantDo,
   type CantDoReason,
   requestLabel,
@@ -61,6 +62,9 @@ export default function RequestCardScreen() {
   const { me } = useAuth();
   const query = useFocusQuery(() => requestCard({ id: Number(id) }), { key: `card:${id}`, persist: false });
   const { data: r, error, loading, reload } = query;
+  // доп. поля заявки из магазина («Инициаторы»): место, материалы, кто подал
+  const extraQ = useFocusQuery(() => requestExtraFields(Number(id)), { key: `extra:${id}`, persist: false });
+  const extra = r?.source === 'initiator' ? extraQ.data : null;
   const [panel, setPanel] = useState<Panel>(null);
   const [menu, setMenu] = useState(false);
   const [workFor, setWorkFor] = useState<RequestWork | null>(null);
@@ -212,6 +216,15 @@ export default function RequestCardScreen() {
             </Text>
           </TourTarget>
           <RequestExtras requestId={r.id} />
+          {extra ? (
+            <View style={styles.initBox}>
+              {extra.department_name ? <Text style={styles.meta}>Отдел: {extra.department_name}</Text> : null}
+              {extra.place ? <Text style={styles.body}>Где: {extra.place}</Text> : null}
+              {extra.urgent_reason ? <Text style={styles.body}>Почему срочно: {extra.urgent_reason}</Text> : null}
+              {extra.materials ? <Text style={styles.body}>Материалы: {extra.materials}</Text> : null}
+              {extra.creator_name ? <Text style={styles.meta}>Подал(а): {extra.creator_name}</Text> : null}
+            </View>
+          ) : null}
           <Text style={styles.meta}>
             {[r.requester_name, r.registered_at ? formatRegistered(r.registered_at) : null].filter(Boolean).join(' · ')}
           </Text>
@@ -549,5 +562,6 @@ const styles = StyleSheet.create({
   bannerText: { fontSize: font.small, color: colors.onDark, lineHeight: lineHeight.small },
   work: { flexDirection: 'row', alignItems: 'flex-start', gap: space.s12, paddingVertical: space.s10 },
   workLine: { borderTopWidth: stroke.hair, borderTopColor: colors.border },
+  initBox: { gap: space.s4, padding: space.s10, borderRadius: radius.control, borderWidth: stroke.hair, borderColor: colors.border },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s6 },
 });

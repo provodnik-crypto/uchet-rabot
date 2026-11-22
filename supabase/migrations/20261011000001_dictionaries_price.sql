@@ -38,8 +38,8 @@ create table public.departments (
   created_at  timestamptz not null default now(),
   check (is_active or not is_default)  -- отдел по умолчанию нельзя выключить
 );
--- «Плитка» и «плитка» — один отдел.
-create unique index departments_name_uq on public.departments (lower(trim(name)));
+-- «Плитка» и «плитка» — один отдел (нормализация без зависимости от локали).
+create unique index departments_name_uq on public.departments (public.normalize_search(trim(name)));
 create unique index departments_one_default on public.departments (is_default) where is_default;
 
 insert into public.departments (name, is_default, sort) values

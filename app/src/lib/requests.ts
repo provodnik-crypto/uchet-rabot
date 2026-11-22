@@ -275,7 +275,7 @@ export type RequestWork = {
 export type RequestCard = {
   id: number;
   number: string;
-  source: 'manual' | 'itsm';
+  source: 'manual' | 'itsm' | 'initiator';
   subject: string | null;
   service: string | null;
   operation: string | null;
@@ -363,6 +363,18 @@ export const eventText = (kind: string) => ((eventLabel as Record<string, string
 
 export const requestCard = (ref: { id?: number; number?: string }) =>
   rpc<RequestCard | null>('request_card', { p_id: ref.id ?? null, p_number: ref.number ?? null });
+
+/** Доп. поля заявки инициатора (к ответу request_card клиент добавляет сам). */
+export type RequestExtraFields = {
+  place: string | null;
+  materials: string | null;
+  urgent_reason: string | null;
+  due_at: string | null;
+  department_name: string | null;
+  creator_name: string | null;
+};
+
+export const requestExtraFields = (id: number) => rpc<RequestExtraFields | null>('request_extra_fields', { p_id: id });
 
 // ---------- Счётчики на главной мастера ----------
 // «Новые» — загруженные после последнего просмотра списка; время просмотра хранится на телефоне.

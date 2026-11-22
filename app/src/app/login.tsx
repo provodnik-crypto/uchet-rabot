@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { Text, TextInput } from '../components/Text';
 import { BigButton } from '../components/BigButton';
 import { Card } from '../components/Card';
@@ -87,6 +88,9 @@ export default function LoginScreen() {
           </Pressable>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <BigButton title="Войти" onPress={submit} loading={busy} />
+          <Pressable onPress={() => router.push('/claim')} hitSlop={space.s8} style={styles.claim}>
+            <Text style={styles.claimText}>Первый вход по LDAP — заявки из магазина</Text>
+          </Pressable>
           <Text style={styles.note}>Нет логина? Его выдаёт руководитель.</Text>
         </Card>
       )}
@@ -106,6 +110,8 @@ const styles = StyleSheet.create({
   tick: { fontSize: font.lead, fontWeight: '800' },
   showText: { fontSize: font.body },
   error: { color: colors.danger, fontSize: font.body },
+  claim: { minHeight: 32, alignSelf: 'center', justifyContent: 'center' },
+  claimText: { fontSize: font.small, fontWeight: '600', color: colors.black },
   note: { color: colors.muted, fontSize: font.small, textAlign: 'center' },
   warn: { gap: space.s16 },
   warnText: { fontSize: font.body },

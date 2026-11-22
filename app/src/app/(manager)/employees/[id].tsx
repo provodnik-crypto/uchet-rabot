@@ -67,6 +67,7 @@ export default function EmployeeScreen() {
 
   const isSelf = emp.id === me?.id;
   const canLogin = emp.role !== 'service';
+  const gradeLabel = emp.grade === 2 ? 'Менеджер отдела' : emp.grade === 3 ? 'Руководитель сектора' : 'Сотрудник';
 
   return (
     <Screen>
@@ -76,6 +77,13 @@ export default function EmployeeScreen() {
         <Text style={styles.meta}>
           {roleLabel[emp.role]} · {emp.is_active ? 'активен' : 'отключён'}
         </Text>
+        {emp.role === 'initiator' ? (
+          <Text style={styles.meta}>
+            {gradeLabel}
+            {emp.work_phone ? ` · тел. ${emp.work_phone}` : ''}
+            {emp.ldap_code ? ` · LDAP ${emp.ldap_code}` : ''}
+          </Text>
+        ) : null}
         {emp.role === 'service' ? null : (
           <>
             <Field label="Имя" value={name} onChangeText={setName} error={fieldErrors.name} />
@@ -123,7 +131,17 @@ export default function EmployeeScreen() {
         )}
       </Card>
 
-      {canLogin && !emp.has_account ? (
+      {canLogin && !emp.has_account && emp.role === 'initiator' ? (
+        <Card style={styles.card}>
+          <Text style={styles.h}>Учётная запись</Text>
+          <Text style={styles.hint}>
+            Пароль инициатор придумает сам: он ставит приложение и на экране входа выбирает «Первый вход по LDAP».
+            Его LDAP: {emp.ldap_code ?? '—'}. Передайте номер лично.
+          </Text>
+        </Card>
+      ) : null}
+
+      {canLogin && !emp.has_account && emp.role !== 'initiator' ? (
         <Card style={styles.card}>
           <Text style={styles.h}>Создать учётную запись</Text>
           <AccountForm
@@ -199,6 +217,7 @@ const styles = StyleSheet.create({
   card: { gap: space.s12 },
   meta: { color: colors.muted, fontSize: font.small },
   h: { fontSize: font.body, fontWeight: '700' },
+  hint: { color: colors.muted, fontSize: font.small },
   msg: { fontSize: font.body },
   icons: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s6 },
   iconCell: { padding: space.s2, borderRadius: radius.round, borderWidth: stroke.outline, borderColor: 'transparent' },
