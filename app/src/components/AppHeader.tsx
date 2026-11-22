@@ -47,6 +47,10 @@ export function AppHeader({
   if (children || large)
     return (
       <View style={[styles.wrap, styles.big, { paddingTop: insets.top + space.s20 }]}>
+        {/* Правая кнопка (профиль и т.п.) видна и в большой шапке — раньше терялась. */}
+        {right ? (
+          <View style={[styles.bigRight, { top: insets.top + space.s4 }]}>{right}</View>
+        ) : null}
         {large ? <Text style={styles.h1}>{title}</Text> : null}
         {children}
       </View>
@@ -76,7 +80,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   gap: { width: space.s8 },
   title: { fontSize: font.title, fontWeight: '700' },
-  h1: { fontSize: font.h1, fontWeight: '700' },
+  h1: { fontSize: font.h1, fontWeight: '700', paddingRight: touch.icon + space.s8 },
+  bigRight: { position: 'absolute', right: space.s12 },
   subtitle: { fontSize: font.caption },
   icon: { width: touch.min, height: touch.min, alignItems: 'center', justifyContent: 'center' },
   round: {
