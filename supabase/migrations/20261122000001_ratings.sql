@@ -33,6 +33,8 @@ begin
   end if;
   if coalesce(p_score, 0) not between 1 and 5 then raise exception 'Поставьте оценку от 1 до 5'; end if;
   v_comment := nullif(trim(regexp_replace(coalesce(p_comment, ''), '\s+', ' ', 'g')), '');
+  -- низкая оценка (1–3): без объяснения нельзя — руководителю важно знать, что пошло не так
+  if p_score <= 3 and v_comment is null then raise exception 'Расскажите, что пошло не так'; end if;
   if length(coalesce(v_comment, '')) > 300 then raise exception 'Слишком длинно: до 300 знаков'; end if;
   perform public.assert_clean_text(v_comment, 'В комментарии');
   insert into request_ratings (request_id, employee_id, score, comment)

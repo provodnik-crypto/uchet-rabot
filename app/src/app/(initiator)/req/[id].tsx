@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppHeader } from '../../../components/AppHeader';
 import { BigButton } from '../../../components/BigButton';
 import { Card } from '../../../components/Card';
-import { Chip } from '../../../components/Chip';
 import { Field } from '../../../components/Field';
-import { LoadStatus } from '../../../components/LoadStatus';
 import { PhotoStrip } from '../../../components/PhotoStrip';
 import { Screen, useScreenRefresh } from '../../../components/Screen';
 import { PriorityPill, requestTone, StatusPill } from '../../../components/StatusPill';
@@ -66,7 +64,6 @@ export default function InitiatorRequestScreen() {
 
   return (
     <Screen header={<AppHeader title={r ? `Заявка № ${r.number}` : 'Заявка'} back />} status={q}>
-      <LoadStatus status={q} />
       {r ? (
         <Card style={styles.card}>
           <View style={styles.pills}>
@@ -83,7 +80,7 @@ export default function InitiatorRequestScreen() {
           </Text>
           <PhotoStrip photos={r.photos as unknown as { entry_id: number; photo_position: number; path: string; thumb_path: string }[]} />
           <Text style={styles.line}>
-            Подала: <Text style={styles.strong}>{r.creator_name}</Text>
+            Инициатор: <Text style={styles.strong}>{r.creator_name}</Text>
           </Text>
           <Text style={styles.line}>
             Мастер: <Text style={styles.strong}>{r.master_name ?? 'ещё не назначен'}</Text>
@@ -111,26 +108,48 @@ export default function InitiatorRequestScreen() {
           ) : null}
           {r.can_rate ? (
             <Card style={styles.rateCard}>
-              <Text style={styles.rateTitle}>Как прошло? Поставьте оценку</Text>
+              <Text style={styles.rateTitle}>Оцените, насколько вы довольны выполненной заявкой</Text>
               <View style={styles.stars}>
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <Chip key={n} label={'★'.repeat(n)} selected={score >= n} onPress={() => setScore(n)} />
+                  <Pressable
+                    key={n}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Оценка ${n} из 5`}
+                    onPress={() => setScore(n)}
+                    hitSlop={6}
+                  >
+                    <Text style={[styles.star, score >= n ? styles.starOn : styles.starOff]}>★</Text>
+                  </Pressable>
                 ))}
               </View>
-              <Field
-                label="Комментарий (по желанию)"
-                value={ratingComment}
-                onChangeText={setRatingComment}
-                multiline
-                maxLength={300}
-                placeholder="Что понравилось, что поправить"
-              />
+              {score > 0 && score <= 3 ? (
+                <>
+                  <Text style={styles.rateLabel}>Что пошло не так?</Text>
+                  <Field
+                    label="Комментарий"
+                    value={ratingComment}
+                    onChangeText={setRatingComment}
+                    multiline
+                    maxLength={300}
+                    placeholder="Расскажите, что поправить"
+                  />
+                </>
+              ) : score > 0 ? (
+                <Field
+                  label="Комментарий (по желанию)"
+                  value={ratingComment}
+                  onChangeText={setRatingComment}
+                  multiline
+                  maxLength={300}
+                  placeholder="Что понравилось, что поправить"
+                />
+              ) : null}
               {ratingError ? <Text style={styles.error}>{ratingError}</Text> : null}
               <BigButton
                 title="Отправить оценку"
                 onPress={sendRating}
                 loading={sendingRating}
-                disabled={!score || sendingRating}
+                disabled={!score || sendingRating || (score <= 3 && !ratingComment.trim())}
               />
               <Text style={styles.note}>Оценку и комментарий видит только руководитель, мастер их не видит.</Text>
             </Card>
@@ -157,5 +176,9 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: font.body },
   rateCard: { gap: space.s12 },
   rateTitle: { fontSize: font.lead, fontWeight: '700' },
-  stars: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
+  stars: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
+  star: { fontSize: 32 },
+  starOn: { color: colors.brand },
+  starOff: { color: colors.border },
+  rateLabel: { fontSize: font.body, fontWeight: '700' },
 });

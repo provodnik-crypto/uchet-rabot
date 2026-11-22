@@ -58,18 +58,32 @@ select pg_temp.assert(pg_temp.err('select public.submit_initiator_rating((select
 
 -- успешная оценка; повторная — отказ; pending пуст; шлюз открыт
 select pg_temp.login_as('777123');
+select pg_temp.assert(pg_temp.err('select public.submit_initiator_rating((select id from _r), 3::smallint, null)')
+  like '%что пошло не так%', 'низкая оценка без комментария — отказ');
 select pg_temp.assert(pg_temp.err('select public.submit_initiator_rating((select id from _r), 4::smallint, ''Спасибо, быстро'')')
   is null, 'свою выполненную заявку оценили');
+select pg_temp.assert(pg_temp.err('select public.submit_initiator_rating((select id from _r), 4::smallint, null)')
+  like '%уже оценена%', 'повторная оценка невозможна');
 select pg_temp.assert(pg_temp.err('select public.submit_initiator_rating((select id from _r), 5::smallint, null)')
   like '%уже оценена%', 'повторная оценка невозможна');
 select pg_temp.assert((select count(*) from public.initiator_pending_ratings()) = 0,
   'после оценки «Оцените» пусто');
-select pg_temp.assert(pg_temp.err(format('select public.create_initiator_request(''Ремонт'', ''Шкаф после оценки'', null, ''Подиум 3'', null, false, null, null, jsonb_build_array(%L::jsonb))',
-  pg_temp.photo(3)::text)) is null, 'после оценки новая заявка создаётся');
+create temp table _r2 on commit drop as
+  select (public.create_initiator_request('Ремонт', 'Шкаф после оценки', null, 'Подиум 3', null,
+          false, null, null, jsonb_build_array(pg_temp.photo(3))) ->> 'id')::bigint as id;
+grant all on _r2 to authenticated;
+select pg_temp.assert((select id from _r2) is not null, 'после оценки новая заявка создаётся');
 select pg_temp.assert((select public.initiator_request_card((select id from _r)) ->> 'can_rate') = 'false',
   'карточка: can_rate сброшен после оценки');
 select pg_temp.assert((select public.initiator_request_card((select id from _r)) ->> 'rating_score') = '4',
   'карточка показывает свою оценку');
+
+-- вторая заявка: высокая оценка (4–5) без комментария принимается
+reset role;
+update public.requests set status = 'accepted' where subject = 'Шкаф после оценки' and source = 'initiator';
+select pg_temp.login_as('777123');
+select pg_temp.assert(pg_temp.err('select public.submit_initiator_rating((select id from _r2), 5::smallint, null)')
+  is null, 'высокая оценка без комментария принимается');
 
 -- мастер не видит оценки (таблица без грантов); руководитель видит оценку и комментарий
 select pg_temp.login_as('kolya');
