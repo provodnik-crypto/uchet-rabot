@@ -37,7 +37,7 @@ export default function SendRequestScreen() {
       <Screen status={query} header={header}>
         <Section>
           <Text style={styles.body}>
-            {r.status === 'review' ? 'Заявка уже на проверке у руководителя. Отправлять ещё раз не нужно.' : 'Заявка сейчас не у вас в работе — отправить её нельзя.'}
+            {r.status === 'review' ? 'Заявка уже на проверке у МВСО. Отправлять ещё раз не нужно.' : 'Заявка сейчас не у вас в работе — отправить её нельзя.'}
           </Text>
           <BigButton title="На главную" variant="dark" onPress={() => router.dismissTo('/')} />
         </Section>
@@ -112,12 +112,12 @@ export default function SendRequestScreen() {
           maxLength={1000}
           placeholder="Например: заменил 4 крепежа, механизм работает"
           placeholderTextColor={colors.muted}
-          accessibilityLabel="Комментарий руководителю"
+          accessibilityLabel="Комментарий МВСО"
           style={styles.input}
         />
         </View>
       </Section>
-      <Text style={styles.meta}>После отправки заявка уйдёт руководителю, а вы сможете взять следующую.</Text>
+      <Text style={styles.meta}>После отправки заявка уйдёт МВСО, а вы сможете взять следующую.</Text>
     </Screen>
   );
 }

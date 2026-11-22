@@ -31,7 +31,7 @@ begin
   select * into ev from request_events where id = p_event and kind = 'comment' for update;
   if ev.id is null or ev.deleted_at is not null then raise exception 'Сообщение не найдено'; end if;
   if ev.author_id is distinct from me and not public.is_manager() then
-    raise exception 'Удалить чужое сообщение может только руководитель';
+    raise exception 'Удалить чужое сообщение может только МВСО';
   end if;
   update request_events set comment = null, deleted_at = now(), deleted_by = me where id = p_event;
 end $$;

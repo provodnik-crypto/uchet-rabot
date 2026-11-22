@@ -25,7 +25,7 @@ reset role;
 
 select pg_temp.login_as('misha');
 select pg_temp.assert(pg_temp.err(format('select public.edit_request_comment(%s, %L)', (select min(id) from _e), 'чужое')) = 'Исправить можно только своё сообщение', 'чужое не исправить');
-select pg_temp.assert(pg_temp.err(format('select public.delete_request_comment(%s)', (select min(id) from _e))) = 'Удалить чужое сообщение может только руководитель', 'чужое мастер не удалит');
+select pg_temp.assert(pg_temp.err(format('select public.delete_request_comment(%s)', (select min(id) from _e))) = 'Удалить чужое сообщение может только МВСО', 'чужое мастер не удалит');
 reset role;
 
 select pg_temp.assert(public.request_unread((select id from _r), (select id from public.employees where login = 'boss'), true) = 2, 'у руководителя 2 непрочитанных');

@@ -148,7 +148,7 @@ begin
     'events', coalesce((
       select jsonb_agg(jsonb_build_object('kind', ev.kind, 'at', ev.created_at, 'from', ev.from_status, 'to', ev.to_status,
                                           'comment', ev.comment, 'mine', ev.author_id = me,
-                                          'author', case when e.role = 'manager' then 'Руководитель' else e.display_name end)
+                                          'author', case when e.role = 'manager' then 'МВСО' else e.display_name end)
                        order by ev.created_at desc, ev.id desc)
       from request_events ev left join employees e on e.id = ev.author_id
       where ev.request_id = r.id), '[]'::jsonb)

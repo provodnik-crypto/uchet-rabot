@@ -67,7 +67,7 @@ export default function HistoryScreen() {
                 r.request_number && activeNumbers.has(r.request_number) ? (
                   <BigButton title="Исправить и отправить снова" onPress={() => router.push({ pathname: '/fix', params: { id: String(r.entry_id) } })} />
                 ) : (
-                  <Text style={styles.note}>Заявка уже не у вас в работе — исправить эту работу может руководитель.</Text>
+                  <Text style={styles.note}>Заявка уже не у вас в работе — исправить эту работу может МВСО.</Text>
                 )
               ) : null}
             </Fragment>

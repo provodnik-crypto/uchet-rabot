@@ -89,7 +89,7 @@ export default function MasterHome() {
             ? 'Заявку передали подрядчику'
             : n.status === 'closed'
               ? 'Заявку закрыли по вашей просьбе'
-              : 'Руководитель ответил на ваше сообщение',
+              : 'МВСО ответил на ваше сообщение',
       text: n.status === 'rejected' ? `Отклонено: ${n.answer ?? '—'}` : n.answer ?? n.text,
       onPress: () => router.push('/req/report'),
     })),
@@ -100,7 +100,7 @@ export default function MasterHome() {
       onPress: () => openCard(n.id),
     })),
     ...(rejected
-      ? [{ key: 'rej', red: true, title: `Отклонено работ: ${rejected}`, text: 'Комментарий руководителя — в «Истории»', onPress: () => router.push('/history') }]
+      ? [{ key: 'rej', red: true, title: `Отклонено работ: ${rejected}`, text: 'Комментарий МВСО — в «Истории»', onPress: () => router.push('/history') }]
       : []),
     ...(mineQ.data ?? [])
       .filter((m) => m.id !== active?.id && !m.returned_comment && (m.status === 'paused' || !m.responsible))
@@ -171,7 +171,7 @@ export default function MasterHome() {
               <Text style={styles.meta}>
                 {[works != null ? `Внесено работ: ${works}` : null, day ? `${day}-й день` : null].filter(Boolean).join(' · ') || 'В работе'}
               </Text>
-              {active.pause_request ? <Text style={styles.meta}>Запрос на приостановку у руководителя</Text> : null}
+              {active.pause_request ? <Text style={styles.meta}>Запрос на приостановку у МВСО</Text> : null}
             </View>
             {returned ? (
               <BigButton title="Исправить" variant="dark" size="big" onPress={() => openCard(active.id)} />
@@ -210,7 +210,7 @@ export default function MasterHome() {
               <Text style={styles.monthMeta}>Работ: {team?.entries ?? '…'}</Text>
             </View>
           </View>
-          <Text style={styles.monthNote}>Всё, что команда магазина сделала за месяц и руководитель принял.</Text>
+          <Text style={styles.monthNote}>Всё, что команда магазина сделала за месяц и МВСО принял.</Text>
         </View>
       </TourTarget>
 

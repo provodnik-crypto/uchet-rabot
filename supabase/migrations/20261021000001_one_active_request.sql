@@ -158,7 +158,7 @@ begin
   if length(trim(p_title)) > 200 then raise exception 'Слишком длинно: до 200 знаков, подробности — ниже'; end if;
   if p_assignee is not null and (not v_manager or not exists (
     select 1 from employees where id = p_assignee and is_active and role = 'master')) then
-    raise exception 'Назначить может только руководитель — и только мастеру';
+    raise exception 'Назначить может только МВСО — и только мастеру';
   end if;
   if not v_manager then
     perform 1 from employees where id = me for update;

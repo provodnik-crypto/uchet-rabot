@@ -4,7 +4,7 @@
 create or replace function public.require_manager() returns void
 language plpgsql stable security definer set search_path = public as $$
 begin
-  if not public.is_manager() then raise exception 'Доступно только руководителю' using errcode = '42501'; end if;
+  if not public.is_manager() then raise exception 'Доступно только МВСО' using errcode = '42501'; end if;
 end $$;
 
 -- ---------- Очередь «На оценке» ----------

@@ -157,11 +157,11 @@ begin
   if found then
     if v_shift.author_id <> me then raise exception 'Нет доступа' using errcode = '42501'; end if;
     if (v_shift.submitted_at at time zone public.app_timezone())::date <> public.app_today() and not public.is_manager() then
-      raise exception 'Смену можно изменить только в день отправки. Обратитесь к руководителю.';
+      raise exception 'Смену можно изменить только в день отправки. Обратитесь к МВСО.';
     end if;
     if exists (select 1 from work_entries e left join entry_money m on m.entry_id = e.id
                where e.shift_id = v_shift.id and (e.status = 'rejected' or m.price_source = 'manual')) then
-      raise exception 'Руководитель уже обработал работы этой смены, изменить её нельзя.';
+      raise exception 'МВСО уже обработал работы этой смены, изменить её нельзя.';
     end if;
   end if;
 

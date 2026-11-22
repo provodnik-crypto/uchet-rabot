@@ -1,4 +1,4 @@
--- Фото результата заявки и фото из «Сообщить руководителю» (extra_photos) видит руководитель
+-- Фото результата заявки и фото из «Сообщить МВСО» (extra_photos) видит руководитель
 -- (автор и так видит свою папку). Политика хранилища вызывает функцию с правами владельца.
 -- Откат: supabase/rollback/20261023000002_extra_photos_read_down.sql
 create function public.can_see_extra_photo(p_name text) returns boolean

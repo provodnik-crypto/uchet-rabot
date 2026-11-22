@@ -26,7 +26,7 @@ export default function ClaimScreen() {
 
   async function submit() {
     const code = ldap.trim();
-    if (!/^\d{3,20}$/.test(code)) return setError('LDAP: от 3 до 20 цифр — его выдал руководитель');
+    if (!/^\d{3,20}$/.test(code)) return setError('LDAP: от 3 до 20 цифр — его выдал МВСО');
     if (password.length < 6) return setError('Пароль: не меньше 6 символов');
     if (password !== repeat) return setError('Пароли не совпадают');
     setError(null);
@@ -46,7 +46,7 @@ export default function ClaimScreen() {
     <Screen header={<AppHeader title="Первый вход" back />}>
       <Card style={styles.form}>
         <Text style={styles.note}>
-          Руководитель заранее записал вас в «Сотрудниках». Введите свой LDAP (личный номер) и придумайте пароль.
+          МВСО заранее записал вас в «Сотрудниках». Введите свой LDAP (личный номер) и придумайте пароль.
         </Text>
         <Field
           label="LDAP"
@@ -97,7 +97,7 @@ export default function ClaimScreen() {
         </Pressable>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <BigButton title="Создать пароль и войти" onPress={submit} loading={busy} />
-        <Text style={styles.hint}>Если LDAP не подходит — попросите руководителя проверить запись в «Сотрудниках».</Text>
+        <Text style={styles.hint}>Если LDAP не подходит — попросите МВСО проверить запись в «Сотрудниках».</Text>
       </Card>
     </Screen>
   );

@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const m = await loadMe();
       setQueryCacheUser(m?.id ?? null);
       setMe(m);
-      setAccessError(m ? null : 'Учётная запись отключена или не привязана к сотруднику. Обратитесь к руководителю.');
+      setAccessError(m ? null : 'Учётная запись отключена или не привязана к сотруднику. Обратитесь к МВСО.');
       if (m) AsyncStorage.setItem(ME_KEY, JSON.stringify({ ...m, userId: s.user.id })).catch(() => {});
       else AsyncStorage.removeItem(ME_KEY).catch(() => {});
     } catch (e) {

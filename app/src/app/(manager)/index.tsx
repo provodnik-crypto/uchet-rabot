@@ -66,7 +66,7 @@ export default function ManagerHome() {
       <View style={styles.top}>
         <View style={styles.flex}>
           <Text style={styles.hello}>{me?.displayName}</Text>
-          <Text style={styles.sub}>Руководитель</Text>
+          <Text style={styles.sub}>МВСО</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Выйти" onPress={signOut} style={styles.round}>
           <Icon name="logout" size={iconSize.medium} />
@@ -141,7 +141,7 @@ export default function ManagerHome() {
         <ListRow tourId="mhome.help" title="Помощь" subtitle="обучение по шагам и «Что нового»" icon="doc" href="/help" last />
       </Card>
 
-      <Text style={styles.role}>Вы вошли как руководитель · {me?.login}</Text>
+      <Text style={styles.role}>Вы вошли как МВСО · {me?.login}</Text>
       <Text style={styles.role}>{appVersionLabel()}</Text>
     </Screen>
   );

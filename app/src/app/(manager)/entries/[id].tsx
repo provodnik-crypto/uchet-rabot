@@ -104,7 +104,7 @@ function AdminEntryForm({ e }: { e: AdminEntry }) {
         {workPhotos.length ? <PhotoStrip photos={workPhotos} /> : null}
       </Card>
       <Card style={styles.card}>
-        <DateField label="Дата работы" value={dateText} onChange={setDateText} hint="Мастер дату не выбирает — работа датируется днём внесения. Исправить может только руководитель." />
+        <DateField label="Дата работы" value={dateText} onChange={setDateText} hint="Мастер дату не выбирает — работа датируется днём внесения. Исправить может только МВСО." />
         {dateText !== formatDate(e.work_date) ? (
           <BigButton
             title="Сменить дату"

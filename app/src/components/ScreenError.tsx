@@ -13,7 +13,7 @@ export function ScreenError({ error, retry }: ErrorBoundaryProps) {
   return (
     <View style={styles.box}>
       <Text style={styles.title}>Что-то пошло не так</Text>
-      <Text style={styles.text}>Экран не открылся. Нажмите «Повторить». Если не помогает — вернитесь на главную и сообщите руководителю.</Text>
+      <Text style={styles.text}>Экран не открылся. Нажмите «Повторить». Если не помогает — вернитесь на главную и сообщите МВСО.</Text>
       <Text style={styles.detail}>{String(error?.message ?? error).slice(0, 200)}</Text>
       <BigButton title="Повторить" onPress={retry} />
       <BigButton

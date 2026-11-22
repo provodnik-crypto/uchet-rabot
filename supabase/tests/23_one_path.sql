@@ -40,7 +40,7 @@ select pg_temp.assert((select status from public.requests where id = (select id 
 select pg_temp.assert(jsonb_array_length(public.request_card((select id from _r)) -> 'result_photos') = 2, 'фото результата в карточке');
 select pg_temp.assert(pg_temp.err(format('select public.delete_my_work(%s)', (select min(id) from _w))) = 'Эту работу уже нельзя удалить', 'после отправки — только руководитель');
 -- создать заявку мастер не может; плановая работа — одна за раз, по общей нумерации
-select pg_temp.assert(pg_temp.err($q$select public.create_manual_request('Хочу заявку')$q$) like 'Создавать заявки может только руководитель%', 'мастер не создаёт заявки');
+select pg_temp.assert(pg_temp.err($q$select public.create_manual_request('Хочу заявку')$q$) like 'Создавать заявки может только МВСО%', 'мастер не создаёт заявки');
 select pg_temp.assert(pg_temp.err($q$select public.submit_shift(jsonb_build_object('client_uuid', gen_random_uuid(), 'work_date', public.app_today(),
   'entries', jsonb_build_array(pg_temp.work(1) || jsonb_build_object('request_number', 'RFS261023_' || '9999')))))$q$) is not null and not exists (select 1 from public.requests where number = 'RFS261023_' || '9999'), 'номер вручную не заводит заявку');
 -- сообщение руководителю

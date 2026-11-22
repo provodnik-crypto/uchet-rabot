@@ -104,7 +104,7 @@ export default function InitiatorRequestScreen() {
             <BigButton title="Отменить заявку" variant="secondary" onPress={cancel} loading={busy} disabled={busy} />
           ) : null}
           {!r.can_cancel && r.status === 'waiting' ? (
-            <Text style={styles.note}>Отменить можно только через руководителя — заявку уже взяли в работу.</Text>
+            <Text style={styles.note}>Отменить можно только через МВСО — заявку уже взяли в работу.</Text>
           ) : null}
           {r.can_rate ? (
             <Card style={styles.rateCard}>
@@ -151,7 +151,7 @@ export default function InitiatorRequestScreen() {
                 loading={sendingRating}
                 disabled={!score || sendingRating || (score <= 3 && !ratingComment.trim())}
               />
-              <Text style={styles.note}>Оценку и комментарий видит только руководитель, мастер их не видит.</Text>
+              <Text style={styles.note}>Оценку и комментарий видит только МВСО, мастер их не видит.</Text>
             </Card>
           ) : null}
           {r.rating_score ? (

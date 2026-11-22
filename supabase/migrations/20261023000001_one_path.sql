@@ -7,7 +7,7 @@
 -- * Мастер не создаёт заявки: create_manual_request и номера в сменах — только руководитель.
 --   «Работа без заявки» — плановая работа (start_planned_work): заявка № N, сразу «В работе» у мастера.
 -- * «Отправить на проверку» с фото результата: минимум 1, до 3 (send_request_for_review_photos).
--- * «Сообщить руководителю»: master_reports — текст и до 3 фото; руководитель создаёт заявку, отмечает
+-- * «Сообщить МВСО»: master_reports — текст и до 3 фото; руководитель создаёт заявку, отмечает
 --   «прочитано» (при открытии) или отклоняет с причиной; мастер видит ответ.
 -- * Фото результата и сообщений — таблица extra_photos; ночная чистка фото их не удаляет.
 -- Только добавляет и сужает права мастера; старое приложение работает (кроме создания заявок мастером).
@@ -240,16 +240,16 @@ declare d text;
 begin
   d := pg_get_functiondef('public.create_manual_request(text, text, bigint)'::regprocedure);
   d := replace(d, $r$  if length(trim(coalesce(p_title, ''))) < 3 then raise exception 'Напишите, что нужно сделать'; end if;$r$,
-    $r$  if not v_manager then raise exception 'Создавать заявки может только руководитель. Сообщите ему: «Заявки» → «Сообщить руководителю».'; end if;
+    $r$  if not v_manager then raise exception 'Создавать заявки может только МВСО. Сообщите ему: «Заявки» → «Сообщить МВСО».'; end if;
   if length(trim(coalesce(p_title, ''))) < 3 then raise exception 'Напишите, что нужно сделать'; end if;$r$);
-  if position('Создавать заявки может только руководитель' in d) = 0 then raise exception 'create_manual_request: не нашёл место'; end if;
+  if position('Создавать заявки может только МВСО' in d) = 0 then raise exception 'create_manual_request: не нашёл место'; end if;
   execute d;
 
   d := pg_get_functiondef('public.submit_shift(jsonb)'::regprocedure);
   d := replace(d, '      insert into requests (number, created_by) values (v_num, me) on conflict (number) do nothing;
       select id into v_req from requests where number = v_num;',
     '      select id into v_req from requests where number = v_num;
-      if v_req is null then raise exception ''Заявка % не найдена. Номер вводить не нужно — сообщите руководителю'', v_num; end if;');
+      if v_req is null then raise exception ''Заявка % не найдена. Номер вводить не нужно — сообщите МВСО'', v_num; end if;');
   if position('Номер вводить не нужно' in d) = 0 then raise exception 'submit_shift: не нашёл место'; end if;
   execute d;
 
@@ -307,7 +307,7 @@ begin
   perform public.send_request_for_review(p_id, p_comment);
 end $$;
 
--- ---------- «Сообщить руководителю» ----------
+-- ---------- «Сообщить МВСО» ----------
 create table public.master_reports (
   id bigserial primary key,
   author_id bigint not null references public.employees(id),

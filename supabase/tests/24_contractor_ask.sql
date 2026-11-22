@@ -22,7 +22,7 @@ select pg_temp.assert(pg_temp.err(format($q$select public.request_contractor(%s,
   = 'Напишите, почему нужен подрядчик', 'без причины нельзя');
 select public.request_contractor((select id from _r where operation = 'Заменить светильник'), 'Нужна вышка 8 м');
 select pg_temp.assert(pg_temp.err(format($q$select public.request_contractor(%s, 'Ещё раз')$q$, (select id from _r where operation = 'Заменить светильник')))
-  = 'Просьба уже у руководителя — дождитесь ответа', 'вторую просьбу не отправить');
+  = 'Просьба уже у МВСО — дождитесь ответа', 'вторую просьбу не отправить');
 select pg_temp.assert((select status from public.requests where id = (select id from _r where operation = 'Заменить светильник')) = 'in_work', 'до решения заявка в работе');
 reset role;
 

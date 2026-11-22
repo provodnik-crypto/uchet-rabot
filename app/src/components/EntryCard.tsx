@@ -56,7 +56,7 @@ export function EntryCard({ name, category, isCustom, quantity, unitCode, depart
       </View>
       {note ? <Text style={styles.meta}>Примечание: {note}</Text> : null}
       {extra}
-      {comment ? <Text style={styles.comment}>Руководитель: {comment}</Text> : null}
+      {comment ? <Text style={styles.comment}>МВСО: {comment}</Text> : null}
     </Card>
   );
 }

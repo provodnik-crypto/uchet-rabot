@@ -1,4 +1,4 @@
--- «Передать подрядчику» от мастера — просьба руководителю (как «Сообщить руководителю», с привязкой к заявке).
+-- «Передать подрядчику» от мастера — просьба руководителю (как «Сообщить МВСО», с привязкой к заявке).
 -- Только добавляет: столбец about_request, статус 'contractor', функцию request_contractor, действие 'contractor'
 -- в decide_master_report и поля about_request/about_number в списках. Откат: supabase/rollback/20261024000001_contractor_ask_down.sql
 
@@ -22,7 +22,7 @@ begin
     raise exception 'Попросить можно только по своей заявке в работе';
   end if;
   if exists (select 1 from master_reports where about_request = p_id and status in ('new', 'read')) then
-    raise exception 'Просьба уже у руководителя — дождитесь ответа';
+    raise exception 'Просьба уже у МВСО — дождитесь ответа';
   end if;
   insert into master_reports (author_id, text, about_request) values (me, left(trim(p_reason), 1000), p_id) returning id into v_id;
   perform public.log_request_event(p_id, 'comment', null, null, 'Прошу передать подрядчику: ' || left(trim(p_reason), 900));

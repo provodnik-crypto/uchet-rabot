@@ -280,7 +280,7 @@ export default function EntryScreen() {
             </View>
           </TourTarget>
           {errors.unit ? <Text style={styles.err}>{errors.unit}</Text> : null}
-          <Text style={styles.meta}>Работу вне прайса проверит руководитель. До этого она со статусом «На оценке».</Text>
+          <Text style={styles.meta}>Работу вне прайса проверит МВСО. До этого она со статусом «На оценке».</Text>
         </Card>
       ) : (
         <Card style={styles.card}>

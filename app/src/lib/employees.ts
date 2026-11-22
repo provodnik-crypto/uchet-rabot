@@ -19,7 +19,7 @@ export type Employee = {
 
 export const roleLabel: Record<EmployeeRole, string> = {
   master: 'Мастер',
-  manager: 'Руководитель',
+  manager: 'МВСО',
   service: 'Служебный',
   initiator: 'Инициатор',
 };

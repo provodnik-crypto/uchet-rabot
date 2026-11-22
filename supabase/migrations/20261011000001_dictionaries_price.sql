@@ -50,7 +50,7 @@ insert into public.departments (name, is_default, sort) values
 create or replace function public.set_default_department(p_id smallint) returns void
 language plpgsql security invoker set search_path = public as $$
 begin
-  if not public.is_manager() then raise exception 'Доступно только руководителю' using errcode = '42501'; end if;
+  if not public.is_manager() then raise exception 'Доступно только МВСО' using errcode = '42501'; end if;
   if not exists (select 1 from departments where id = p_id and is_active) then
     raise exception 'Отдел не найден или выключен';
   end if;
@@ -148,7 +148,7 @@ returns table (
 )
 language plpgsql stable security definer set search_path = public as $$
 begin
-  if not public.is_manager() then raise exception 'Доступно только руководителю' using errcode = '42501'; end if;
+  if not public.is_manager() then raise exception 'Доступно только МВСО' using errcode = '42501'; end if;
   return query
     select p.id, p.short_name, p.full_name, p.category, p.subcategory, u.id, u.code,
            p.is_active, p.is_material, p.origin, cur.price_kop, cur.valid_from,
@@ -178,7 +178,7 @@ returns void
 language plpgsql security definer set search_path = public as $$
 declare d date := coalesce(p_valid_from, public.app_today());
 begin
-  if not public.is_manager() then raise exception 'Доступно только руководителю' using errcode = '42501'; end if;
+  if not public.is_manager() then raise exception 'Доступно только МВСО' using errcode = '42501'; end if;
   if p_price_kop is null or p_price_kop <= 0 then raise exception 'Цена должна быть больше нуля'; end if;
   if not exists (select 1 from price_items where id = p_item) then raise exception 'Позиция прайса не найдена'; end if;
   insert into price_item_prices (price_item_id, price_kop, valid_from, created_by)

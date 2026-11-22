@@ -103,6 +103,6 @@ select public.assign_request(pg_temp.req('RFS261014_0003'), null, true);
 reset role;
 select pg_temp.login_as('kolya');
 select pg_temp.fails($q$select public.take_request(pg_temp.req('RFS261014_0003'), 60)$q$, '%подрядчик%', 'заявку у подрядчика не взять');
-select pg_temp.fails($q$select public.accept_request(pg_temp.req('RFS261014_0002'))$q$, '%руководител%', 'мастер не принимает');
+select pg_temp.fails($q$select public.accept_request(pg_temp.req('RFS261014_0002'))$q$, '%МВСО%', 'мастер не принимает');
 reset role;
 rollback;

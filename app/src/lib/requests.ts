@@ -475,8 +475,8 @@ export type MasterReport = {
   photos: { path: string; thumb_path: string }[];
 };
 export const reportStatusText: Record<ReportStatus, string> = {
-  new: 'Отправлено, руководитель ещё не открыл',
-  read: 'Руководитель прочитал',
+  new: 'Отправлено, МВСО ещё не открыл',
+  read: 'МВСО прочитал',
   request: 'Создана заявка',
   rejected: 'Отклонено',
   contractor: 'Заявку передали подрядчику',
@@ -495,7 +495,7 @@ export type HoldReason = 'urgent' | 'returned' | 'pause' | 'materials';
 export function holdText(reason: HoldReason | null | undefined, holdNumber?: string | null): string {
   if (reason === 'urgent') return `Приостановлена из-за срочной${holdNumber ? ` ${requestLabel(holdNumber)}` : ''} — вернётся в работу сама, когда срочную отправят на проверку`;
   if (reason === 'returned') return 'Вернули на доработку — в очереди: станет активной, как только вы отправите текущую';
-  if (reason === 'pause') return 'Приостановлена с согласия руководителя';
+  if (reason === 'pause') return 'Приостановлена с согласия МВСО';
   if (reason === 'materials') return 'Ждёт материалы';
   return 'Приостановлена';
 }

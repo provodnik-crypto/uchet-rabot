@@ -107,7 +107,7 @@ export function PhotoPicker({ photos, onChange, hint, required, buttons }: Props
       ) : null}
       <Text style={styles.meta}>
         Не снимайте людей и документы.{' '}
-        {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}.` : required ? `Нужно хотя бы одно фото, всего до ${MAX_PHOTOS}.` : hint ? 'С фото руководитель оценит быстрее.' : `До ${MAX_PHOTOS} фото, необязательно.`}
+        {photos.length ? `Фото: ${photos.length} из ${MAX_PHOTOS}.` : required ? `Нужно хотя бы одно фото, всего до ${MAX_PHOTOS}.` : hint ? 'С фото МВСО оценит быстрее.' : `До ${MAX_PHOTOS} фото, необязательно.`}
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <PhotoViewer

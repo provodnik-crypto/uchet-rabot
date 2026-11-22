@@ -55,7 +55,7 @@ export default function ReportScreen() {
 
   return (
     <Screen status={query}>
-      <Text style={styles.lead}>Нашли поломку, а заявки нет? Напишите руководителю — он решит, создавать ли заявку.</Text>
+      <Text style={styles.lead}>Нашли поломку, а заявки нет? Напишите МВСО — он решит, создавать ли заявку.</Text>
       <Card style={styles.card}>
         <Field label="Что случилось и где" value={text} onChangeText={setText} multiline maxLength={1000} placeholder="Например: течёт кран в подсобке у склада" />
         <Text style={styles.label}>Фото (по желанию, до 3)</Text>
@@ -64,8 +64,8 @@ export default function ReportScreen() {
       </Card>
       {progress ? <Text style={styles.meta}>{progress}</Text> : null}
       {err ? <Text style={styles.err}>Не отправлено: {err}</Text> : null}
-      {sent ? <Text style={styles.ok}>Отправлено руководителю.</Text> : null}
-      <BigButton title={err ? 'Повторить' : 'Отправить руководителю'} size="big" loading={busy} disabled={text.trim().length < 3} onPress={send} />
+      {sent ? <Text style={styles.ok}>Отправлено МВСО.</Text> : null}
+      <BigButton title={err ? 'Повторить' : 'Отправить МВСО'} size="big" loading={busy} disabled={text.trim().length < 3} onPress={send} />
 
       <Text style={styles.section}>Мои сообщения</Text>
       {!list ? <StateView loading={loading} error={error} onRetry={reload} /> : null}

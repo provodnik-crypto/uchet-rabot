@@ -33,7 +33,7 @@ begin
   select * into r from requests where id = p_id for update;
   if not found then raise exception 'Заявка не найдена'; end if;
   if not public.can_edit_request_title(p_id) then
-    raise exception 'Название меняет руководитель. Мастер — только у своей заявки, пока она не отправлена на проверку.' using errcode = '42501';
+    raise exception 'Название меняет МВСО. Мастер — только у своей заявки, пока она не отправлена на проверку.' using errcode = '42501';
   end if;
   if r.operation is not distinct from t then return; end if;
   -- subject у ручной заявки — то же название; у ITSM — тема «для себя» руководителя, её не трогаем, если он её менял
@@ -55,7 +55,7 @@ begin
   select * into r from requests where id = p_id for update;
   if not found then raise exception 'Заявка не найдена'; end if;
   if not public.is_manager() and not (r.responsible_id = me and r.status = 'in_work' and r.is_open) then
-    raise exception 'Добавить фото может руководитель или мастер, у которого заявка в работе' using errcode = '42501';
+    raise exception 'Добавить фото может МВСО или мастер, у которого заявка в работе' using errcode = '42501';
   end if;
   select count(*) into n from extra_photos where owner_kind = 'request' and owner_id = p_id;
   if n + (case when jsonb_typeof(p_photos) = 'array' then jsonb_array_length(p_photos) else 0 end) > 12 then
@@ -77,7 +77,7 @@ begin
   select * into x from extra_photos where id = p_photo_id and owner_kind = 'request' for update;
   if not found then raise exception 'Фото уже удалено'; end if;
   if not public.is_manager() and x.uploaded_by is distinct from me then
-    raise exception 'Удалить фото может тот, кто его добавил, или руководитель' using errcode = '42501';
+    raise exception 'Удалить фото может тот, кто его добавил, или МВСО' using errcode = '42501';
   end if;
   delete from extra_photos where id = x.id;
   insert into photo_trash (path) values (x.path), (x.thumb_path) on conflict do nothing;

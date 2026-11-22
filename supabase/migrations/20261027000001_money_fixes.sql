@@ -151,7 +151,7 @@ begin
     loop
       if not public.valid_request_number(v_num) then raise exception 'Номер заявки % в неверном формате', v_num; end if;
       select id into v_req from requests where number = v_num;
-      if v_req is null then raise exception 'Заявка % не найдена. Номер вводить не нужно — сообщите руководителю', v_num; end if;
+      if v_req is null then raise exception 'Заявка % не найдена. Номер вводить не нужно — сообщите МВСО', v_num; end if;
       perform public.claim_request_for_work(v_req, me);
     end loop;
   end if;
@@ -167,7 +167,7 @@ begin
     $r$if e.status <> 'rejected' then raise exception 'Исправить можно только отклонённую работу'; end if;
   if not public.is_manager() and not public.legacy_shift_allowed() and not exists (select 1 from requests r where r.id = e.request_id and r.status = 'in_work'
        and r.responsible_id = public.current_employee_id() and r.is_open) then
-    raise exception 'Заявка уже не у вас в работе — исправить эту работу может руководитель';
+    raise exception 'Заявка уже не у вас в работе — исправить эту работу может МВСО';
   end if;$r$);
   if n = d then raise exception 'Не нашёл место для проверки в resubmit_entry'; end if;
   execute n;

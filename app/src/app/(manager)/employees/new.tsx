@@ -120,7 +120,7 @@ export default function NewEmployeeScreen() {
         <Text style={styles.label}>Роль</Text>
         <View style={styles.chips}>
           <Chip label="Мастер" selected={role === 'master'} onPress={() => setRole('master')} />
-          <Chip label="Руководитель" selected={role === 'manager'} onPress={() => setRole('manager')} />
+          <Chip label="МВСО" selected={role === 'manager'} onPress={() => setRole('manager')} />
           <Chip label="Инициатор" selected={role === 'initiator'} onPress={() => setRole('initiator')} />
         </View>
         {role === 'initiator' ? (
@@ -155,7 +155,7 @@ export default function NewEmployeeScreen() {
                 keyboardType="number-pad"
                 placeholder="031XXX"
                 error={errors.phone}
-                hint="Формат 031XXX — виден руководителю в заявках этого человека."
+                hint="Формат 031XXX — виден МВСО в заявках этого человека."
               />
             ) : (
               <Text style={styles.hint}>Рабочий телефон 031XXX — только менеджеру отдела и руководителю сектора.</Text>

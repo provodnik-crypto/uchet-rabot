@@ -90,7 +90,7 @@ export default function FixEntryScreen() {
   return (
     <Screen>
       <Card style={styles.alert}>
-        <Text style={styles.alertTitle}>Руководитель отклонил работу</Text>
+        <Text style={styles.alertTitle}>МВСО отклонил работу</Text>
         <Text style={styles.alertText}>{entry.reject_comment}</Text>
       </Card>
       <Card style={styles.card}>

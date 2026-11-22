@@ -117,7 +117,7 @@ export default function NewInitiatorRequestScreen() {
       forgetLocalPhotos(photos);
       setBusy(false);
       setProgress('');
-      Alert.alert('Готово', `Заявка № ${res.number} отправлена руководителю.`, [
+      Alert.alert('Готово', `Заявка № ${res.number} отправлена МВСО.`, [
         { text: 'Отлично', onPress: () => router.replace('/') },
       ]);
     } catch (e) {
@@ -197,7 +197,7 @@ export default function NewInitiatorRequestScreen() {
             placeholder="Безопасность / монетизация / другое"
           />
         ) : (
-          <Text style={styles.hint}>Срок назначит руководитель (МВСО)</Text>
+          <Text style={styles.hint}>Срок назначит МВСО</Text>
         )}
       </View>
 

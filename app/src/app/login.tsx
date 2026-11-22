@@ -91,7 +91,7 @@ export default function LoginScreen() {
           <Pressable onPress={() => router.push('/claim')} hitSlop={space.s8} style={styles.claim}>
             <Text style={styles.claimText}>Первый вход по LDAP — заявки из магазина</Text>
           </Pressable>
-          <Text style={styles.note}>Нет логина? Его выдаёт руководитель.</Text>
+          <Text style={styles.note}>Нет логина? Его выдаёт МВСО.</Text>
         </Card>
       )}
     </Screen>

@@ -35,7 +35,7 @@ begin
     perform public.resume_next(me);
   elsif p_reason = 'not_needed' then
     if exists (select 1 from master_reports where about_request = p_id and kind = 'close' and status in ('new', 'read')) then
-      raise exception 'Просьба уже у руководителя — дождитесь ответа';
+      raise exception 'Просьба уже у МВСО — дождитесь ответа';
     end if;
     insert into master_reports (author_id, text, about_request, kind) values (me, c, p_id, 'close');
     perform public.log_request_event(p_id, 'comment', null, null, 'Прошу закрыть заявку — не нужна: ' || c);
@@ -59,7 +59,7 @@ begin
     raise exception 'Попросить можно только по своей заявке в работе';
   end if;
   if exists (select 1 from master_reports where about_request = p_id and kind = 'contractor' and status in ('new', 'read')) then
-    raise exception 'Просьба уже у руководителя — дождитесь ответа';
+    raise exception 'Просьба уже у МВСО — дождитесь ответа';
   end if;
   insert into master_reports (author_id, text, about_request, kind) values (me, left(trim(p_reason), 1000), p_id, 'contractor') returning id into v_id;
   perform public.log_request_event(p_id, 'comment', null, null, 'Прошу передать подрядчику: ' || left(trim(p_reason), 900));

@@ -85,7 +85,7 @@ begin
   if p_text is null then return; end if;
   if p_text ~ '[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9.-]+'
      or p_text ~ '(^|\D)(\+7|8)?[\s(-]*\d{3}[\s)-]{0,2}\d{3}[\s-]?\d{2}[\s-]?\d{2}($|\D)' then
-    raise exception '%: телефон или почта в тексте не нужны — руководитель видит их в карточке', p_label;
+    raise exception '%: телефон или почта в тексте не нужны — МВСО видит их в карточке', p_label;
   end if;
 end $$;
 
@@ -226,7 +226,7 @@ begin
   if not found then raise exception 'Заявка не найдена'; end if;
   if r.created_by <> me then raise exception 'Отменить можно только свою заявку' using errcode = '42501'; end if;
   if not (r.is_open and r.status = 'waiting') then
-    raise exception 'Заявку уже взяли в работу — об отмене попросите руководителя';
+    raise exception 'Заявку уже взяли в работу — об отмене попросите МВСО';
   end if;
   update requests set is_open = false, closed_at = now(), closed_by = me, last_activity_at = now() where id = r.id;
   insert into request_events (request_id, kind, author_id, comment)

@@ -93,7 +93,7 @@ export default function InitiatorProfile() {
           }}
           keyboardType="phone-pad"
           placeholder="+7…"
-          hint="Видит только руководитель. Рабочие телефоны 031XXX вписывает руководитель."
+          hint="Видит только МВСО. Рабочие телефоны 031XXX вписывает МВСО."
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {saved ? <Text style={styles.meta}>Сохранено.</Text> : null}

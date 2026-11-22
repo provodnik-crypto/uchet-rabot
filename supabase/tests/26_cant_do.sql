@@ -29,7 +29,7 @@ select pg_temp.assert(pg_temp.err(format('select public.resume_request(%s)', (se
 -- заявка не нужна: просьба руководителю, заявка пока в работе
 select public.cant_do((select id from _r where operation = 'Повесить телевизор'), 'not_needed', 'Телевизора нет, заявка старая');
 select pg_temp.assert(pg_temp.err(format($q$select public.cant_do(%s, 'not_needed', 'ещё раз')$q$, (select id from _r where operation = 'Повесить телевизор')))
-  = 'Просьба уже у руководителя — дождитесь ответа', 'вторую просьбу не отправить');
+  = 'Просьба уже у МВСО — дождитесь ответа', 'вторую просьбу не отправить');
 select pg_temp.assert((select status from public.requests where id = (select id from _r where operation = 'Повесить телевизор')) = 'in_work', 'до решения — в работе');
 reset role;
 

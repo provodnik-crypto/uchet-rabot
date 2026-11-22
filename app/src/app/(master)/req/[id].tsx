@@ -137,7 +137,7 @@ export default function RequestCardScreen() {
 
   /** Меню «⋯»: редкие действия по своей заявке в работе. */
   const moreActions: SheetAction[] = [
-    ...(r.pause_request ? [] : [{ label: 'Приостановить', hint: 'Запрос руководителю с причиной', onPress: () => setPanel('pause') }]),
+    ...(r.pause_request ? [] : [{ label: 'Приостановить', hint: 'Запрос МВСО с причиной', onPress: () => setPanel('pause') }]),
     { label: 'Не могу выполнить', hint: 'Нет материалов, заявка не нужна или нужен подрядчик', onPress: () => setPanel('cant') },
     { label: 'Отказаться от заявки', danger: true, onPress: () => setPanel('refuse') },
   ];
@@ -246,7 +246,7 @@ export default function RequestCardScreen() {
 
       {returned ? (
         <View style={[styles.plate, styles.plateRed]}>
-          <Text style={[styles.plateTitle, styles.red]}>Руководитель вернул заявку</Text>
+          <Text style={[styles.plateTitle, styles.red]}>МВСО вернул заявку</Text>
           <Text style={styles.body}>{r.returned_comment}</Text>
         </View>
       ) : null}
@@ -276,18 +276,18 @@ export default function RequestCardScreen() {
       ) : null}
       {working && r.pause_request ? (
         <View style={styles.plate}>
-          <Text style={styles.plateTitle}>Запрос на приостановку у руководителя</Text>
+          <Text style={styles.plateTitle}>Запрос на приостановку у МВСО</Text>
           <Text style={styles.body}>{r.pause_request}</Text>
-          <Text style={styles.meta}>Пока руководитель не решил, заявка остаётся у вас в работе.</Text>
+          <Text style={styles.meta}>Пока МВСО не решил, заявка остаётся у вас в работе.</Text>
         </View>
       ) : null}
 
       {r.open_asks?.length && working ? (
         <View style={styles.plate}>
           <Text style={styles.plateTitle}>
-            {r.open_asks.includes('close') ? 'Просьба закрыть заявку — у руководителя' : 'Просьба передать подрядчику — у руководителя'}
+            {r.open_asks.includes('close') ? 'Просьба закрыть заявку — у МВСО' : 'Просьба передать подрядчику — у МВСО'}
           </Text>
-          <Text style={styles.meta}>Пока руководитель не решил, заявка остаётся у вас в работе. Ответ придёт в «Что нового».</Text>
+          <Text style={styles.meta}>Пока МВСО не решил, заявка остаётся у вас в работе. Ответ придёт в «Что нового».</Text>
         </View>
       ) : null}
 
@@ -302,7 +302,7 @@ export default function RequestCardScreen() {
         <ReasonPanel
           label="Почему заявка не может двигаться дальше?"
           placeholder="Например: нет доступа в помещение"
-          hint="Запрос уйдёт руководителю. Пока он не подтвердил, заявка остаётся у вас в работе. Нет материалов — лучше «⋯» → «Не могу выполнить»: вы сразу свободны."
+          hint="Запрос уйдёт МВСО. Пока он не подтвердил, заявка остаётся у вас в работе. Нет материалов — лучше «⋯» → «Не могу выполнить»: вы сразу свободны."
           button="Отправить запрос"
           run={(t) => requestPause(r.id, t)}
           onDone={done}
@@ -327,7 +327,7 @@ export default function RequestCardScreen() {
         <ReasonPanel
           label="Почему отказываетесь?"
           placeholder="Например: нет запчасти"
-          hint={`Заявка снова станет «Ожидает», руководитель увидит ваш комментарий.${
+          hint={`Заявка снова станет «Ожидает», МВСО увидит ваш комментарий.${
             liveWorks ? ` Ваши работы по заявке (${liveWorks}) будут удалены — их не получит следующий мастер.` : ''
           }`}
           button="Отказаться"
@@ -361,7 +361,7 @@ export default function RequestCardScreen() {
                   {formatDate(w.work_date)}
                   {w.performers ? ` · ${w.performers}` : ''} ·{' '}
                   <Text style={[w.status === 'rejected' && styles.red, w.status === 'priced' && styles.green]}>{workStatus[w.status]}
-                    {w.status === 'rejected' ? (working ? ' — нажмите, чтобы исправить' : ' — исправит руководитель') : ''}
+                    {w.status === 'rejected' ? (working ? ' — нажмите, чтобы исправить' : ' — исправит МВСО') : ''}
                   </Text>
                 </Text>
               </View>
@@ -440,16 +440,16 @@ const CANT_DO: { value: CantDoReason; label: string; hint: string; placeholder: 
   {
     value: 'not_needed',
     label: 'Заявка не нужна',
-    hint: 'Просьба закрыть уйдёт руководителю — закрывает только он. Пока он не решил, заявка у вас в работе.',
+    hint: 'Просьба закрыть уйдёт МВСО — закрывает только он. Пока он не решил, заявка у вас в работе.',
     placeholder: 'Почему не нужна, например: телевизора нет, заявка старая',
-    done: 'Просьба закрыть заявку отправлена руководителю.',
+    done: 'Просьба закрыть заявку отправлена МВСО.',
   },
   {
     value: 'contractor',
     label: 'Нужен подрядчик',
-    hint: 'Просьба передать подрядчику уйдёт руководителю. Пока он не решил, заявка у вас в работе.',
+    hint: 'Просьба передать подрядчику уйдёт МВСО. Пока он не решил, заявка у вас в работе.',
     placeholder: 'Почему нужен подрядчик, например: нужна вышка',
-    done: 'Просьба передать подрядчику отправлена руководителю.',
+    done: 'Просьба передать подрядчику отправлена МВСО.',
   },
 ];
 
