@@ -74,6 +74,20 @@ select pg_temp.assert((select count(*) from public.requests where source = 'init
 select pg_temp.assert((select count(*) from public.requests where number = 'ITSM-INIT-TEST') = 0,
   'служебные заявки без отдела инициатору не видны');
 
+-- списки и карточка (42804-регрессия: типы RETURNS TABLE должны совпадать тип-в-тип)
+select pg_temp.assert((select count(*) from public.initiator_requests('my')) = 2,
+  '«Мои заявки» отдаёт обе заявки');
+select pg_temp.assert((select count(*) from public.initiator_requests('department')) = 2,
+  '«Заявки отдела» отдаёт заявки отдела');
+select pg_temp.assert((select can_cancel from public.initiator_requests('my') where subject like 'Стеллаж%'),
+  'в «Мои» видно can_cancel до взятия');
+select pg_temp.assert((select number from public.initiator_requests('my') where subject like 'Стеллаж%') = (
+  select number from _r where subject like 'Стеллаж%'), 'номера совпадают с базой');
+select pg_temp.assert((select public.initiator_request_card((select id from _r where subject like 'Собрать%')) ->> 'can_cancel') = 'true',
+  'карточка отдаёт can_cancel');
+select pg_temp.assert((select public.initiator_request_card((select id from _r where subject like 'Собрать%')) ->> 'subject') like 'Собрать%',
+  'карточка отдаёт заявку');
+
 -- отмена: чужую нельзя, свою waiting можно, повторно нельзя
 select pg_temp.login_as('boss');
 select set_config('request.jwt.claims', format('{"sub":"%s"}',

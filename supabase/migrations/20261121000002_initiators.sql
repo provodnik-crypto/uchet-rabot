@@ -239,7 +239,7 @@ grant execute on function public.cancel_initiator_request(bigint) to authenticat
 create function public.initiator_requests(p_scope text) returns table (
   id bigint, number text, subject text, operation text, status text, priority smallint,
   place text, due_date date, materials text, urgent_reason text,
-  created_at timestamptz, creator_name text, master_name text, department_name text, can_cancel boolean
+  created_at timestamp, creator_name text, master_name text, department_name text, can_cancel boolean
 )
 language plpgsql stable security definer set search_path = public as $$
 declare me bigint := public.current_initiator_id();
