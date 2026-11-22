@@ -4,7 +4,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { AppHeader, IconButton } from '../../components/AppHeader';
 import { BigButton } from '../../components/BigButton';
-import { LoadStatus } from '../../components/LoadStatus';
 import { Screen, useScreenRefresh } from '../../components/Screen';
 import { Segmented } from '../../components/Segmented';
 import { PriorityPill, requestTone, StatusPill } from '../../components/StatusPill';
@@ -85,7 +84,6 @@ export default function InitiatorRequestsScreen() {
         </AppHeader>
       }
     >
-      <LoadStatus status={q} />
       {list.length === 0 && !q.loading && !q.error ? (
         <Text style={styles.empty}>
           {scope === 'my'

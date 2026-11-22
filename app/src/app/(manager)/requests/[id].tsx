@@ -231,20 +231,6 @@ function RequestDetail({ r }: { r: RequestRow }) {
 
       {r.source === 'initiator' ? <InitiatorInfo requestId={r.id} dueAt={r.due_at} /> : null}
 
-      {isOpen && (!card || card.status === 'waiting' || card.status === 'contractor' || card.status === 'in_work' || card.status === 'paused') ? (
-        <Card style={styles.card}>
-          <Text style={styles.h}>Кому назначена</Text>
-          <View style={styles.chips}>
-            <Chip label="Никому" selected={!assignee && !contractor} onPress={() => assign(null, false)} />
-            {(masters ?? []).map((m) => (
-              <Chip key={m.id} label={m.display_name} selected={assignee === m.id} onPress={() => assign(m.id, false)} />
-            ))}
-            <Chip label="Подрядчик" selected={contractor} onPress={() => assign(null, true)} />
-          </View>
-          <Text style={styles.hint}>Назначенную заявку мастер видит первой с пометкой «Назначено вам».</Text>
-        </Card>
-      ) : null}
-
       {r.status === 'in_work' && r.work_days != null ? (
         <Card style={styles.card}>
           <Text style={styles.h}>{r.work_days === 0 ? 'Взята в работу сегодня' : `В работе ${r.work_days} раб. дн.`}</Text>
@@ -352,11 +338,17 @@ function RequestDetail({ r }: { r: RequestRow }) {
                   }}
                 />
               ))}
+              {card.status === 'waiting' ? (
+                <Chip label="Подрядчику" selected={!!r.to_contractor} onPress={async () => {
+                  if (r.to_contractor) return;
+                  await run('resp', async () => (await assign(null, true), reloadCard()));
+                }} />
+              ) : null}
             </View>
-            <Text style={styles.hint}>«Снять» — заявка снова «Ожидает». Мастер, которому переназначили, увидит её в «Мои заявки».</Text>
+            <Text style={styles.hint}>{card.status === 'waiting' ? '«Подрядчику» — заявка уйдёт внешнему подрядчику, мастерам её не видно.' : '«Снять» — заявка снова «Ожидает». Мастер, которому переназначили, увидит её в «Мои заявки».'}</Text>
             <Text style={styles.hint}>
               У мастера одна заявка в работе. Занятому можно отдать только «Срочно» — его текущая приостановится и вернётся сама, когда он отправит срочную.
-              Обычную назначьте ему выше («Кому назначена») — возьмёт следующей.
+              «Снять» — заявка снова «Ожидает», мастер может взять другую.
             </Text>
             {message ? <Text style={styles.err}>{message}</Text> : null}
           </>
