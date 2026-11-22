@@ -7,7 +7,7 @@ import { Icon, type IconName } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
 import { appVersionLabel } from '../../lib/appUpdate';
 import { useAuth } from '../../lib/auth';
-import { awaitingTotals, managerDashboard, monthName, presetPeriod, requestCounts } from '../../lib/manager';
+import { awaitingTotals, managerDashboard, managerRatingSummary, monthName, presetPeriod, requestCounts } from '../../lib/manager';
 import { myNotifications, reviewCount, requestLabel } from '../../lib/requests';
 import { Notices, type Notice } from '../../components/Notices';
 import { formatKop } from '../../lib/money';
@@ -17,6 +17,15 @@ import { useFocusQuery } from '../../lib/useQuery';
 import { colors, font, iconSize, opacity, radius, size, space, stroke, touch } from '../../theme';
 
 type Href = Parameters<typeof router.push>[0];
+
+/** «1 оценка / 2 оценки / 5 оценок». */
+function pluralRatings(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'оценка';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'оценки';
+  return 'оценок';
+}
 
 export default function ManagerHome() {
   const { me, signOut } = useAuth();
@@ -55,6 +64,8 @@ export default function ManagerHome() {
   const { data: counts } = countsQ;
   const awaitingQ = useFocusQuery(() => awaitingTotals(presetPeriod('month')), { key: 'mhome:awaiting' });
   const { data: awaiting } = awaitingQ;
+  const ratingQ = useFocusQuery(managerRatingSummary, { key: 'mhome:ratings' });
+  const { data: ratings } = ratingQ;
   const { autoStart } = useTour();
   const focused = useIsFocused();
   // первый вход на этом телефоне — обучение, после обновлений — «Что нового»
@@ -74,7 +85,12 @@ export default function ManagerHome() {
       </View>
 
       <TourTarget id="mhome.month">
-      <Card style={styles.month}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Сводка за месяц"
+        onPress={() => router.push('/summary')}
+        style={({ pressed }) => [styles.month, pressed && { opacity: opacity.soft }]}
+      >
         <Text style={styles.monthLabel}>Выполнено за {monthName(storeToday())}</Text>
         <Text style={styles.monthSum}>{data ? formatKop(data.month_total_kop) : '…'}</Text>
         {data ? <Text style={styles.monthLabel}>работ с ценой: {data.month_entries}</Text> : null}
@@ -84,14 +100,24 @@ export default function ManagerHome() {
           </Text>
         ) : null}
         {data?.pending_count ? (
-          <Pressable accessibilityRole="button" onPress={() => router.push('/pending')} style={styles.warn}>
+          <View style={styles.warn}>
             <Text style={styles.warnText}>
               <Text style={styles.warnStrong}>{data.pending_count} на оценке</Text> — в сумму не входят
             </Text>
             <Icon name="chevronRight" size={iconSize.small} color={colors.white} />
-          </Pressable>
+          </View>
         ) : null}
-      </Card>
+        {ratings && ratings.count > 0 ? (
+          <View style={styles.warn}>
+            <Text style={styles.warnText}>
+              <Text style={styles.warnStrong}>Оценки: ★ {ratings.avg?.toFixed(1).replace('.', ',')} из 5</Text>
+              {' · '}{ratings.count} {pluralRatings(ratings.count)}
+              {ratings.prev_count > 0 && ratings.prev_avg != null ? ` (в прошлом месяце ★ ${ratings.prev_avg.toFixed(1).replace('.', ',')})` : ''}
+            </Text>
+            <Icon name="chevronRight" size={iconSize.small} color={colors.white} />
+          </View>
+        ) : null}
+      </Pressable>
       </TourTarget>
 
       <TourTarget id="mhome.requests">
@@ -123,7 +149,6 @@ export default function ManagerHome() {
         <ActionTile tourId="mhome.review" title="На проверке" subtitle="заявки мастеров" icon="check" badge={review ?? undefined} href="/review" />
         <ActionTile tourId="mhome.pending" title="На оценке" subtitle="без цены" icon="clock" badge={data?.pending_count} href="/pending" />
         <ActionTile tourId="mhome.entries" title="Работы" subtitle="журнал и правка" icon="list" href="/entries" />
-        <ActionTile tourId="mhome.summary" title="Сводка" subtitle="по сотрудникам" icon="chart" href="/summary" />
         <ActionTile tourId="mhome.export" title="В Excel" subtitle="отчёт за период" icon="download" href="/export" />
       </View>
       <Card style={styles.list}>

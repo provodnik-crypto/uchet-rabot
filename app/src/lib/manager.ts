@@ -51,6 +51,20 @@ export const requestRow = async (id: number) => (await rpc<RequestRow[]>('reques
 export const setManualRequestTitle = (id: number, title: string) => rpc<void>('set_manual_request_title', { p_id: id, p_title: title });
 export const managerDashboard = async () => (await rpc<Dashboard[]>('manager_dashboard'))[0];
 
+/** Сводка оценок инициаторов за месяц (этап «NPS-сводка»; оценки видит только МВСО). */
+export type RatingSummary = {
+  count: number;
+  avg: number | null;
+  fives: number;
+  fours: number;
+  threes: number;
+  twos: number;
+  ones: number;
+  prev_count: number;
+  prev_avg: number | null;
+};
+export const managerRatingSummary = async () => (await rpc<RatingSummary[]>('manager_rating_summary'))[0];
+
 export type EmployeeRow = { employee_id: number; display_name: string; in_output_chart: boolean; total_kop: number; entries: number; shifts: number };
 export type MonthRow = { month: string; total_kop: number; entries: number };
 export type Totals = { total_kop: number; entries: number; pending: number; rejected: number };
