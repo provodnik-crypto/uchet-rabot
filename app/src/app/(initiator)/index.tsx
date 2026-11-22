@@ -51,9 +51,9 @@ function Row({ r }: { r: InitiatorRequest }) {
 /** Вкладка «Заявки»: переключатель «Мои» / «Отдел», самая старая сверху. */
 export default function InitiatorRequestsScreen() {
   const [scope, setScope] = useState<Scope>('my');
-  const [historyScope, setHistoryScope] = useState<'my' | 'department' | 'all'>('department');
+  const [historyScope, setHistoryScope] = useState<'my' | 'department'>('department');
   const isHistory = scope === 'history';
-  const rpcScope: 'my' | 'department' | 'all' = isHistory ? historyScope : scope;
+  const rpcScope: 'my' | 'department' = isHistory ? historyScope : scope;
   const q = useFocusQuery(() => initiatorRequests(rpcScope, isHistory), {
     key: `init:list:${rpcScope}:${isHistory}`,
   });
@@ -89,17 +89,6 @@ export default function InitiatorRequestsScreen() {
               onChange={setScope}
             />
           </TourTarget>
-          {isHistory ? (
-            <Segmented<'my' | 'department' | 'all'>
-              options={[
-                { value: 'my', label: 'Мои' },
-                { value: 'department', label: 'Отдел' },
-                { value: 'all', label: 'Все заявки' },
-              ]}
-              value={historyScope}
-              onChange={setHistoryScope}
-            />
-          ) : null}
         </AppHeader>
       }
     >
@@ -115,6 +104,24 @@ export default function InitiatorRequestsScreen() {
           <Text style={styles.rateHint}>«+ Новая заявка» откроется после оценки</Text>
         </Pressable>
       ))}
+      {isHistory ? (
+        <View style={styles.histFilter}>
+          {([
+            ['my', 'Мои'],
+            ['department', 'Отдел'],
+          ] as const).map(([value, label]) => (
+            <Pressable
+              key={value}
+              accessibilityRole="button"
+              accessibilityLabel={`История: ${label.toLowerCase()}`}
+              onPress={() => setHistoryScope(value)}
+              style={[styles.histPill, historyScope === value && styles.histPillOn]}
+            >
+              <Text style={[styles.histPillText, historyScope === value && styles.histPillTextOn]}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       {list.length === 0 && !q.loading && !q.error ? (
         <Text style={styles.empty}>
           {isHistory
@@ -157,4 +164,17 @@ const styles = StyleSheet.create({
   },
   rateText: { fontSize: font.body, fontWeight: '700' },
   rateHint: { fontSize: font.small },
+  histFilter: { flexDirection: 'row', gap: space.s8 },
+  histPill: {
+    paddingVertical: space.s4,
+    paddingHorizontal: space.s12,
+    borderRadius: radius.pill,
+    borderWidth: stroke.hair,
+    borderColor: colors.border,
+    minHeight: touch.small,
+    justifyContent: 'center',
+  },
+  histPillOn: { backgroundColor: colors.brand, borderColor: colors.brand },
+  histPillText: { fontSize: font.small, color: colors.secondary },
+  histPillTextOn: { color: colors.black, fontWeight: '600' },
 });

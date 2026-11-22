@@ -47,7 +47,7 @@ export type InitiatorProfileInfo = {
 };
 
 export async function initiatorRequests(
-  scope: 'my' | 'department' | 'all',
+  scope: 'my' | 'department',
   history = false,
 ): Promise<InitiatorRequest[]> {
   const { data, error } = await supabase.rpc('initiator_requests', { p_scope: scope, p_history: history });
