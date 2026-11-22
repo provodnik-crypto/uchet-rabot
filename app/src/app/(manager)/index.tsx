@@ -43,6 +43,7 @@ export default function ManagerHome() {
   const notices: Notice[] = [
     ...(showAllNews
       ? [
+          { key: 'news-fold', tone: 'blue' as const, title: `Новое по заявкам: ${news.length}`, text: 'Нажмите, чтобы свернуть', onPress: () => setShowAllNews(false) },
           ...news.map((n) => ({
             key: `u${n.id}`,
             tone: 'blue' as const,
@@ -50,7 +51,6 @@ export default function ManagerHome() {
             text: `Сообщений и событий: ${n.count}`,
             onPress: () => router.push({ pathname: '/requests/[id]', params: { id: String(n.id), number: n.number } }),
           })),
-          { key: 'news-fold', tone: 'blue' as const, title: 'Свернуть', onPress: () => setShowAllNews(false) },
         ]
       : news.length
         ? [{ key: 'news', tone: 'blue' as const, title: `Новое по заявкам: ${news.length}`, text: 'Нажмите, чтобы показать', onPress: () => setShowAllNews(true) }]
