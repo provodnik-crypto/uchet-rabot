@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { StyleSheet, View, type TextInputProps } from 'react-native';
 import { Text, TextInput } from './Text';
 import { useKeepAboveKeyboard } from './Screen';
@@ -6,22 +6,27 @@ import { colors, font, radius, space, stroke, touch } from '../theme';
 
 type Props = TextInputProps & { label: string; error?: string | null; hint?: string };
 
-export const Field = forwardRef<TextInput, Props>(function Field({ label, error, hint, style, onFocus, onBlur, ...rest }, ref) {
+export const Field = forwardRef<TextInput, Props>(function Field({ label, error, hint, style, onFocus, onBlur, placeholder, ...rest }, ref) {
   // поле внизу экрана не уходит под клавиатуру
   const keep = useKeepAboveKeyboard();
+  // подсказка (placeholder) исчезает сразу при касании поля, а не с первым символом
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrap} ref={keep.ref} collapsable={false}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         ref={ref}
+        placeholder={focused ? undefined : placeholder}
         placeholderTextColor={colors.muted}
         style={[styles.input, error ? styles.inputError : null, style]}
         {...rest}
         onFocus={(e) => {
+          setFocused(true);
           keep.onFocus();
           onFocus?.(e);
         }}
         onBlur={(e) => {
+          setFocused(false);
           keep.onBlur();
           onBlur?.(e);
         }}

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { AppHeader } from '../../../components/AppHeader';
 import { BigButton } from '../../../components/BigButton';
@@ -11,11 +11,17 @@ import { SelectField } from '../../../components/SelectField';
 import { StatusPill } from '../../../components/StatusPill';
 import { Text } from '../../../components/Text';
 import { humanError } from '../../../lib/errors';
-import { addDepartmentByName, createInitiatorRequest, initiatorProfile, WORK_CATEGORIES } from '../../../lib/initiators';
-import { cleanDepartmentName, listDepartments, type Department } from '../../../lib/departments';
+import {
+  addDepartmentByName,
+  createInitiatorRequest,
+  initiatorProfile,
+  WORK_CATEGORIES,
+  type InitiatorProfileInfo,
+} from '../../../lib/initiators';
+import { cleanDepartmentName, listDepartments } from '../../../lib/departments';
 import { useFocusQuery } from '../../../lib/useQuery';
 import { uploadPhotos, forgetLocalPhotos, toPayload, type DraftPhoto } from '../../../lib/workPhotos';
-import { colors, font, space } from '../../../theme';
+import { colors, font, radius, space, stroke } from '../../../theme';
 
 /** Экран «Новая заявка»: тот же состав сведений, что в бумажном шаблоне, но коротко и с фото. */
 export default function NewInitiatorRequestScreen() {
@@ -33,26 +39,37 @@ export default function NewInitiatorRequestScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
+  // профиль подставляет отдел из учётки: в форме поле «Отдел» не показываем — не дублируем
+  const [profile, setProfile] = useState<InitiatorProfileInfo | null>(null);
+  const [profileReady, setProfileReady] = useState(false);
+  // шаг «Проверка»: инициатор смотрит оформленную заявку и подтверждает отправку
+  const [step, setStep] = useState<'form' | 'review'>('form');
 
   // Отдел из учётки — подставляем сразу (руководитель задал при регистрации).
   useEffect(() => {
     let on = true;
     initiatorProfile()
       .then((p) => {
-        if (on && p?.department_id) setDeptId((cur) => cur ?? p.department_id ?? null);
+        if (!on) return;
+        setProfile(p);
+        if (p?.department_id) setDeptId((cur) => cur ?? p.department_id ?? null);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (on) setProfileReady(true);
+      });
     return () => {
       on = false;
     };
   }, []);
 
   const departments = deptQ.data ?? [];
-  const deptOptions = useMemo(
-    () => departments.filter((d) => d.is_active).map((d) => ({ value: d.id, label: d.name })),
-    [departments],
-  );
-  const deptName = departments.find((d) => d.id === deptId)?.name;
+  // поле «Отдел» появляется, только если в профиле отдел не выбран
+  const needDeptPick = profileReady && !deptId;
+  const deptOptions = departments.filter((d) => d.is_active).map((d) => ({ value: d.id, label: d.name }));
+  const deptName =
+    departments.find((d) => d.id === deptId)?.name ??
+    (profile?.department_id === deptId ? (profile?.department_name ?? null) : null);
 
   async function addDepartment() {
     const name = cleanDepartmentName(newDept);
@@ -71,14 +88,27 @@ export default function NewInitiatorRequestScreen() {
     }
   }
 
-  async function submit() {
-    if (!category) return setError('Выберите, что нужно сделать');
-    if (description.trim().length < 3) return setError('Опишите задачу');
-    if (description.trim().length > 200) return setError('Описание: до 200 знаков');
-    if (!deptId) return setError('Выберите отдел');
-    if (!place.trim()) return setError('Укажите, где именно: аллея, подиум, бокс');
-    if (photos.filter((p) => p.path || p.localUri).length < 1) return setError('Добавьте фото — без него заявку не принять');
-    if (urgent && !urgentReason.trim()) return setError('Укажите, почему это срочно');
+  function validate(): string | null {
+    if (!category) return 'Выберите, что нужно сделать';
+    if (description.trim().length < 3) return 'Опишите задачу';
+    if (description.trim().length > 200) return 'Описание: до 200 знаков';
+    if (!deptId) return 'Отдел не задан в профиле — выберите свой отдел перед созданием заявки';
+    if (!place.trim()) return 'Укажите место проведения работ: аллея, подиум, бокс';
+    if (photos.filter((p) => p.path || p.localUri).length < 1) return 'Добавьте минимум одно фото — без него заявку не принять';
+    if (urgent && !urgentReason.trim()) return 'Укажите, почему это срочно';
+    return null;
+  }
+
+  /** «Отправить» — проверяем поля и показываем оформленную заявку на проверку. */
+  function toReview() {
+    const problem = validate();
+    if (problem) return setError(problem);
+    setError(null);
+    setStep('review');
+  }
+
+  /** «Подтверждаю» — настоящая отправка: фото в хранилище, заявка в базу. */
+  async function confirm() {
     setError(null);
     setBusy(true);
     try {
@@ -98,15 +128,15 @@ export default function NewInitiatorRequestScreen() {
         } catch {
           setBusy(false);
           setProgress('');
-          setError('Не удалось загрузить фото — проверьте интернет и нажмите «Отправить» ещё раз');
+          setError('Не удалось загрузить фото — проверьте интернет и нажмите «Подтверждаю» ещё раз');
           return;
         }
       }
       setProgress('Отправляю заявку…');
       const res = await createInitiatorRequest({
-        category,
+        category: category!,
         description: description.trim(),
-        departmentId: deptId,
+        departmentId: deptId!,
         place: place.trim(),
         due: null,
         urgent: urgent,
@@ -127,10 +157,52 @@ export default function NewInitiatorRequestScreen() {
     }
   }
 
+  if (step === 'review') {
+    return (
+      <Screen
+        header={<AppHeader title="Проверьте заявку" back={() => setStep('form')} />}
+        footer={
+          <View style={styles.reviewButtons}>
+            <BigButton title={progress || 'Подтверждаю'} onPress={confirm} loading={busy} disabled={busy} />
+            <BigButton title="Изменить" variant="secondary" onPress={() => setStep('form')} disabled={busy} />
+          </View>
+        }
+      >
+        <Text style={styles.hint}>
+          Проверьте всё, что написали. «Подтверждаю» — отправить заявку, «Изменить» — вернуться и поправить.
+        </Text>
+
+        <ReviewRow label="Что сделать" value={category ?? ''} />
+        <ReviewRow label="Опишите задачу" value={description} />
+        <ReviewRow label="Место проведения работ" value={place} />
+
+        <View style={styles.reviewPhotos}>
+          <Text style={styles.reviewLabel}>Фото</Text>
+          <View style={styles.thumbs}>
+            {photos.map((p) => {
+              const uri = p.thumbUri ?? p.localUri;
+              return uri ? <Image key={p.key} source={{ uri }} style={styles.thumb} /> : null;
+            })}
+          </View>
+        </View>
+
+        {urgent ? (
+          <ReviewRow label="Срочно" value={urgentReason.trim() || 'Срочно — если горит, звоните 031 833'} />
+        ) : (
+          <ReviewRow label="Срок" value="Назначит МВСО" />
+        )}
+        {materials.trim() ? <ReviewRow label="Материалы" value={materials} /> : null}
+        {deptName ? <ReviewRow label="Отдел" value={deptName} /> : null}
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+      </Screen>
+    );
+  }
+
   return (
     <Screen
       header={<AppHeader title="Новая заявка" back />}
-      footer={<BigButton title={progress || 'Отправить'} onPress={submit} loading={busy} disabled={busy} />}
+      footer={<BigButton title="Отправить" onPress={toReview} />}
     >
       <Text style={styles.hint}>Поля со звёздочкой — обязательные. Фото помогает мастеру понять задачу.</Text>
 
@@ -149,38 +221,45 @@ export default function NewInitiatorRequestScreen() {
         maxLength={200}
         placeholder="Например: собрать шкаф распашной, зеркало 240×238, 6 дверей, ЛДСП дуб комано, ЛМ 89433656"
         hint="Артикул, количество и цвет пишите прямо сюда — до 200 знаков"
+        style={styles.tallInput}
       />
 
-      <SelectField
-        label="Отдел *"
-        value={deptId}
-        options={deptOptions}
-        onChange={setDeptId}
-        placeholder="Выберите отдел"
-        error={deptQ.error ? 'Не удалось загрузить отделы' : null}
-      />
-      {addingDept || deptOptions.length === 0 ? (
+      {needDeptPick ? (
         <View style={styles.newDept}>
-          <Field label="Новый отдел" value={newDept} onChangeText={setNewDept} placeholder="Например, Аллея 3 — освещение" />
-          <BigButton title="Добавить отдел" size="small" variant="secondary" onPress={addDepartment} loading={addingDept} />
+          <SelectField
+            label="Отдел *"
+            value={deptId}
+            options={deptOptions}
+            onChange={setDeptId}
+            placeholder="Выберите отдел"
+            error={deptQ.error ? 'Не удалось загрузить отделы' : null}
+          />
+          {addingDept || deptOptions.length === 0 ? (
+            <View style={styles.newDept}>
+              <Field label="Новый отдел" value={newDept} onChangeText={setNewDept} placeholder="Например, Аллея 3 — освещение" />
+              <BigButton title="Добавить отдел" size="small" variant="secondary" onPress={addDepartment} loading={addingDept} />
+            </View>
+          ) : (
+            <Text style={styles.link} onPress={() => setAddingDept(true)}>
+              Нет отдела в списке? Добавить
+            </Text>
+          )}
         </View>
-      ) : (
-        <Text style={styles.link} onPress={() => setAddingDept(true)}>
-          Нет отдела в списке? Добавить
-        </Text>
-      )}
+      ) : null}
 
       <Field
-        label="Где именно *"
+        label="Место проведения работ *"
         value={place}
         onChangeText={setPlace}
+        multiline
         maxLength={200}
         placeholder="Центральный подиум, третий бокс справа"
+        style={styles.wideInput}
       />
 
       <View>
         <Text style={styles.label}>Фото *</Text>
-        <PhotoPicker photos={photos} onChange={setPhotos} required />
+        <PhotoPicker photos={photos} onChange={setPhotos} required caption="Добавьте минимум одно фото" />
       </View>
 
       <View style={styles.due}>
@@ -205,13 +284,26 @@ export default function NewInitiatorRequestScreen() {
         label="Материалы"
         value={materials}
         onChangeText={setMaterials}
+        multiline
         maxLength={300}
-        placeholder="Что нужно и где лежит: RAL 9003, аллея 65 (в конце)"
+        placeholder="Шкаф изъят, стоит в аллее №69"
+        style={styles.wideInput}
       />
 
-      {deptName ? <Text style={styles.deptLine}>Отдел: {deptName}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </Screen>
+  );
+}
+
+/** Строка проверки: слева — название поля, справа — что написал инициатор. */
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.reviewRow}>
+      <Text style={styles.reviewLabel}>{label}</Text>
+      <Text style={styles.reviewValue} selectable>
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -224,6 +316,15 @@ const styles = StyleSheet.create({
   due: { gap: space.s8 },
   urgentRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
   urgent: { gap: space.s8 },
-  deptLine: { fontSize: font.small, color: colors.muted, textAlign: 'center' },
   error: { color: colors.danger, fontSize: font.body },
+  // поля ввода выше: текст виден целиком, поле не уходит под клавиатуру (Screen + useKeepAboveKeyboard)
+  tallInput: { minHeight: 128, textAlignVertical: 'top' },
+  wideInput: { minHeight: 96, textAlignVertical: 'top' },
+  reviewButtons: { gap: space.s8 },
+  reviewRow: { gap: space.s4, paddingBottom: space.s8, borderBottomWidth: stroke.hair, borderBottomColor: colors.border },
+  reviewLabel: { fontSize: font.small, fontWeight: '600', color: colors.muted },
+  reviewValue: { fontSize: font.body, color: colors.text },
+  reviewPhotos: { gap: space.s4 },
+  thumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.s8 },
+  thumb: { width: 96, height: 96, borderRadius: radius.small, backgroundColor: colors.border },
 });
