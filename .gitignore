@@ -3,4 +3,7 @@
 .env.local
 .env
 
+# временные файлы с ключами (создаются при работе с API)
+keys_temp.json
+
 app/dist-web/

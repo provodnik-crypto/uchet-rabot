@@ -12,6 +12,15 @@
 		}
 	}
 
+	# Раздача установочного APK: /apk/uchet.apk (файлы лежат в data/apk на сервере)
+	@apk path /apk/*
+	handle @apk {
+		uri strip_prefix /apk
+		root * /srv/apk
+		header Content-Type application/vnd.android.package-archive
+		file_server
+	}
+
 	handle {
 		respond "uchet-rabot" 200
 	}

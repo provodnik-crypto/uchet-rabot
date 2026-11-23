@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Text, TextInput } from '../components/Text';
 import { BigButton } from '../components/BigButton';
@@ -38,10 +38,8 @@ export default function LoginScreen() {
   return (
     <Screen>
       <View style={styles.logo}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>УР</Text>
-        </View>
-        <Text style={styles.title}>Учёт работ</Text>
+        <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
+        <Text style={styles.title}>LM сервис</Text>
       </View>
 
       {accessError ? (
@@ -100,8 +98,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   logo: { alignItems: 'center', marginTop: touch.min, marginBottom: space.s8, gap: space.s12 },
-  badge: { width: size.logo, height: size.logo, borderRadius: radius.round, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: font.sum, fontWeight: '800' },
+  logoImage: { width: size.logo, height: size.logo, borderRadius: radius.round },
   title: { fontSize: font.header, fontWeight: '800' },
   form: { gap: space.s16 },
   show: { flexDirection: 'row', alignItems: 'center', gap: space.s12, minHeight: touch.min, marginTop: -space.s4 },

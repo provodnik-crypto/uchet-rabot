@@ -37,7 +37,7 @@ function ask(title: string, message: string, ok: string): Promise<boolean> {
 function deniedForever(what: string) {
   Alert.alert(
     `Доступ к ${what} выключен`,
-    `Без него фото добавить нельзя, остальное работает как обычно. Включить: Настройки телефона → Приложения → «Учёт работ» → Разрешения.`,
+    `Без него фото добавить нельзя, остальное работает как обычно. Включить: Настройки телефона → Приложения → «LM сервис» → Разрешения.`,
     [
       { text: 'Понятно', style: 'cancel' },
       { text: 'Открыть настройки', onPress: () => Linking.openSettings().catch(() => {}) },

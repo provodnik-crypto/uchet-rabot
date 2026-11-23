@@ -24,6 +24,7 @@ mkdir -p "$TMP/b"
 cp -r "$ROOT/infra/timeweb/." "$TMP/b/"
 rm -f "$TMP/b/make-bundle.sh"
 mkdir -p "$TMP/b/app-functions" && cp -r "$ROOT/supabase/functions/." "$TMP/b/app-functions/"
+#NB: папку supabase/ (db, envoy, functions-main) кладёт строка cp "$ROOT/infra/timeweb/." выше — отдельных действий не нужно
 umask 077
 cat > "$TMP/b/secrets.env" <<ENV
 DOMAIN=$DOMAIN

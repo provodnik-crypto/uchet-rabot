@@ -21,6 +21,7 @@ services:
       DOMAIN: ${DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/apk:/srv/apk:ro
       - caddy_data:/data
       - caddy_config:/config
     mem_limit: 128m
