@@ -108,7 +108,9 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   с `p_comment`) требует причину, пока заявка не «Принята»; причина пишется в ленту (`request_events`, kind `close`)
   и видна инициатору. Инициатору закрытая заявка отдаётся со статусом `'closed'` («Закрыта», тон `closed` в теме),
   карточка инициатора — `is_mine` и `close_comment`. Массовые закрытия (ITSM, «Закрыть старые») и «Принятые» — без
-  причины. Старая `set_request_open(bigint, boolean)` осталась рядом для старых сборок — убрать отдельной миграцией.
+  причины. Старая перегрузка `set_request_open(bigint, boolean)` удалена миграцией 20261124000003 — заодно
+  `decide_master_report` («закрыть по просьбе мастера») передаёт причину: комментарий руководителя или
+  «Закрыто по просьбе мастера»; старые сборки работают — PostgREST подставляет default `p_comment`.
   Тест — `supabase/tests/42_close_reason.sql` (локально не гонялся: на машине нет PostgreSQL).
 * **Одна заявка в работе** (21.10.2026): у ответственного не больше одной открытой `in_work` — индекс `requests_one_active_uq`
   и `assert_free` (блокировка строки сотрудника) во всех путях: `take_request`, `claim_request_for_work` (работы в смене),

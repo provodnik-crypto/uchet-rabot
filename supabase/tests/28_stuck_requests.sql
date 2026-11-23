@@ -25,7 +25,7 @@ select pg_temp.login_as('kolya');
 select public.take_request(pg_temp.rid('Заявка А'), null);
 reset role;
 select pg_temp.login_as('boss');
-select public.set_request_open(pg_temp.rid('Заявка А'), false);
+select public.set_request_open(pg_temp.rid('Заявка А'), false, 'Тест: закрыто');
 select pg_temp.assert((select status || '/' || is_open::text || '/' || coalesce(responsible_id::text, '-') from public.requests where id = pg_temp.rid('Заявка А')) = 'waiting/false/-',
   'закрытая снята с мастера');
 reset role;

@@ -113,7 +113,7 @@ select pg_temp.assert(pg_temp.st('Заявка А') = 'in_work', 'а его А �
 select pg_temp.assert(pg_temp.err(format($q$update public.requests set status = 'in_work', responsible_id = %s, taken_at = now() where id = %s$q$,
   (select id from public.employees where login = 'kolya'), pg_temp.rid('Заявка Г'))) like '%requests_one_active_uq%', 'уникальный индекс: вторую «В работе» не записать');
 select pg_temp.login_as('boss');
-select public.set_request_open(pg_temp.rid('Заявка А'), false);
+select public.set_request_open(pg_temp.rid('Заявка А'), false, 'Тест: закрыто');
 select pg_temp.assert((select count(*) from public.masters_now() m join public.employees e on e.id = m.employee_id
   where e.login = 'kolya' and m.request_id is null) = 1, 'закрыл А — Николай свободен');
 reset role;

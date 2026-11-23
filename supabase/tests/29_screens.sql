@@ -29,7 +29,7 @@ select pg_temp.assert((select count(*) from public.request_row((select id from _
 select public.set_manual_request_title((select id from _r), 'Покрасить стену в коридоре');
 select pg_temp.assert((select operation from public.requests where id = (select id from _r)) = 'Покрасить стену в коридоре', 'название ручной заявки поменялось');
 select pg_temp.assert((select count(*) from public.list_requests('', 100, 'all', 'stale')) = 0, 'фильтр «долго в работе» — пока пусто');
-select public.set_request_open((select id from _r), false);
+select public.set_request_open((select id from _r), false, 'Тест: закрыто');
 select pg_temp.assert(pg_temp.err(format('select public.set_request_priority(%s, 1::smallint)', (select id from _r)))
   = 'У принятой или закрытой заявки приоритет не меняется', 'приоритет у закрытой не меняется');
 reset role;
