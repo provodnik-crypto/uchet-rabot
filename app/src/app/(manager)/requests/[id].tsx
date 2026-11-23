@@ -11,6 +11,7 @@ import { RequestExtras } from '../../../components/RequestExtras';
 import { RequestTitle } from '../../../components/RequestTitle';
 import { WorksMoney } from '../../../components/WorksMoney';
 import { Screen } from '../../../components/Screen';
+import { SafetyPill } from '../../../components/StatusPill';
 import { StateView } from '../../../components/StateView';
 import { confirm } from '../../../lib/confirm';
 import { formatDate } from '../../../lib/dates';
@@ -293,6 +294,7 @@ function RequestDetail({ r }: { r: RequestRow }) {
           Статус: {card ? lifecycleLabel[card.status] : lifecycleLabel[r.status]}
           {card?.responsible_name ? ` · ${card.responsible_name}` : ''}
         </Text>
+        {card?.safety ? <SafetyPill /> : null}
         {card?.pause_request ? (
           <View style={styles.pause}>
             <Text style={styles.pauseTitle}>Мастер просит приостановить</Text>

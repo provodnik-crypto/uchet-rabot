@@ -8,7 +8,6 @@ import { Field } from '../../../components/Field';
 import { PhotoPicker } from '../../../components/PhotoPicker';
 import { Screen } from '../../../components/Screen';
 import { SelectField } from '../../../components/SelectField';
-import { StatusPill } from '../../../components/StatusPill';
 import { Text } from '../../../components/Text';
 import { humanError } from '../../../lib/errors';
 import {
@@ -141,6 +140,7 @@ export default function NewInitiatorRequestScreen() {
         due: null,
         urgent: urgent,
         urgentReason: urgent ? urgentReason.trim() : null,
+        safety: urgent,
         materials: materials.trim() || null,
         photos: toPayload(photos.map((p) => uploaded.get(p.key) ?? p)),
       });
@@ -187,7 +187,7 @@ export default function NewInitiatorRequestScreen() {
         </View>
 
         {urgent ? (
-          <ReviewRow label="Срочно" value={urgentReason.trim() || 'Срочно — если горит, звоните 031 833'} />
+          <ReviewRow label="Срочно · безопасность" value={urgentReason.trim() || 'Связана с безопасностью'} />
         ) : (
           <ReviewRow label="Срок" value="Назначит МВСО" />
         )}
@@ -263,10 +263,11 @@ export default function NewInitiatorRequestScreen() {
       </View>
 
       <View style={styles.due}>
-        <View style={styles.urgentRow}>
-          <Chip label="Срочно" selected={urgent} onPress={() => setUrgent((u) => !u)} />
-          {urgent ? <StatusPill tone="urgent" label="Если горит — звоните 031 833" /> : null}
-        </View>
+        <Chip
+          label="Срочно. Заявка связана с безопасностью"
+          selected={urgent}
+          onPress={() => setUrgent((u) => !u)}
+        />
         {urgent ? (
           <Field
             label="Почему срочно *"
@@ -314,8 +315,6 @@ const styles = StyleSheet.create({
   newDept: { gap: space.s8 },
   link: { fontSize: font.small, color: colors.secondary, fontWeight: '600' },
   due: { gap: space.s8 },
-  urgentRow: { flexDirection: 'row', alignItems: 'center', gap: space.s8 },
-  urgent: { gap: space.s8 },
   error: { color: colors.danger, fontSize: font.body },
   // поля ввода выше: текст виден целиком, поле не уходит под клавиатуру (Screen + useKeepAboveKeyboard)
   tallInput: { minHeight: 128, textAlignVertical: 'top' },

@@ -159,7 +159,7 @@ export default function RequestsScreen() {
           style={[styles.card, r.status === 'in_work' && long(r.work_days) && styles.stale]}
           onPress={() => router.push({ pathname: '/requests/[id]', params: { id: String(r.id), data: JSON.stringify(r) } })}
         >
-          <RequestBadges status={r.status} priority={r.priority} responsibleName={r.responsible_name} unread={r.unread} />
+          <RequestBadges status={r.status} priority={r.priority} safety={r.safety} responsibleName={r.responsible_name} unread={r.unread} />
           {r.status === 'in_work' && r.work_days != null ? (
             <Text style={[styles.meta, long(r.work_days) && styles.staleText]}>
               {workDaysText(r.work_days).replace(/^в/, 'В')}

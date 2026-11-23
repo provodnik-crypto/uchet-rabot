@@ -11,7 +11,7 @@ import { RequestFeed } from '../../../components/RequestFeed';
 import { Screen } from '../../../components/Screen';
 import { Section } from '../../../components/Section';
 import { StateView } from '../../../components/StateView';
-import { PriorityPill, requestTone, StatusPill } from '../../../components/StatusPill';
+import { PriorityPill, requestTone, SafetyPill, StatusPill } from '../../../components/StatusPill';
 import { Text } from '../../../components/Text';
 import { useAuth } from '../../../lib/auth';
 import { confirm } from '../../../lib/confirm';
@@ -206,7 +206,7 @@ export default function RequestCardScreen() {
         <Section>
           <View style={styles.pills}>
             <StatusPill tone={tone.tone} label={day && tone.tone === 'in_work' ? `В работе · ${day}-й день` : tone.label} />
-            <PriorityPill priority={r.priority} />
+            {r.safety ? <SafetyPill /> : <PriorityPill priority={r.priority} />}
             {r.service ? <StatusPill tone="waiting" label={r.service} /> : null}
           </View>
           <RequestTitle requestId={r.id} title={r.operation} canEdit={!!r.can_edit_title} onSaved={reload} />

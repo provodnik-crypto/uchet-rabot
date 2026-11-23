@@ -199,6 +199,8 @@ export type RequestRow = {
   to_contractor: boolean;
   status: LifecycleStatus;
   priority: Priority;
+  /** Заявка связана с безопасностью (кнопка инициатора «Срочно…»). */
+  safety?: boolean;
   responsible_id: number | null;
   responsible_name: string | null;
   taken_at: string | null;

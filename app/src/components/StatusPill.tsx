@@ -53,6 +53,11 @@ export function PriorityPill({ priority }: { priority: Priority }) {
   return null;
 }
 
+/** Метка «Безопасность»: заявка связана с безопасностью (кнопка «Срочно…» у инициатора). */
+export function SafetyPill() {
+  return <StatusPill tone="urgent" label="Безопасность" />;
+}
+
 const styles = StyleSheet.create({
   pill: { borderRadius: radius.pill, paddingHorizontal: space.s10, paddingVertical: space.s4, alignSelf: 'flex-start' },
   text: { fontSize: font.caption, fontWeight: '700' },

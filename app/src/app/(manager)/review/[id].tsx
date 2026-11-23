@@ -63,7 +63,7 @@ export default function ReviewRequestScreen() {
 
   return (
     <Screen status={query}>
-      <RequestBadges status={r.status} priority={r.priority} />
+      <RequestBadges status={r.status} priority={r.priority} safety={r.safety} />
       <Text style={styles.number}>{requestLabel(r.number)}</Text>
       {r.operation ? <Text style={styles.op}>{r.operation}</Text> : null}
       {r.description ? <Text style={styles.body}>{r.description}</Text> : null}

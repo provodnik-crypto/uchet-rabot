@@ -1,12 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 import type { LifecycleStatus, Priority } from '../lib/requests';
 import { space } from '../theme';
-import { PriorityPill, requestTone, StatusPill } from './StatusPill';
+import { PriorityPill, requestTone, SafetyPill, StatusPill } from './StatusPill';
 
 /** Метки заявки: «Назначено вам», статус (цвет + слово), приоритет, новые сообщения. */
 export function RequestBadges({
   status,
   priority,
+  safety,
   contractor,
   mine,
   responsibleName,
@@ -15,6 +16,8 @@ export function RequestBadges({
 }: {
   status: LifecycleStatus;
   priority: Priority;
+  /** Заявка связана с безопасностью — метка вместо «! Срочно». */
+  safety?: boolean;
   contractor?: boolean;
   mine?: boolean;
   /** Для «В работе · Имя Ф.» у чужой заявки. */
@@ -28,7 +31,7 @@ export function RequestBadges({
   return (
     <View style={styles.row}>
       {mine && status === 'waiting' && !contractor ? <StatusPill tone="in_work" label="Назначено вам" /> : <StatusPill tone={s.tone} label={s.label} />}
-      <PriorityPill priority={priority} />
+      {safety ? <SafetyPill /> : <PriorityPill priority={priority} />}
       {unread ? <StatusPill tone="busy" label={`Новое: ${unread}`} /> : null}
     </View>
   );

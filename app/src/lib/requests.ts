@@ -292,6 +292,8 @@ export type RequestCard = {
   works: RequestWork[];
   status: LifecycleStatus;
   priority: Priority;
+  /** Заявка связана с безопасностью (кнопка инициатора «Срочно…»). */
+  safety?: boolean;
   plan_minutes: number | null;
   responsible_id: number | null;
   responsible_name: string | null;

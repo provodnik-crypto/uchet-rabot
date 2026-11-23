@@ -75,6 +75,8 @@ export type NewInitiatorRequest = {
   due?: string | null;
   urgent?: boolean;
   urgentReason?: string | null;
+  /** Кнопка «Срочно. Заявка связана с безопасностью»: МВСО видит метку «Безопасность». */
+  safety?: boolean;
   materials?: string | null;
   /** Уже загруженные в storage фото (uploadPhotos + toPayload из lib/workPhotos). */
   photos: Array<{ path?: string; thumb_path?: string }>;
@@ -89,6 +91,7 @@ export async function createInitiatorRequest(input: NewInitiatorRequest): Promis
     p_due: input.urgent ? null : (input.due ?? null),
     p_urgent: input.urgent ?? false,
     p_urgent_reason: input.urgent ? (input.urgentReason ?? null) : null,
+    p_safety: input.safety ?? false,
     p_materials: input.materials ?? null,
     p_photos: input.photos,
   });
