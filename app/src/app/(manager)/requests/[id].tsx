@@ -193,16 +193,36 @@ function RequestDetail({ r }: { r: RequestRow }) {
     });
   };
 
+  /** Форма «Причина закрытия»: обязательна, пока заявка не «Принята» (её увидит инициатор). */
+  const [closing, setClosing] = useState(false);
+  const [closeReason, setCloseReason] = useState('');
+  const needReason = card?.status !== 'accepted';
+
   async function toggleOpen() {
-    const atMaster = card && (card.status === 'in_work' || card.status === 'paused') ? card.responsible_name : null;
-    const text = atMaster
-      ? `Заявка сейчас у мастера ${atMaster} — она будет снята с него, и он сможет взять другую. Мастера перестанут видеть её в списке.`
-      : 'Мастера перестанут видеть её в списке заявок.';
-    if (isOpen && !(await confirm('Закрыть заявку?', text, 'Закрыть'))) return;
+    if (isOpen) {
+      if (needReason) {
+        setClosing(true);
+        return;
+      }
+      if (!(await confirm('Закрыть заявку?', 'Мастера перестанут видеть её в списке заявок.', 'Закрыть'))) return;
+    }
     run('open', async () => {
       if (isOpen && !(await settleBeforeLeaving(r.id, 'Закрыть заявку', card))) return;
       await setRequestOpen(r.id, !isOpen);
       setIsOpen(!isOpen);
+      setClosing(false);
+      setCloseReason('');
+      reloadCard();
+    });
+  }
+
+  async function closeWithReason() {
+    run('open', async () => {
+      if (!(await settleBeforeLeaving(r.id, 'Закрыть заявку', card))) return;
+      await setRequestOpen(r.id, false, closeReason.trim());
+      setIsOpen(false);
+      setClosing(false);
+      setCloseReason('');
       reloadCard();
     });
   }
@@ -237,9 +257,9 @@ function RequestDetail({ r }: { r: RequestRow }) {
               {r.itsm_status ? ` · ${r.itsm_status}` : ''}
             </Text>
             <DueLine dueAt={r.due_at} status={r.status} isOpen={isOpen} />
-            {!isOpen ? <Text style={styles.closed}>Закрыта</Text> : null}
           </>
         ) : null}
+        {!isOpen ? <Text style={styles.closed}>Закрыта</Text> : null}
       </Card>
 
       {r.source === 'initiator' ? <InitiatorInfo requestId={r.id} dueAt={r.due_at} /> : null}
@@ -371,6 +391,43 @@ function RequestDetail({ r }: { r: RequestRow }) {
 
       {card?.works.length ? <WorksMoney requestId={card.id} works={card.works} onChanged={reloadCard} /> : null}
       {card ? <RequestFeed requestId={card.id} events={card.events} onSent={reloadCard} /> : null}
+
+      {closing ? (
+        <Card style={styles.card}>
+          <Text style={styles.pauseTitle}>Причина закрытия</Text>
+          <Text style={styles.hint}>
+            Её увидит инициатор в карточке своей заявки
+            {card && (card.status === 'in_work' || card.status === 'paused')
+              ? '; заявка будет снята с мастера и мастера перестанут видеть её в списке'
+              : '; мастера перестанут видеть заявку в списке'}
+            .
+          </Text>
+          <Field
+            label="Почему закрываете"
+            value={closeReason}
+            onChangeText={setCloseReason}
+            multiline
+            maxLength={300}
+            placeholder="Например: товар убрали из магазина, заявка не нужна"
+          />
+          <BigButton
+            title="Закрыть заявку"
+            variant="danger"
+            loading={busy === 'open'}
+            disabled={!!busy || closeReason.trim().length < 3}
+            onPress={closeWithReason}
+          />
+          <BigButton
+            title="Не закрывать"
+            variant="secondary"
+            disabled={!!busy}
+            onPress={() => {
+              setClosing(false);
+              setCloseReason('');
+            }}
+          />
+        </Card>
+      ) : null}
 
       <BigButton
         title={isOpen ? (itsm ? 'Закрыть заявку (как в ITSM)' : 'Закрыть заявку') : 'Открыть снова'}

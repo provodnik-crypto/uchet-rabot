@@ -103,8 +103,13 @@ export default function InitiatorRequestScreen() {
           {r.can_cancel ? (
             <BigButton title="Отменить заявку" variant="secondary" onPress={cancel} loading={busy} disabled={busy} />
           ) : null}
-          {!r.can_cancel && r.status === 'waiting' ? (
-            <Text style={styles.note}>Отменить можно только через МВСО — заявку уже взяли в работу.</Text>
+          {!r.can_cancel && r.status === 'waiting' && r.is_mine !== false ? (
+            <Text style={styles.note}>Отменить можно только через МВСО — заявку уже передали мастеру.</Text>
+          ) : null}
+          {r.status === 'closed' ? (
+            <Text style={styles.note}>
+              Заявка закрыта МВСО{r.close_comment ? `. Причина: ${r.close_comment}` : null}
+            </Text>
           ) : null}
           {r.can_rate ? (
             <Card style={styles.rateCard}>

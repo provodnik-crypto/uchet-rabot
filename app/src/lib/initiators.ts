@@ -13,7 +13,8 @@ export type InitiatorRequest = {
   number: string;
   subject: string;
   operation: string;
-  status: LifecycleStatus;
+  /** 'closed' — закрыта МВСО (не «Принята»); показывается как «Закрыта». */
+  status: LifecycleStatus | 'closed';
   priority: number;
   place: string | null;
   due_date: string | null;
@@ -30,6 +31,10 @@ export type InitiatorCard = Omit<InitiatorRequest, 'created_at' | 'due_date'> & 
   registered_at: string;
   due_at: string | null;
   photos: { path: string; thumb_path: string }[];
+  /** Своя заявка (иначе — заявка отдела). */
+  is_mine?: boolean;
+  /** Причина закрытия от МВСО (kind 'close' в ленте); есть у закрытых не «Принятых» заявок. */
+  close_comment?: string | null;
   /** Этап «Оценки»: свою выполненную заявку можно оценить (1–5 + комментарий). */
   can_rate?: boolean;
   rating_score?: number | null;

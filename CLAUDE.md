@@ -104,6 +104,12 @@ npx supabase functions deploy <имя> --use-api --project-ref $SUPABASE_PROJECT
   `request_members`, `request_events`. Работы по заявке — статус `awaiting` до «Принята» (в суммы не идут).
   Ключевые функции: `take_request`, `send_request_for_review`, `accept_request`, `return_request`; `submit_shift` —
   обёртка над `submit_shift_core` с проверкой, чья заявка.
+* **Причина закрытия** (23.11.2026, заявка № 110): ручное закрытие МВСО (`set_request_open`, новая версия
+  с `p_comment`) требует причину, пока заявка не «Принята»; причина пишется в ленту (`request_events`, kind `close`)
+  и видна инициатору. Инициатору закрытая заявка отдаётся со статусом `'closed'` («Закрыта», тон `closed` в теме),
+  карточка инициатора — `is_mine` и `close_comment`. Массовые закрытия (ITSM, «Закрыть старые») и «Принятые» — без
+  причины. Старая `set_request_open(bigint, boolean)` осталась рядом для старых сборок — убрать отдельной миграцией.
+  Тест — `supabase/tests/42_close_reason.sql` (локально не гонялся: на машине нет PostgreSQL).
 * **Одна заявка в работе** (21.10.2026): у ответственного не больше одной открытой `in_work` — индекс `requests_one_active_uq`
   и `assert_free` (блокировка строки сотрудника) во всех путях: `take_request`, `claim_request_for_work` (работы в смене),
   `create_manual_request` (занятому — «Ожидает» с назначением на него), `set_request_responsible` (обычную занятому — отказ,

@@ -20,7 +20,7 @@ export function StatusPill({ tone, label }: { tone: StatusTone; label: string })
  * «В работе · Имя Ф.» (чёрная), подрядчик — фиолетовая.
  */
 export function requestTone(r: {
-  status: LifecycleStatus;
+  status: LifecycleStatus | 'closed';
   returned?: boolean | null;
   contractor?: boolean | null;
   /** Имя мастера, если заявка в работе у другого. */
@@ -28,6 +28,7 @@ export function requestTone(r: {
   /** Почему приостановлена (materials — «Ждёт материалы»). */
   hold?: string | null;
 }): { tone: StatusTone; label: string } {
+  if (r.status === 'closed') return { tone: 'closed', label: 'Закрыта' };
   if (r.status === 'contractor' || (r.contractor && r.status === 'waiting')) return { tone: 'contractor', label: 'Подрядчик' };
   if ((r.status === 'in_work' || r.status === 'paused') && r.returned) return { tone: 'returned', label: 'Вернули' };
   if (r.status === 'in_work' && r.busyName) return { tone: 'busy', label: `В работе · ${r.busyName}` };

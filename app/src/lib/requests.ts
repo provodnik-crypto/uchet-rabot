@@ -329,7 +329,7 @@ export type RequestEvent = {
   deleted?: boolean;
   kind:
     | 'take' | 'refuse' | 'send' | 'accept' | 'return' | 'priority' | 'assign' | 'responsible' | 'contractor' | 'plan' | 'migrate' | 'comment' | 'create'
-    | 'pause_request' | 'pause' | 'pause_reject' | 'resume';
+    | 'pause_request' | 'pause' | 'pause_reject' | 'resume' | 'close';
   at: string;
   from: LifecycleStatus | null;
   to: LifecycleStatus | null;
@@ -356,6 +356,7 @@ export const eventLabel: Record<RequestEvent['kind'], string> = {
   pause: 'Приостановлена',
   pause_reject: 'Приостановку отклонил',
   resume: 'Снова в работе',
+  close: 'Закрыл заявку',
 };
 
 /** Подпись события; незнакомое (из новой версии базы) не роняет экран. */
@@ -569,7 +570,9 @@ export const requestMoney = (id: number) => rpc<RequestMoney>('request_money', {
 
 export const assignRequest = (id: number, employeeId: number | null, contractor: boolean) =>
   rpc<void>('assign_request', { p_id: id, p_employee_id: employeeId, p_contractor: contractor });
-export const setRequestOpen = (id: number, open: boolean) => rpc<void>('set_request_open', { p_id: id, p_open: open });
+/** Закрыть (с причиной, если заявка не «Принята») или открыть снова. */
+export const setRequestOpen = (id: number, open: boolean, comment?: string) =>
+  rpc<void>('set_request_open', { p_id: id, p_open: open, p_comment: comment ?? null });
 
 // ---------- Старые заявки: закрыть пачкой ----------
 export type OldRequest = { id: number; number: string; operation: string | null; description: string | null; registered_at: string };

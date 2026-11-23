@@ -56,6 +56,8 @@ export const statusColors = {
   urgent: { bg: '#F7DCD5', fg: '#C00000' },
   paused: { bg: '#FFF3C4', fg: '#6B4E00' },
   high: { bg: '#FFF3C4', fg: '#6B4E00' },
+  /** Закрытая не «Принятая» заявка (инициатор): серая, как «Ожидает», но слово другое. */
+  closed: { bg: '#E7E6E6', fg: '#6B6B6B' },
 } as const;
 export type StatusTone = keyof typeof statusColors;
 
